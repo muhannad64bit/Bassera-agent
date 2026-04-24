@@ -113,6 +113,7 @@ class OwnerDNATrait:
     evidence_count: int
     last_updated: str
     supporting_signals: tuple[str, ...]
+    supporting_examples: tuple[str, ...] = ()
     stability_score: float = 0.0
     applicability_notes: str = ""
 
@@ -168,6 +169,13 @@ def normalize_owner_dna_trait(trait: OwnerDNATrait) -> OwnerDNATrait:
             }
         )
     )
+    examples = tuple(
+        dict.fromkeys(
+            " ".join((example or "").strip().split())
+            for example in trait.supporting_examples
+            if (example or "").strip()
+        )
+    )
     stability_score = min(1.0, max(0.0, float(trait.stability_score)))
     applicability = " ".join((trait.applicability_notes or "").strip().split())
     return OwnerDNATrait(
@@ -177,6 +185,7 @@ def normalize_owner_dna_trait(trait: OwnerDNATrait) -> OwnerDNATrait:
         evidence_count=evidence_count,
         last_updated=last_updated,
         supporting_signals=signals,
+        supporting_examples=examples,
         stability_score=stability_score,
         applicability_notes=applicability,
     )
@@ -258,6 +267,8 @@ def owner_dna_trait_to_record(trait: OwnerDNATrait) -> MemoryRecord:
         f"Stability Score: {normalized.stability_score:.2f}",
         f"Supporting Signals: {', '.join(normalized.supporting_signals)}",
     ]
+    if normalized.supporting_examples:
+        content_parts.append(f"Supporting Examples: {' || '.join(normalized.supporting_examples)}")
     if normalized.applicability_notes:
         content_parts.append(f"Applicability Notes: {normalized.applicability_notes}")
     content = " | ".join(content_parts)
@@ -293,6 +304,11 @@ def parse_owner_dna_trait(value: str | MemoryRecord, *, default_target: MemoryTa
         for signal in fields.get("Supporting Signals", "").split(",")
         if signal.strip()
     )
+    examples = tuple(
+        example.strip()
+        for example in fields.get("Supporting Examples", "").split(" || ")
+        if example.strip()
+    )
     if not trait_name or not category or not signals:
         return None
     return normalize_owner_dna_trait(
@@ -303,6 +319,7 @@ def parse_owner_dna_trait(value: str | MemoryRecord, *, default_target: MemoryTa
             evidence_count=int(fields.get("Evidence Count", str(record.hits)) or record.hits),
             last_updated=record.updated_at,
             supporting_signals=signals,
+            supporting_examples=examples,
             stability_score=float(fields.get("Stability Score", "0") or 0),
             applicability_notes=fields.get("Applicability Notes", ""),
         )
@@ -372,6 +389,36 @@ def parse_memory_record(entry: str, *, default_target: MemoryTarget = "memory") 
 
 def merge_memory_records(existing: MemoryRecord, new_record: MemoryRecord) -> MemoryRecord:
     """Merge a new observation into an existing structured record."""
+    if existing.category == "owner_dna":
+        existing_trait = parse_owner_dna_trait(existing)
+        new_trait = parse_owner_dna_trait(new_record)
+        if existing_trait is not None and new_trait is not None:
+            merged_trait = normalize_owner_dna_trait(
+                OwnerDNATrait(
+                    trait_name=existing_trait.trait_name,
+                    category=existing_trait.category,
+                    confidence=max(existing_trait.confidence, new_trait.confidence),
+                    evidence_count=max(existing_trait.evidence_count, 0) + max(new_trait.evidence_count, 1),
+                    last_updated=new_trait.last_updated or existing_trait.last_updated,
+                    supporting_signals=tuple(existing_trait.supporting_signals) + tuple(new_trait.supporting_signals),
+                    supporting_examples=tuple(existing_trait.supporting_examples) + tuple(new_trait.supporting_examples),
+                    stability_score=max(existing_trait.stability_score, new_trait.stability_score),
+                    applicability_notes=new_trait.applicability_notes or existing_trait.applicability_notes,
+                )
+            )
+            return normalize_memory_record(
+                MemoryRecord(
+                    category="owner_dna",
+                    content=owner_dna_trait_to_record(merged_trait).content,
+                    key=existing.key,
+                    target=existing.target,
+                    hits=max(existing.hits, 0) + max(new_record.hits, 1),
+                    confidence=max(existing.confidence, new_record.confidence),
+                    source=new_record.source or existing.source,
+                    updated_at=new_record.updated_at or existing.updated_at,
+                    session_id=new_record.session_id or existing.session_id,
+                )
+            )
     chosen_content = new_record.normalized_content() or existing.normalized_content()
     return normalize_memory_record(
         MemoryRecord(
