@@ -82,7 +82,7 @@ class FakeBot:
     def __init__(self, *, intents, proxy=None, allowed_mentions=None, **_):
         self.intents = intents
         self.allowed_mentions = allowed_mentions
-        self.user = SimpleNamespace(id=999, name="Hermes")
+        self.user = SimpleNamespace(id=999, name="Wafi")
         self._events = {}
         self.tree = FakeTree()
 

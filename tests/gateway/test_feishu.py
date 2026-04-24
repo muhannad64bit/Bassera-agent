@@ -423,7 +423,7 @@ class TestFeishuAdapterMessaging(unittest.TestCase):
                 self.request = request
                 return SimpleNamespace(
                     success=lambda: True,
-                    data=SimpleNamespace(name="Hermes Group", chat_type="group"),
+                    data=SimpleNamespace(name="Wafi Group", chat_type="group"),
                 )
 
         chat_api = _ChatAPI()
@@ -443,7 +443,7 @@ class TestFeishuAdapterMessaging(unittest.TestCase):
 
         self.assertEqual(chat_api.request.chat_id, "oc_chat")
         self.assertEqual(info["chat_id"], "oc_chat")
-        self.assertEqual(info["name"], "Hermes Group")
+        self.assertEqual(info["name"], "Wafi Group")
         self.assertEqual(info["type"], "group")
 
 class TestAdapterModule(unittest.TestCase):
@@ -746,8 +746,8 @@ class TestAdapterBehavior(unittest.TestCase):
     @patch.dict(
         os.environ,
         {
-            "FEISHU_BOT_OPEN_ID": "ou_hermes",
-            "FEISHU_BOT_USER_ID": "u_hermes",
+            "FEISHU_BOT_OPEN_ID": "ou_wafi",
+            "FEISHU_BOT_USER_ID": "u_wafi",
         },
         clear=True,
     )
@@ -768,8 +768,8 @@ class TestAdapterBehavior(unittest.TestCase):
     @patch.dict(
         os.environ,
         {
-            "FEISHU_BOT_OPEN_ID": "ou_hermes",
-            "FEISHU_BOT_USER_ID": "u_hermes",
+            "FEISHU_BOT_OPEN_ID": "ou_wafi",
+            "FEISHU_BOT_USER_ID": "u_wafi",
         },
         clear=True,
     )
@@ -781,13 +781,13 @@ class TestAdapterBehavior(unittest.TestCase):
         by_open_id = SimpleNamespace(
             sender=SimpleNamespace(
                 sender_type="bot",
-                sender_id=SimpleNamespace(open_id="ou_hermes", user_id="u_other"),
+                sender_id=SimpleNamespace(open_id="ou_wafi", user_id="u_other"),
             )
         )
         by_user_id = SimpleNamespace(
             sender=SimpleNamespace(
                 sender_type="app",
-                sender_id=SimpleNamespace(open_id="ou_other", user_id="u_hermes"),
+                sender_id=SimpleNamespace(open_id="ou_other", user_id="u_wafi"),
             )
         )
 
@@ -799,7 +799,7 @@ class TestAdapterBehavior(unittest.TestCase):
         {
             "FEISHU_GROUP_POLICY": "allowlist",
             "FEISHU_ALLOWED_USERS": "ou_allowed",
-            "FEISHU_BOT_NAME": "Hermes Bot",
+            "FEISHU_BOT_NAME": "Wafi Bot",
         },
         clear=True,
     )
@@ -811,7 +811,7 @@ class TestAdapterBehavior(unittest.TestCase):
         mentioned = SimpleNamespace(
             mentions=[
                 SimpleNamespace(
-                    name="Hermes Bot",
+                    name="Wafi Bot",
                     id=SimpleNamespace(open_id="ou_other", user_id="u_other"),
                 )
             ]
@@ -1040,7 +1040,7 @@ class TestAdapterBehavior(unittest.TestCase):
         sender_id = SimpleNamespace(open_id="ou_any", user_id=None)
 
         bot_mention = SimpleNamespace(
-            name="Hermes",
+            name="Wafi",
             id=SimpleNamespace(open_id="ou_bot", user_id="u_bot"),
         )
         other_mention = SimpleNamespace(
@@ -1057,11 +1057,11 @@ class TestAdapterBehavior(unittest.TestCase):
         from gateway.platforms.feishu import FeishuAdapter
 
         adapter = FeishuAdapter(PlatformConfig())
-        adapter._bot_name = "Hermes Bot"
+        adapter._bot_name = "Wafi Bot"
         sender_id = SimpleNamespace(open_id="ou_any", user_id=None)
 
         named_mention = SimpleNamespace(
-            name="Hermes Bot",
+            name="Wafi Bot",
             id=SimpleNamespace(open_id="ou_other", user_id="u_other"),
         )
         different_mention = SimpleNamespace(
@@ -1083,7 +1083,7 @@ class TestAdapterBehavior(unittest.TestCase):
         message = SimpleNamespace(
             message_type="post",
             mentions=[],
-            content='{"en_us":{"content":[[{"tag":"at","user_name":"Hermes","open_id":"ou_bot"}]]}}',
+            content='{"en_us":{"content":[[{"tag":"at","user_name":"Wafi","open_id":"ou_bot"}]]}}',
         )
 
         self.assertTrue(adapter._should_accept_group_message(message, sender_id, ""))
@@ -2450,7 +2450,7 @@ class TestAdapterBehavior(unittest.TestCase):
 
         content = (
             "确认已入库 ✓\n"
-            "文件路径：`/root/.hermes/profiles/agent_cto/cron/jobs.json`\n"
+            "文件路径：`/root/.wafi/profiles/agent_cto/cron/jobs.json`\n"
             "**解码后的内容：**\n"
             "```json\n"
             '{"cron": "list"}\n'
@@ -2476,7 +2476,7 @@ class TestAdapterBehavior(unittest.TestCase):
                 [
                     {
                         "tag": "md",
-                        "text": "确认已入库 ✓\n文件路径：`/root/.hermes/profiles/agent_cto/cron/jobs.json`\n**解码后的内容：**",
+                        "text": "确认已入库 ✓\n文件路径：`/root/.wafi/profiles/agent_cto/cron/jobs.json`\n**解码后的内容：**",
                     }
                 ],
                 [{"tag": "md", "text": "```json\n{\"cron\": \"list\"}\n```"}],
@@ -2707,8 +2707,8 @@ class TestHydrateBotIdentity(unittest.TestCase):
             {
                 "code": 0,
                 "bot": {
-                    "bot_name": "Hermes Bot",
-                    "open_id": "ou_hermes_hydrated",
+                    "bot_name": "Wafi Bot",
+                    "open_id": "ou_wafi_hydrated",
                 },
             }
         ).encode("utf-8")
@@ -2717,8 +2717,8 @@ class TestHydrateBotIdentity(unittest.TestCase):
 
         asyncio.run(adapter._hydrate_bot_identity())
 
-        self.assertEqual(adapter._bot_open_id, "ou_hermes_hydrated")
-        self.assertEqual(adapter._bot_name, "Hermes Bot")
+        self.assertEqual(adapter._bot_open_id, "ou_wafi_hydrated")
+        self.assertEqual(adapter._bot_name, "Wafi Bot")
         # Application-info fallback must NOT run when bot_name is already set.
         self.assertFalse(
             adapter._client.application.v6.application.get.called
@@ -2729,7 +2729,7 @@ class TestHydrateBotIdentity(unittest.TestCase):
         os.environ,
         {
             "FEISHU_BOT_OPEN_ID": "ou_env",
-            "FEISHU_BOT_NAME": "Env Hermes",
+            "FEISHU_BOT_NAME": "Env Wafi",
         },
         clear=True,
     )
@@ -2743,7 +2743,7 @@ class TestHydrateBotIdentity(unittest.TestCase):
         # Neither probe should run — both fields are already populated.
         adapter._client.request.assert_not_called()
         self.assertEqual(adapter._bot_open_id, "ou_env")
-        self.assertEqual(adapter._bot_name, "Env Hermes")
+        self.assertEqual(adapter._bot_name, "Env Wafi")
 
     @patch.dict(os.environ, {"FEISHU_BOT_OPEN_ID": "ou_env"}, clear=True)
     def test_hydration_fills_only_missing_fields(self):
@@ -2754,7 +2754,7 @@ class TestHydrateBotIdentity(unittest.TestCase):
             {
                 "code": 0,
                 "bot": {
-                    "bot_name": "Hermes Bot",
+                    "bot_name": "Wafi Bot",
                     "open_id": "ou_probe_DIFFERENT",
                 },
             }
@@ -2764,7 +2764,7 @@ class TestHydrateBotIdentity(unittest.TestCase):
         asyncio.run(adapter._hydrate_bot_identity())
 
         self.assertEqual(adapter._bot_open_id, "ou_env")  # preserved
-        self.assertEqual(adapter._bot_name, "Hermes Bot")  # filled in
+        self.assertEqual(adapter._bot_name, "Wafi Bot")  # filled in
 
     @patch.dict(os.environ, {}, clear=True)
     def test_hydration_tolerates_probe_failure_and_falls_back_to_app_info(self):
@@ -2791,7 +2791,7 @@ class TestHydrateBotIdentity(unittest.TestCase):
         adapter = self._make_adapter()
         adapter._client = Mock()
         payload = json.dumps(
-            {"code": 0, "bot": {"bot_name": "Hermes", "open_id": "ou_hermes"}}
+            {"code": 0, "bot": {"bot_name": "Wafi", "open_id": "ou_wafi"}}
         ).encode("utf-8")
         adapter._client.request = Mock(return_value=SimpleNamespace(content=payload))
 
@@ -2800,7 +2800,7 @@ class TestHydrateBotIdentity(unittest.TestCase):
         self_event = SimpleNamespace(
             sender=SimpleNamespace(
                 sender_type="bot",
-                sender_id=SimpleNamespace(open_id="ou_hermes", user_id=""),
+                sender_id=SimpleNamespace(open_id="ou_wafi", user_id=""),
             )
         )
         peer_event = SimpleNamespace(

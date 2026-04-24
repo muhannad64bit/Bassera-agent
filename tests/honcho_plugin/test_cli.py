@@ -13,10 +13,10 @@ class TestCmdStatus:
         class FakeConfig:
             enabled = True
             api_key = "root-key"
-            workspace_id = "hermes"
-            host = "hermes"
+            workspace_id = "wafi"
+            host = "wafi"
             base_url = None
-            ai_peer = "hermes"
+            ai_peer = "wafi"
             peer_name = "eri"
             recall_mode = "hybrid"
             user_observe_me = True
@@ -31,7 +31,7 @@ class TestCmdStatus:
             reasoning_heuristic = True
 
             def resolve_session_name(self):
-                return "hermes"
+                return "wafi"
 
         monkeypatch.setattr(honcho_cli, "_read_config", lambda: {"apiKey": "***"})
         monkeypatch.setattr(honcho_cli, "_config_path", lambda: cfg_path)

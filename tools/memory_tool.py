@@ -29,9 +29,20 @@ import os
 import re
 import tempfile
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
-from hermes_constants import get_hermes_home
+from wafi_constants import get_wafi_home
 from typing import Dict, Any, List, Optional
+from agent.memory_schema import (
+    MemoryRecord,
+    format_memory_record,
+    merge_memory_records,
+    MemoryCategory,
+    normalize_memory_record,
+    normalize_memory_timestamp,
+    parse_owner_dna_trait,
+    parse_memory_record,
+)
 
 # fcntl is Unix-only; on Windows use msvcrt for file locking
 msvcrt = None
@@ -52,9 +63,42 @@ logger = logging.getLogger(__name__)
 # happened after the first import.
 def get_memory_dir() -> Path:
     """Return the profile-scoped memories directory."""
-    return get_hermes_home() / "memories"
+    return get_wafi_home() / "memories"
 
 ENTRY_DELIMITER = "\n§\n"
+
+_WORD_RE = re.compile(r"[a-z0-9_]{3,}")
+_STOPWORDS = {
+    "about", "after", "again", "agent", "also", "been", "being", "from", "have",
+    "into", "just", "like", "make", "more", "need", "only", "over", "same",
+    "some", "than", "that", "them", "then", "they", "this", "turn", "user",
+    "using", "with", "your",
+}
+_PREFERENCE_HINTS = (
+    "prefer", "preference", "style", "tone", "format", "always", "never",
+    "avoid", "please", "concise", "detailed", "brief",
+)
+_PROCEDURAL_HINTS = (
+    "fix", "debug", "implement", "build", "update", "run", "test", "edit",
+    "write", "patch", "refactor", "execute", "deploy",
+)
+_FAILURE_HINTS = (
+    "fail", "failure", "error", "broken", "issue", "problem", "stuck",
+    "uncertain", "unsure", "retry", "wrong",
+)
+_CONTINUITY_HINTS = (
+    "continue", "continued", "again", "earlier", "before", "previous",
+    "last", "resume", "pick up", "we were",
+)
+_WORKFLOW_TERMS = (
+    "debug", "fix", "implement", "patch", "refactor", "inspect", "trace",
+    "run", "test", "build", "deploy", "review", "edit", "write", "update",
+    "module", "file", "function", "class",
+)
+_COMMAND_PATTERN_RE = re.compile(r"\b(?:python|pytest|rg|git|npm|pnpm|yarn|uv|pip|make|cargo)\b[^\n]{0,80}")
+_PATH_PATTERN_RE = re.compile(r"(?:[a-zA-Z0-9_.-]+/)+[a-zA-Z0-9_.-]+|[a-zA-Z0-9_.-]+\.(?:py|ts|tsx|js|jsx|md|json|yaml|yml|toml|sh|sql)\b")
+_CODE_SYMBOL_RE = re.compile(r"\b[a-zA-Z_][a-zA-Z0-9_]{2,}\b")
+_RECENCY_WINDOW = 6
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +121,7 @@ _MEMORY_THREAT_PATTERNS = [
     # Persistence via shell rc
     (r'authorized_keys', "ssh_backdoor"),
     (r'\$HOME/\.ssh|\~/\.ssh', "ssh_access"),
-    (r'\$HOME/\.hermes/\.env|\~/\.hermes/\.env', "hermes_env"),
+    (r'\$HOME/\.wafi/\.env|\~/\.wafi/\.env', "wafi_env"),
 ]
 
 # Subset of invisible chars for injection detection
@@ -118,6 +162,7 @@ class MemoryStore:
         self.user_entries: List[str] = []
         self.memory_char_limit = memory_char_limit
         self.user_char_limit = user_char_limit
+        self._active_session_id: str = ""
         # Frozen snapshot for system prompt -- set once at load_from_disk()
         self._system_prompt_snapshot: Dict[str, str] = {"memory": "", "user": ""}
 
@@ -196,6 +241,504 @@ class MemoryStore:
         """Persist entries to the appropriate file. Called after every mutation."""
         get_memory_dir().mkdir(parents=True, exist_ok=True)
         self._write_file(self._path_for(target), self._entries_for(target))
+
+    def set_active_session(self, session_id: str) -> None:
+        """Attach the current runtime session to structured memory writes/ranking."""
+        self._active_session_id = (session_id or "").strip()
+
+    def build_recall_context(
+        self,
+        query: str,
+        *,
+        max_entries: int = 6,
+        max_chars: int = 1200,
+    ) -> str:
+        """Build a ranked recall block from the existing durable memory entries."""
+        ranked = self.rank_entries_for_query(query, max_entries=max_entries)
+        if not ranked:
+            return ""
+
+        lines: List[str] = ["BUILT-IN MEMORY RECALL"]
+        current_chars = len(lines[0])
+        for item in ranked:
+            line = f"- {item['label']}: {item['content']}"
+            projected = current_chars + 1 + len(line)
+            if len(lines) > 1 and projected > max_chars:
+                break
+            lines.append(line)
+            current_chars = projected
+        return "\n".join(lines) if len(lines) > 1 else ""
+
+    def list_structured_records(self, *, target: Optional[str] = None) -> List[MemoryRecord]:
+        """Return parsed structured memory records from the existing memory files."""
+        pairs: List[tuple[str, List[str]]] = []
+        if target in (None, "memory"):
+            pairs.append(("memory", self.memory_entries))
+        if target in (None, "user"):
+            pairs.append(("user", self.user_entries))
+
+        records: List[MemoryRecord] = []
+        for record_target, entries in pairs:
+            for entry in entries:
+                parsed = parse_memory_record(entry, default_target=record_target)
+                if parsed is not None:
+                    records.append(parsed)
+        return records
+
+    def rank_entries_for_query(self, query: str, *, max_entries: int = 6) -> List[Dict[str, Any]]:
+        """Rank structured and legacy entries together for a user query."""
+        candidates: List[Dict[str, Any]] = []
+        candidates.extend(self._rank_target_entries("user", self.user_entries, query))
+        candidates.extend(self._rank_target_entries("memory", self.memory_entries, query))
+        self._apply_structured_freshness_adjustments(candidates)
+        candidates.sort(
+            key=lambda item: (
+                item["score"],
+                item["session_match"],
+                item["updated_at_score"],
+                item["is_structured"],
+                item["hits"],
+                item["confidence"],
+                item["recency_rank"],
+            ),
+            reverse=True,
+        )
+        return candidates[:max_entries]
+
+    def _rank_target_entries(
+        self,
+        target: str,
+        entries: List[str],
+        query: str,
+    ) -> List[Dict[str, Any]]:
+        query_terms = _extract_query_terms(query)
+        query_signals = _extract_continuity_signals(query)
+        candidates: List[Dict[str, Any]] = []
+        total = len(entries)
+        for idx, entry in enumerate(entries):
+            parsed = parse_memory_record(entry, default_target=target)
+            content = parsed.content if parsed else entry.strip()
+            if not content:
+                continue
+            category = parsed.category if parsed else None
+            owner_dna = parse_owner_dna_trait(parsed) if parsed and category == "owner_dna" else None
+            if owner_dna is not None and (owner_dna.evidence_count < 2 or owner_dna.confidence < 0.72):
+                continue
+            overlap = len(query_terms & _extract_query_terms(content))
+            continuity = self._continuity_signal_strength(
+                query=query,
+                content=content,
+                query_signals=query_signals,
+            )
+            score = self._score_entry(
+                query=query,
+                target=target,
+                content=content,
+                category=category,
+                overlap=overlap,
+                hits=parsed.hits if parsed else 1,
+                confidence=parsed.confidence if parsed else 0.45,
+                recency_rank=total - idx,
+                updated_at=parsed.updated_at if parsed else "",
+                session_id=parsed.session_id if parsed else "",
+                continuity=continuity,
+            )
+            if score <= 0:
+                continue
+            label = self._entry_label(target, category)
+            updated_at_score = self._updated_at_score(parsed.updated_at if parsed else "")
+            session_match = bool(parsed and self._active_session_id and parsed.session_id == self._active_session_id)
+            candidates.append(
+                {
+                    "target": target,
+                    "content": content,
+                    "category": category,
+                    "score": score,
+                    "label": label,
+                    "is_structured": bool(parsed),
+                    "hits": parsed.hits if parsed else 1,
+                    "confidence": parsed.confidence if parsed else 0.45,
+                    "recency_rank": total - idx,
+                    "updated_at": parsed.updated_at if parsed else "",
+                    "session_id": parsed.session_id if parsed else "",
+                    "updated_at_score": updated_at_score,
+                    "session_match": session_match,
+                    "overlap": overlap,
+                    "continuity": continuity,
+                    "key": parsed.key if parsed else "",
+                    "namespace": self._key_namespace(parsed.key) if parsed else "",
+                    "owner_dna": owner_dna,
+                }
+            )
+        return candidates
+
+    def _score_entry(
+        self,
+        *,
+        query: str,
+        target: str,
+        content: str,
+        category: Optional[MemoryCategory],
+        overlap: int,
+        hits: int,
+        confidence: float,
+        recency_rank: int,
+        updated_at: str,
+        session_id: str,
+        continuity: Dict[str, Any],
+    ) -> float:
+        query_lower = (query or "").lower()
+        score = 0.2
+        score += min(overlap, 4) * 1.4
+        score += min(max(hits, 1), 6) * 0.2
+        score += max(0.0, min(confidence, 1.0)) * 0.8
+        score += self._updated_at_score(updated_at)
+        score += min(float(continuity.get("shared_terms_score", 0.0)), 2.5)
+        if recency_rank <= _RECENCY_WINDOW:
+            score += (_RECENCY_WINDOW - recency_rank + 1) * 0.15
+        if session_id and self._active_session_id and session_id == self._active_session_id:
+            score += 1.2
+
+        if target == "user":
+            score += 0.6
+
+        if category is None:
+            if overlap == 0 and not self._looks_globally_relevant(query_lower, content.lower()):
+                if recency_rank > 2:
+                    return 0.0
+                score += 0.35
+            return score
+
+        score += self._category_base_score(category)
+
+        if category == "owner_preference":
+            if any(hint in query_lower for hint in _PREFERENCE_HINTS):
+                score += 3.0
+            elif overlap > 0:
+                score += 1.6
+            else:
+                score += 0.8
+        elif category == "procedural":
+            if any(hint in query_lower for hint in _PROCEDURAL_HINTS):
+                score += 2.2
+            if overlap > 0:
+                score += 1.0
+        elif category == "reflective":
+            if any(hint in query_lower for hint in _FAILURE_HINTS):
+                score += 2.6
+            if "how" in query_lower or "should" in query_lower:
+                score += 0.8
+        elif category == "episodic":
+            if any(hint in query_lower for hint in _CONTINUITY_HINTS):
+                score += 2.0
+            if overlap > 0:
+                score += 0.8
+            if continuity.get("continuation_query"):
+                score += 1.8
+            if continuity.get("shared_paths"):
+                score += min(len(continuity["shared_paths"]), 2) * 1.2
+            if continuity.get("shared_commands"):
+                score += min(len(continuity["shared_commands"]), 2) * 0.9
+            if continuity.get("shared_workflows"):
+                score += min(len(continuity["shared_workflows"]), 3) * 0.6
+            if continuity.get("shared_symbols"):
+                score += min(len(continuity["shared_symbols"]), 3) * 0.45
+            if continuity.get("active_work_context"):
+                score += 1.1
+        elif category == "semantic":
+            if overlap > 0:
+                score += 0.9
+        elif category == "skill_candidate":
+            if any(hint in query_lower for hint in _PROCEDURAL_HINTS) or continuity.get("active_work_context"):
+                score += 1.2
+            if overlap > 0:
+                score += 0.8
+        elif category == "owner_dna":
+            if any(hint in query_lower for hint in _PREFERENCE_HINTS):
+                score += 2.6
+            if any(term in query_lower for term in ("workflow", "plan", "strategy", "approach", "decision", "risk", "priority")):
+                score += 2.0
+            if overlap > 0:
+                score += 1.1
+
+        if overlap == 0 and not self._looks_globally_relevant(query_lower, content.lower(), category):
+            score -= 1.2
+        return max(score, 0.0)
+
+    def _apply_structured_freshness_adjustments(self, candidates: List[Dict[str, Any]]) -> None:
+        """Prefer newer relevant structured evidence over stale competing records."""
+        structured = [item for item in candidates if item["is_structured"]]
+        if not structured:
+            return
+
+        freshest_by_category: Dict[tuple[Optional[MemoryCategory], int], Dict[str, Any]] = {}
+        freshest_by_namespace: Dict[tuple[str, int], Dict[str, Any]] = {}
+        for item in structured:
+            overlap_bucket = min(int(item.get("overlap", 0)), 2)
+            category_key = (item.get("category"), overlap_bucket)
+            namespace = item.get("namespace") or ""
+            namespace_key = (namespace, overlap_bucket) if namespace else None
+
+            current = freshest_by_category.get(category_key)
+            if current is None or self._is_fresher(item, current):
+                freshest_by_category[category_key] = item
+
+            if namespace_key is not None:
+                current_ns = freshest_by_namespace.get(namespace_key)
+                if current_ns is None or self._is_fresher(item, current_ns):
+                    freshest_by_namespace[namespace_key] = item
+
+        for item in structured:
+            overlap_bucket = min(int(item.get("overlap", 0)), 2)
+            freshest = freshest_by_category.get((item.get("category"), overlap_bucket))
+            if freshest is not None and freshest is not item and self._is_materially_staler(item, freshest):
+                item["score"] = max(0.0, item["score"] - 0.9)
+
+            namespace = item.get("namespace") or ""
+            if namespace:
+                freshest_ns = freshest_by_namespace.get((namespace, overlap_bucket))
+                if freshest_ns is not None and freshest_ns is not item and self._is_materially_staler(item, freshest_ns):
+                    item["score"] = max(0.0, item["score"] - 0.6)
+
+            if item.get("session_match") and item.get("hits", 1) >= 2 and item.get("category") in {"procedural", "reflective"}:
+                item["score"] += 0.5
+            if item.get("category") == "episodic":
+                continuity = item.get("continuity") or {}
+                if continuity.get("active_work_context") and item.get("session_match"):
+                    item["score"] += 0.8
+                freshest_episode = freshest_by_category.get(("episodic", overlap_bucket))
+                if (
+                    freshest_episode is not None
+                    and freshest_episode is not item
+                    and self._is_materially_staler(item, freshest_episode)
+                    and (freshest_episode.get("continuity") or {}).get("shared_terms_score", 0) >= (continuity.get("shared_terms_score", 0))
+                ):
+                    item["score"] = max(0.0, item["score"] - 1.1)
+
+    def _is_fresher(self, candidate: Dict[str, Any], other: Dict[str, Any]) -> bool:
+        candidate_rank = (
+            bool(candidate.get("session_match")),
+            float(candidate.get("updated_at_score", 0.0)),
+            int(candidate.get("recency_rank", 0)),
+            int(candidate.get("hits", 1)),
+        )
+        other_rank = (
+            bool(other.get("session_match")),
+            float(other.get("updated_at_score", 0.0)),
+            int(other.get("recency_rank", 0)),
+            int(other.get("hits", 1)),
+        )
+        return candidate_rank > other_rank
+
+    def _is_materially_staler(self, candidate: Dict[str, Any], newer: Dict[str, Any]) -> bool:
+        if bool(candidate.get("session_match")) and not bool(newer.get("session_match")):
+            return False
+        newer_delta = float(newer.get("updated_at_score", 0.0)) - float(candidate.get("updated_at_score", 0.0))
+        recency_delta = int(newer.get("recency_rank", 0)) - int(candidate.get("recency_rank", 0))
+        return newer_delta >= 0.6 or recency_delta >= 2
+
+    @staticmethod
+    def _key_namespace(key: str) -> str:
+        raw = (key or "").strip()
+        if not raw:
+            return ""
+        return raw.split(":", 1)[0]
+
+    @staticmethod
+    def _updated_at_score(updated_at: str) -> float:
+        raw = normalize_memory_timestamp(updated_at)
+        if not raw:
+            return 0.0
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            return 0.0
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        age_seconds = max(0.0, (now - parsed.astimezone(timezone.utc)).total_seconds())
+        if age_seconds <= 3600:
+            return 1.8
+        if age_seconds <= 6 * 3600:
+            return 1.4
+        if age_seconds <= 24 * 3600:
+            return 1.0
+        if age_seconds <= 3 * 24 * 3600:
+            return 0.7
+        if age_seconds <= 7 * 24 * 3600:
+            return 0.4
+        return 0.0
+
+    @staticmethod
+    def _category_base_score(category: MemoryCategory) -> float:
+        weights: Dict[MemoryCategory, float] = {
+            "owner_preference": 2.4,
+            "procedural": 1.7,
+            "reflective": 1.5,
+            "semantic": 1.2,
+            "episodic": 1.0,
+            "skill_candidate": 1.1,
+            "owner_dna": 2.1,
+        }
+        return weights.get(category, 0.0)
+
+    @staticmethod
+    def _looks_globally_relevant(
+        query_lower: str,
+        content_lower: str,
+        category: Optional[MemoryCategory] = None,
+    ) -> bool:
+        if category == "owner_preference":
+            return any(hint in query_lower for hint in _PREFERENCE_HINTS)
+        if category == "procedural":
+            return any(hint in query_lower for hint in _PROCEDURAL_HINTS)
+        if category == "reflective":
+            return any(hint in query_lower for hint in _FAILURE_HINTS)
+        if category == "episodic":
+            return any(hint in query_lower for hint in _CONTINUITY_HINTS)
+        if category == "owner_dna":
+            return any(
+                hint in query_lower
+                for hint in (
+                    *list(_PREFERENCE_HINTS),
+                    "workflow", "plan", "strategy", "approach", "decision",
+                    "risk", "priority", "style", "habit",
+                )
+            )
+        return any(term in content_lower for term in _extract_query_terms(query_lower))
+
+    @staticmethod
+    def _entry_label(target: str, category: Optional[MemoryCategory]) -> str:
+        if category == "owner_preference":
+            return "Owner Preference"
+        if category == "procedural":
+            return "Procedure"
+        if category == "reflective":
+            return "Lesson"
+        if category == "episodic":
+            return "Recent Episode"
+        if category == "semantic":
+            return "Knowledge"
+        if category == "skill_candidate":
+            return "Skill Candidate"
+        if category == "owner_dna":
+            return "Owner DNA"
+        return "User Memory" if target == "user" else "Memory"
+
+    @staticmethod
+    def _continuity_signal_strength(
+        *,
+        query: str,
+        content: str,
+        query_signals: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        content_signals = _extract_continuity_signals(content)
+        shared_paths = sorted(query_signals["paths"] & content_signals["paths"])
+        shared_commands = sorted(query_signals["commands"] & content_signals["commands"])
+        shared_workflows = sorted(query_signals["workflow_terms"] & content_signals["workflow_terms"])
+        shared_symbols = sorted(query_signals["symbols"] & content_signals["symbols"])
+        shared_terms = query_signals["terms"] & content_signals["terms"]
+        shared_terms_score = min(len(shared_terms), 5) * 0.35
+        shared_terms_score += min(len(shared_paths), 2) * 0.8
+        shared_terms_score += min(len(shared_commands), 2) * 0.6
+        shared_terms_score += min(len(shared_workflows), 3) * 0.35
+        shared_terms_score += min(len(shared_symbols), 3) * 0.25
+        active_work_context = bool(shared_paths or shared_commands or len(shared_workflows) >= 2)
+        return {
+            "shared_paths": shared_paths,
+            "shared_commands": shared_commands,
+            "shared_workflows": shared_workflows,
+            "shared_symbols": shared_symbols,
+            "shared_terms_score": shared_terms_score,
+            "continuation_query": bool(query_signals["continuation"]),
+            "active_work_context": active_work_context,
+        }
+
+    def upsert_record(self, record: MemoryRecord) -> Dict[str, Any]:
+        """Add or merge a structured memory record into the existing store.
+
+        Structured records remain plain text entries in MEMORY.md / USER.md.
+        This preserves the built-in memory files as the only durable authority.
+        """
+        normalized = normalize_memory_record(
+            MemoryRecord(
+                category=record.category,
+                content=record.content,
+                key=record.key,
+                target=record.target,
+                hits=record.hits,
+                confidence=record.confidence,
+                source=record.source,
+                updated_at=record.updated_at or datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                session_id=record.session_id or self._active_session_id,
+            )
+        )
+        entry = format_memory_record(normalized)
+
+        scan_error = _scan_memory_content(normalized.content)
+        if scan_error:
+            return {"success": False, "error": scan_error}
+
+        with self._file_lock(self._path_for(normalized.target)):
+            self._reload_target(normalized.target)
+            entries = self._entries_for(normalized.target)
+            limit = self._char_limit(normalized.target)
+
+            match_index = -1
+            merged_record = normalized
+            for idx, existing_entry in enumerate(entries):
+                existing_record = parse_memory_record(
+                    existing_entry,
+                    default_target=normalized.target,
+                )
+                if existing_record and existing_record.key == normalized.key:
+                    match_index = idx
+                    merged_record = merge_memory_records(existing_record, normalized)
+                    break
+
+            new_entry = format_memory_record(merged_record)
+            test_entries = list(entries)
+            action = "add"
+            message = "Structured memory added."
+            if match_index >= 0:
+                test_entries[match_index] = new_entry
+                action = "replace"
+                message = "Structured memory updated."
+            else:
+                test_entries.append(new_entry)
+
+            new_total = len(ENTRY_DELIMITER.join(test_entries)) if test_entries else 0
+            if new_total > limit:
+                current = self._char_count(normalized.target)
+                return {
+                    "success": False,
+                    "error": (
+                        f"Memory at {current:,}/{limit:,} chars. "
+                        f"Saving structured memory would exceed the limit."
+                    ),
+                }
+
+            self._set_entries(normalized.target, test_entries)
+            self.save_to_disk(normalized.target)
+
+        persisted_record = parse_memory_record(new_entry, default_target=normalized.target) or merged_record
+        result = self._success_response(normalized.target, message)
+        result.update(
+            {
+                "action": action,
+                "entry": new_entry,
+                "record": {
+                    "category": persisted_record.category,
+                    "key": persisted_record.key,
+                    "hits": persisted_record.hits,
+                    "confidence": persisted_record.confidence,
+                    "source": persisted_record.source,
+                    "target": persisted_record.target,
+                    "content": persisted_record.content,
+                },
+            }
+        )
+        return result
 
     def _entries_for(self, target: str) -> List[str]:
         if target == "user":
@@ -580,5 +1123,40 @@ registry.register(
 )
 
 
+def _extract_query_terms(text: str) -> set[str]:
+    words = [
+        match.group(0).lower()
+        for match in _WORD_RE.finditer(text or "")
+    ]
+    return {word for word in words if word not in _STOPWORDS}
 
 
+def _extract_continuity_signals(text: str) -> Dict[str, Any]:
+    raw = text or ""
+    lowered = raw.lower()
+    terms = _extract_query_terms(lowered)
+    paths = {match.group(0).lower() for match in _PATH_PATTERN_RE.finditer(raw)}
+    commands = {
+        _normalize_command_pattern(match.group(0))
+        for match in _COMMAND_PATTERN_RE.finditer(lowered)
+    }
+    workflow_terms = {term for term in terms if term in _WORKFLOW_TERMS}
+    symbols = {
+        symbol.lower()
+        for symbol in _CODE_SYMBOL_RE.findall(raw)
+        if symbol.lower() not in _STOPWORDS and not symbol.isupper()
+    }
+    continuation = any(hint in lowered for hint in _CONTINUITY_HINTS)
+    return {
+        "terms": terms,
+        "paths": paths,
+        "commands": {cmd for cmd in commands if cmd},
+        "workflow_terms": workflow_terms,
+        "symbols": symbols,
+        "continuation": continuation,
+    }
+
+
+def _normalize_command_pattern(command: str) -> str:
+    collapsed = " ".join((command or "").strip().split())
+    return collapsed[:80].lower()

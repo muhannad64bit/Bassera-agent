@@ -8,7 +8,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from hermes_cli.auth import AuthError, get_provider_auth_state, resolve_nous_runtime_credentials
+from wafi_cli.auth import AuthError, get_provider_auth_state, resolve_nous_runtime_credentials
 
 
 # =============================================================================
@@ -20,7 +20,7 @@ class TestResolveVerifyFallback:
     """Verify _resolve_verify falls back to True when CA bundle path doesn't exist."""
 
     def test_missing_ca_bundle_in_auth_state_falls_back(self):
-        from hermes_cli.auth import _resolve_verify
+        from wafi_cli.auth import _resolve_verify
 
         result = _resolve_verify(auth_state={
             "tls": {"insecure": False, "ca_bundle": "/nonexistent/ca-bundle.pem"},
@@ -29,7 +29,7 @@ class TestResolveVerifyFallback:
 
     def test_valid_ca_bundle_in_auth_state_is_returned(self, tmp_path, monkeypatch):
         import ssl
-        from hermes_cli.auth import _resolve_verify
+        from wafi_cli.auth import _resolve_verify
 
         ca_file = tmp_path / "ca-bundle.pem"
         ca_file.write_text("fake cert")
@@ -46,23 +46,23 @@ class TestResolveVerifyFallback:
         )
 
     def test_missing_ssl_cert_file_env_falls_back(self, monkeypatch):
-        from hermes_cli.auth import _resolve_verify
+        from wafi_cli.auth import _resolve_verify
 
         monkeypatch.setenv("SSL_CERT_FILE", "/nonexistent/ssl-cert.pem")
         monkeypatch.delenv("HERMES_CA_BUNDLE", raising=False)
         result = _resolve_verify(auth_state={"tls": {}})
         assert result is True
 
-    def test_missing_hermes_ca_bundle_env_falls_back(self, monkeypatch):
-        from hermes_cli.auth import _resolve_verify
+    def test_missing_wafi_ca_bundle_env_falls_back(self, monkeypatch):
+        from wafi_cli.auth import _resolve_verify
 
-        monkeypatch.setenv("HERMES_CA_BUNDLE", "/nonexistent/hermes-ca.pem")
+        monkeypatch.setenv("HERMES_CA_BUNDLE", "/nonexistent/wafi-ca.pem")
         monkeypatch.delenv("SSL_CERT_FILE", raising=False)
         result = _resolve_verify(auth_state={"tls": {}})
         assert result is True
 
     def test_insecure_takes_precedence_over_missing_ca(self):
-        from hermes_cli.auth import _resolve_verify
+        from wafi_cli.auth import _resolve_verify
 
         result = _resolve_verify(
             insecure=True,
@@ -71,7 +71,7 @@ class TestResolveVerifyFallback:
         assert result is False
 
     def test_no_ca_bundle_returns_true(self, monkeypatch):
-        from hermes_cli.auth import _resolve_verify
+        from wafi_cli.auth import _resolve_verify
 
         monkeypatch.delenv("HERMES_CA_BUNDLE", raising=False)
         monkeypatch.delenv("SSL_CERT_FILE", raising=False)
@@ -79,14 +79,14 @@ class TestResolveVerifyFallback:
         assert result is True
 
     def test_explicit_ca_bundle_param_missing_falls_back(self):
-        from hermes_cli.auth import _resolve_verify
+        from wafi_cli.auth import _resolve_verify
 
         result = _resolve_verify(ca_bundle="/nonexistent/explicit-ca.pem")
         assert result is True
 
     def test_explicit_ca_bundle_param_valid_is_returned(self, tmp_path, monkeypatch):
         import ssl
-        from hermes_cli.auth import _resolve_verify
+        from wafi_cli.auth import _resolve_verify
 
         ca_file = tmp_path / "explicit-ca.pem"
         ca_file.write_text("fake cert")
@@ -102,12 +102,12 @@ class TestResolveVerifyFallback:
 
 
 def _setup_nous_auth(
-    hermes_home: Path,
+    wafi_home: Path,
     *,
     access_token: str = "access-old",
     refresh_token: str = "refresh-old",
 ) -> None:
-    hermes_home.mkdir(parents=True, exist_ok=True)
+    wafi_home.mkdir(parents=True, exist_ok=True)
     auth_store = {
         "version": 1,
         "active_provider": "nous",
@@ -115,7 +115,7 @@ def _setup_nous_auth(
             "nous": {
                 "portal_base_url": "https://portal.example.com",
                 "inference_base_url": "https://inference.example.com/v1",
-                "client_id": "hermes-cli",
+                "client_id": "wafi-cli",
                 "token_type": "Bearer",
                 "scope": "inference:mint_agent_key",
                 "access_token": access_token,
@@ -132,7 +132,7 @@ def _setup_nous_auth(
             }
         },
     }
-    (hermes_home / "auth.json").write_text(json.dumps(auth_store, indent=2))
+    (wafi_home / "auth.json").write_text(json.dumps(auth_store, indent=2))
 
 
 def _mint_payload(api_key: str = "agent-key") -> dict:
@@ -151,15 +151,15 @@ def test_get_nous_auth_status_checks_credential_pool(tmp_path, monkeypatch):
     case when login happened via the dashboard device-code flow which
     saves to the pool only.
     """
-    from hermes_cli.auth import get_nous_auth_status
+    from wafi_cli.auth import get_nous_auth_status
 
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
     # Empty auth store — no Nous provider entry
-    (hermes_home / "auth.json").write_text(json.dumps({
+    (wafi_home / "auth.json").write_text(json.dumps({
         "version": 1, "providers": {},
     }))
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     # Seed the credential pool with a Nous entry
     from agent.credential_pool import PooledCredential, load_pool
@@ -187,11 +187,11 @@ def test_get_nous_auth_status_auth_store_fallback(tmp_path, monkeypatch):
     """get_nous_auth_status() falls back to auth store when credential
     pool is empty.
     """
-    from hermes_cli.auth import get_nous_auth_status
+    from wafi_cli.auth import get_nous_auth_status
 
-    hermes_home = tmp_path / "hermes"
-    _setup_nous_auth(hermes_home, access_token="at-123")
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    wafi_home = tmp_path / "wafi"
+    _setup_nous_auth(wafi_home, access_token="at-123")
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     status = get_nous_auth_status()
     assert status["logged_in"] is True
@@ -202,23 +202,23 @@ def test_get_nous_auth_status_empty_returns_not_logged_in(tmp_path, monkeypatch)
     """get_nous_auth_status() returns logged_in=False when both pool
     and auth store are empty.
     """
-    from hermes_cli.auth import get_nous_auth_status
+    from wafi_cli.auth import get_nous_auth_status
 
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    (hermes_home / "auth.json").write_text(json.dumps({
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
+    (wafi_home / "auth.json").write_text(json.dumps({
         "version": 1, "providers": {},
     }))
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     status = get_nous_auth_status()
     assert status["logged_in"] is False
 
 
 def test_refresh_token_persisted_when_mint_returns_insufficient_credits(tmp_path, monkeypatch):
-    hermes_home = tmp_path / "hermes"
-    _setup_nous_auth(hermes_home, refresh_token="refresh-old")
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    wafi_home = tmp_path / "wafi"
+    _setup_nous_auth(wafi_home, refresh_token="refresh-old")
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     refresh_calls = []
     mint_calls = {"count": 0}
@@ -239,8 +239,8 @@ def test_refresh_token_persisted_when_mint_returns_insufficient_credits(tmp_path
             raise AuthError("credits exhausted", provider="nous", code="insufficient_credits")
         return _mint_payload(api_key="agent-key-2")
 
-    monkeypatch.setattr("hermes_cli.auth._refresh_access_token", _fake_refresh_access_token)
-    monkeypatch.setattr("hermes_cli.auth._mint_agent_key", _fake_mint_agent_key)
+    monkeypatch.setattr("wafi_cli.auth._refresh_access_token", _fake_refresh_access_token)
+    monkeypatch.setattr("wafi_cli.auth._mint_agent_key", _fake_mint_agent_key)
 
     with pytest.raises(AuthError) as exc:
         resolve_nous_runtime_credentials(min_key_ttl_seconds=300)
@@ -257,9 +257,9 @@ def test_refresh_token_persisted_when_mint_returns_insufficient_credits(tmp_path
 
 
 def test_refresh_token_persisted_when_mint_times_out(tmp_path, monkeypatch):
-    hermes_home = tmp_path / "hermes"
-    _setup_nous_auth(hermes_home, refresh_token="refresh-old")
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    wafi_home = tmp_path / "wafi"
+    _setup_nous_auth(wafi_home, refresh_token="refresh-old")
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     def _fake_refresh_access_token(*, client, portal_base_url, client_id, refresh_token):
         return {
@@ -272,8 +272,8 @@ def test_refresh_token_persisted_when_mint_times_out(tmp_path, monkeypatch):
     def _fake_mint_agent_key(*, client, portal_base_url, access_token, min_ttl_seconds):
         raise httpx.ReadTimeout("mint timeout")
 
-    monkeypatch.setattr("hermes_cli.auth._refresh_access_token", _fake_refresh_access_token)
-    monkeypatch.setattr("hermes_cli.auth._mint_agent_key", _fake_mint_agent_key)
+    monkeypatch.setattr("wafi_cli.auth._refresh_access_token", _fake_refresh_access_token)
+    monkeypatch.setattr("wafi_cli.auth._mint_agent_key", _fake_mint_agent_key)
 
     with pytest.raises(httpx.ReadTimeout):
         resolve_nous_runtime_credentials(min_key_ttl_seconds=300)
@@ -285,9 +285,9 @@ def test_refresh_token_persisted_when_mint_times_out(tmp_path, monkeypatch):
 
 
 def test_mint_retry_uses_latest_rotated_refresh_token(tmp_path, monkeypatch):
-    hermes_home = tmp_path / "hermes"
-    _setup_nous_auth(hermes_home, refresh_token="refresh-old")
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    wafi_home = tmp_path / "wafi"
+    _setup_nous_auth(wafi_home, refresh_token="refresh-old")
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     refresh_calls = []
     mint_calls = {"count": 0}
@@ -308,8 +308,8 @@ def test_mint_retry_uses_latest_rotated_refresh_token(tmp_path, monkeypatch):
             raise AuthError("stale access token", provider="nous", code="invalid_token")
         return _mint_payload(api_key="agent-key")
 
-    monkeypatch.setattr("hermes_cli.auth._refresh_access_token", _fake_refresh_access_token)
-    monkeypatch.setattr("hermes_cli.auth._mint_agent_key", _fake_mint_agent_key)
+    monkeypatch.setattr("wafi_cli.auth._refresh_access_token", _fake_refresh_access_token)
+    monkeypatch.setattr("wafi_cli.auth._mint_agent_key", _fake_mint_agent_key)
 
     creds = resolve_nous_runtime_credentials(min_key_ttl_seconds=300)
     assert creds["api_key"] == "agent-key"
@@ -322,7 +322,7 @@ def test_mint_retry_uses_latest_rotated_refresh_token(tmp_path, monkeypatch):
 
 
 class TestLoginNousSkipKeepsCurrent:
-    """When a user runs `hermes model` → Nous Portal → Skip (keep current) after
+    """When a user runs `wafi model` → Nous Portal → Skip (keep current) after
     a successful OAuth login, the prior provider and model MUST be preserved.
 
     Regression: previously, _update_config_for_provider was called
@@ -333,11 +333,11 @@ class TestLoginNousSkipKeepsCurrent:
 
     def _setup_home_with_openrouter(self, tmp_path, monkeypatch):
         import yaml
-        hermes_home = tmp_path / "hermes"
-        hermes_home.mkdir(parents=True, exist_ok=True)
-        monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+        wafi_home = tmp_path / "wafi"
+        wafi_home.mkdir(parents=True, exist_ok=True)
+        monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
-        config_path = hermes_home / "config.yaml"
+        config_path = wafi_home / "config.yaml"
         config_path.write_text(yaml.safe_dump({
             "model": {
                 "provider": "openrouter",
@@ -345,19 +345,19 @@ class TestLoginNousSkipKeepsCurrent:
             },
         }, sort_keys=False))
 
-        auth_path = hermes_home / "auth.json"
+        auth_path = wafi_home / "auth.json"
         auth_path.write_text(json.dumps({
             "version": 1,
             "active_provider": "openrouter",
             "providers": {"openrouter": {"api_key": "sk-or-fake"}},
         }))
-        return hermes_home, config_path, auth_path
+        return wafi_home, config_path, auth_path
 
     def _patch_login_internals(self, monkeypatch, *, prompt_returns):
         """Patch OAuth + model-list + prompt so _login_nous doesn't hit network."""
-        import hermes_cli.auth as auth_mod
-        import hermes_cli.models as models_mod
-        import hermes_cli.nous_subscription as ns
+        import wafi_cli.auth as auth_mod
+        import wafi_cli.models as models_mod
+        import wafi_cli.nous_subscription as ns
 
         fake_auth_state = {
             "access_token": "fake-nous-token",
@@ -388,9 +388,9 @@ class TestLoginNousSkipKeepsCurrent:
         """User picks Skip → config.yaml untouched, Nous creds still saved."""
         import argparse
         import yaml
-        from hermes_cli.auth import PROVIDER_REGISTRY, _login_nous
+        from wafi_cli.auth import PROVIDER_REGISTRY, _login_nous
 
-        hermes_home, config_path, auth_path = self._setup_home_with_openrouter(
+        wafi_home, config_path, auth_path = self._setup_home_with_openrouter(
             tmp_path, monkeypatch,
         )
         self._patch_login_internals(monkeypatch, prompt_returns=None)
@@ -419,9 +419,9 @@ class TestLoginNousSkipKeepsCurrent:
         """User picks a Nous model → provider flips to nous with that model."""
         import argparse
         import yaml
-        from hermes_cli.auth import PROVIDER_REGISTRY, _login_nous
+        from wafi_cli.auth import PROVIDER_REGISTRY, _login_nous
 
-        hermes_home, config_path, auth_path = self._setup_home_with_openrouter(
+        wafi_home, config_path, auth_path = self._setup_home_with_openrouter(
             tmp_path, monkeypatch,
         )
         self._patch_login_internals(
@@ -446,13 +446,13 @@ class TestLoginNousSkipKeepsCurrent:
         instead of leaving it as nous."""
         import argparse
         import yaml
-        from hermes_cli.auth import PROVIDER_REGISTRY, _login_nous
+        from wafi_cli.auth import PROVIDER_REGISTRY, _login_nous
 
-        hermes_home = tmp_path / "hermes"
-        hermes_home.mkdir(parents=True, exist_ok=True)
-        monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+        wafi_home = tmp_path / "wafi"
+        wafi_home.mkdir(parents=True, exist_ok=True)
+        monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
-        config_path = hermes_home / "config.yaml"
+        config_path = wafi_home / "config.yaml"
         config_path.write_text(yaml.safe_dump({"model": {}}, sort_keys=False))
 
         # No auth.json yet — simulates first-run before any OAuth
@@ -464,7 +464,7 @@ class TestLoginNousSkipKeepsCurrent:
         )
         _login_nous(args, PROVIDER_REGISTRY["nous"])
 
-        auth_path = hermes_home / "auth.json"
+        auth_path = wafi_home / "auth.json"
         auth_after = json.loads(auth_path.read_text())
         # active_provider should NOT be set to "nous" after Skip
         assert auth_after.get("active_provider") in (None, "")
@@ -483,7 +483,7 @@ def _full_state_fixture() -> dict:
     return {
         "portal_base_url": "https://portal.example.com",
         "inference_base_url": "https://inference.example.com/v1",
-        "client_id": "hermes-cli",
+        "client_id": "wafi-cli",
         "scope": "inference:mint_agent_key",
         "token_type": "Bearer",
         "access_token": "access-tok",
@@ -504,21 +504,21 @@ def _full_state_fixture() -> dict:
 def test_persist_nous_credentials_writes_both_pool_and_providers(tmp_path, monkeypatch):
     """Helper must populate BOTH credential_pool.nous AND providers.nous.
 
-    Regression guard: before this helper existed, `hermes auth add nous`
+    Regression guard: before this helper existed, `wafi auth add nous`
     wrote only the pool. After the Nous agent_key's 24h TTL expired, the
     401-recovery path in run_agent.py called resolve_nous_runtime_credentials
     which reads providers.nous, found it empty, raised AuthError, and the
     agent failed with "Non-retryable client error". Both stores must stay
     in sync at write time.
     """
-    from hermes_cli.auth import persist_nous_credentials, NOUS_DEVICE_CODE_SOURCE
+    from wafi_cli.auth import persist_nous_credentials, NOUS_DEVICE_CODE_SOURCE
 
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    (hermes_home / "auth.json").write_text(json.dumps({
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
+    (wafi_home / "auth.json").write_text(json.dumps({
         "version": 1, "providers": {},
     }))
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     entry = persist_nous_credentials(_full_state_fixture())
 
@@ -526,7 +526,7 @@ def test_persist_nous_credentials_writes_both_pool_and_providers(tmp_path, monke
     assert entry.provider == "nous"
     assert entry.source == NOUS_DEVICE_CODE_SOURCE
 
-    payload = json.loads((hermes_home / "auth.json").read_text())
+    payload = json.loads((wafi_home / "auth.json").read_text())
 
     # providers.nous populated with the full state (new behaviour)
     singleton = payload["providers"]["nous"]
@@ -546,26 +546,26 @@ def test_persist_nous_credentials_writes_both_pool_and_providers(tmp_path, monke
 
 def test_persist_nous_credentials_allows_recovery_from_401(tmp_path, monkeypatch):
     """End-to-end: after persisting via the helper, resolve_nous_runtime_credentials
-    must succeed (not raise "Hermes is not logged into Nous Portal").
+    must succeed (not raise "Wafi is not logged into Nous Portal").
 
     This is the exact path that run_agent.py's `_try_refresh_nous_client_credentials`
     calls after a Nous 401 — before the fix it would raise AuthError because
     providers.nous was empty.
     """
-    from hermes_cli.auth import persist_nous_credentials, resolve_nous_runtime_credentials
+    from wafi_cli.auth import persist_nous_credentials, resolve_nous_runtime_credentials
 
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    (hermes_home / "auth.json").write_text(json.dumps({
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
+    (wafi_home / "auth.json").write_text(json.dumps({
         "version": 1, "providers": {},
     }))
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     persist_nous_credentials(_full_state_fixture())
 
     # Stub the network-touching steps so we don't actually contact the
     # portal — the point of this test is that state lookup succeeds and
-    # doesn't raise "Hermes is not logged into Nous Portal".
+    # doesn't raise "Wafi is not logged into Nous Portal".
     def _fake_refresh_access_token(*, client, portal_base_url, client_id, refresh_token):
         return {
             "access_token": "access-new",
@@ -577,8 +577,8 @@ def test_persist_nous_credentials_allows_recovery_from_401(tmp_path, monkeypatch
     def _fake_mint_agent_key(*, client, portal_base_url, access_token, min_ttl_seconds):
         return _mint_payload(api_key="new-agent-key")
 
-    monkeypatch.setattr("hermes_cli.auth._refresh_access_token", _fake_refresh_access_token)
-    monkeypatch.setattr("hermes_cli.auth._mint_agent_key", _fake_mint_agent_key)
+    monkeypatch.setattr("wafi_cli.auth._refresh_access_token", _fake_refresh_access_token)
+    monkeypatch.setattr("wafi_cli.auth._mint_agent_key", _fake_mint_agent_key)
 
     creds = resolve_nous_runtime_credentials(min_key_ttl_seconds=300, force_mint=True)
     assert creds["api_key"] == "new-agent-key"
@@ -594,14 +594,14 @@ def test_persist_nous_credentials_idempotent_no_duplicate_pool_entries(tmp_path,
     materialise the pool entry under the canonical ``device_code`` source, so
     two persists still leave the pool with exactly one row.
     """
-    from hermes_cli.auth import persist_nous_credentials, NOUS_DEVICE_CODE_SOURCE
+    from wafi_cli.auth import persist_nous_credentials, NOUS_DEVICE_CODE_SOURCE
 
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    (hermes_home / "auth.json").write_text(json.dumps({
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
+    (wafi_home / "auth.json").write_text(json.dumps({
         "version": 1, "providers": {},
     }))
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     first = _full_state_fixture()
     persist_nous_credentials(first)
@@ -611,7 +611,7 @@ def test_persist_nous_credentials_idempotent_no_duplicate_pool_entries(tmp_path,
     second["agent_key"] = "agent-key-second"
     persist_nous_credentials(second)
 
-    payload = json.loads((hermes_home / "auth.json").read_text())
+    payload = json.loads((wafi_home / "auth.json").read_text())
 
     # providers.nous reflects the latest write (singleton semantics)
     assert payload["providers"]["nous"]["access_token"] == "access-second"
@@ -633,14 +633,14 @@ def test_persist_nous_credentials_reloads_pool_after_singleton_write(tmp_path, m
     callers observe the canonical seeded state, including any legacy entries
     that ``_seed_from_singletons`` pruned or upserted.
     """
-    from hermes_cli.auth import persist_nous_credentials, NOUS_DEVICE_CODE_SOURCE
+    from wafi_cli.auth import persist_nous_credentials, NOUS_DEVICE_CODE_SOURCE
 
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    (hermes_home / "auth.json").write_text(json.dumps({
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
+    (wafi_home / "auth.json").write_text(json.dumps({
         "version": 1, "providers": {},
     }))
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     entry = persist_nous_credentials(_full_state_fixture())
     assert entry is not None
@@ -654,19 +654,19 @@ def test_persist_nous_credentials_reloads_pool_after_singleton_write(tmp_path, m
 def test_persist_nous_credentials_embeds_custom_label(tmp_path, monkeypatch):
     """User-supplied ``--label`` round-trips through providers.nous and the pool.
 
-    Previously `hermes auth add nous --type oauth --label <name>` silently
+    Previously `wafi auth add nous --type oauth --label <name>` silently
     dropped the label because persist_nous_credentials() ignored it and
     _seed_from_singletons always auto-derived via label_from_token().  The
     fix stashes the label inside providers.nous so seeding prefers it.
     """
-    from hermes_cli.auth import persist_nous_credentials, NOUS_DEVICE_CODE_SOURCE
+    from wafi_cli.auth import persist_nous_credentials, NOUS_DEVICE_CODE_SOURCE
 
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    (hermes_home / "auth.json").write_text(json.dumps({
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
+    (wafi_home / "auth.json").write_text(json.dumps({
         "version": 1, "providers": {},
     }))
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     entry = persist_nous_credentials(_full_state_fixture(), label="my-personal")
     assert entry is not None
@@ -675,7 +675,7 @@ def test_persist_nous_credentials_embeds_custom_label(tmp_path, monkeypatch):
 
     # providers.nous carries the label so re-seeding on the next load_pool
     # doesn't overwrite it with the auto-derived fingerprint.
-    payload = json.loads((hermes_home / "auth.json").read_text())
+    payload = json.loads((wafi_home / "auth.json").read_text())
     assert payload["providers"]["nous"]["label"] == "my-personal"
 
 
@@ -683,15 +683,15 @@ def test_persist_nous_credentials_custom_label_survives_reseed(tmp_path, monkeyp
     """Reopening the pool (which re-runs _seed_from_singletons) must keep the
     user-chosen label instead of clobbering it with label_from_token output.
     """
-    from hermes_cli.auth import persist_nous_credentials
+    from wafi_cli.auth import persist_nous_credentials
     from agent.credential_pool import load_pool
 
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    (hermes_home / "auth.json").write_text(json.dumps({
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
+    (wafi_home / "auth.json").write_text(json.dumps({
         "version": 1, "providers": {},
     }))
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     persist_nous_credentials(_full_state_fixture(), label="work-acct")
 
@@ -707,14 +707,14 @@ def test_persist_nous_credentials_no_label_uses_auto_derived(tmp_path, monkeypat
     """When the caller doesn't pass ``label``, the auto-derived fingerprint
     is used (unchanged default behaviour — regression guard).
     """
-    from hermes_cli.auth import persist_nous_credentials
+    from wafi_cli.auth import persist_nous_credentials
 
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    (hermes_home / "auth.json").write_text(json.dumps({
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
+    (wafi_home / "auth.json").write_text(json.dumps({
         "version": 1, "providers": {},
     }))
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     entry = persist_nous_credentials(_full_state_fixture())
     assert entry is not None
@@ -725,5 +725,5 @@ def test_persist_nous_credentials_no_label_uses_auto_derived(tmp_path, monkeypat
     assert entry.label != "my-personal"
 
     # No "label" key embedded in providers.nous when the caller didn't supply one.
-    payload = json.loads((hermes_home / "auth.json").read_text())
+    payload = json.loads((wafi_home / "auth.json").read_text())
     assert "label" not in payload["providers"]["nous"]

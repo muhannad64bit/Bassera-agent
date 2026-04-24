@@ -1,13 +1,13 @@
 """Regression tests for /model support of config.yaml custom_providers.
 
-The terminal `hermes model` flow already exposes `custom_providers`, but the
+The terminal `wafi model` flow already exposes `custom_providers`, but the
 shared slash-command pipeline (`/model` in CLI/gateway/Telegram) historically
 only looked at `providers:`.
 """
 
-import hermes_cli.providers as providers_mod
-from hermes_cli.model_switch import list_authenticated_providers, switch_model
-from hermes_cli.providers import resolve_provider_full
+import wafi_cli.providers as providers_mod
+from wafi_cli.model_switch import list_authenticated_providers, switch_model
+from wafi_cli.providers import resolve_provider_full
 
 
 _MOCK_VALIDATION = {
@@ -68,16 +68,16 @@ def test_resolve_provider_full_finds_named_custom_provider():
 def test_switch_model_accepts_explicit_named_custom_provider(monkeypatch):
     """Shared /model switch pipeline should accept --provider for custom_providers."""
     monkeypatch.setattr(
-        "hermes_cli.runtime_provider.resolve_runtime_provider",
+        "wafi_cli.runtime_provider.resolve_runtime_provider",
         lambda requested: {
             "api_key": "no-key-required",
             "base_url": "http://127.0.0.1:4141/v1",
             "api_mode": "chat_completions",
         },
     )
-    monkeypatch.setattr("hermes_cli.models.validate_requested_model", lambda *a, **k: _MOCK_VALIDATION)
-    monkeypatch.setattr("hermes_cli.model_switch.get_model_info", lambda *a, **k: None)
-    monkeypatch.setattr("hermes_cli.model_switch.get_model_capabilities", lambda *a, **k: None)
+    monkeypatch.setattr("wafi_cli.models.validate_requested_model", lambda *a, **k: _MOCK_VALIDATION)
+    monkeypatch.setattr("wafi_cli.model_switch.get_model_info", lambda *a, **k: None)
+    monkeypatch.setattr("wafi_cli.model_switch.get_model_capabilities", lambda *a, **k: None)
 
     result = switch_model(
         raw_input="rotator-openrouter-coding",
@@ -162,7 +162,7 @@ def test_list_enumerates_dict_format_models_alongside_default(monkeypatch):
     """custom_providers entry with dict-format ``models:`` plus singular
     ``model:`` should surface the default and every dict key.
 
-    Regression: Hermes's own writer stores configured models as a dict
+    Regression: Wafi's own writer stores configured models as a dict
     keyed by model id, but the /model picker previously only honored the
     singular ``model:`` field, so multi-model custom providers appeared
     to have only the active model.

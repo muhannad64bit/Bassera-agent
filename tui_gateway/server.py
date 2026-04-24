@@ -12,14 +12,14 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from hermes_constants import get_hermes_home
-from hermes_cli.env_loader import load_hermes_dotenv
+from wafi_constants import get_wafi_home
+from wafi_cli.env_loader import load_wafi_dotenv
 
-_hermes_home = get_hermes_home()
-load_hermes_dotenv(hermes_home=_hermes_home, project_env=Path(__file__).parent.parent / ".env")
+_wafi_home = get_wafi_home()
+load_wafi_dotenv(wafi_home=_wafi_home, project_env=Path(__file__).parent.parent / ".env")
 
 try:
-    from hermes_cli.banner import prefetch_update_check
+    from wafi_cli.banner import prefetch_update_check
     prefetch_update_check()
 except Exception:
     pass
@@ -62,7 +62,7 @@ sys.stdout = sys.stderr
 
 
 class _SlashWorker:
-    """Persistent HermesCLI subprocess for slash commands."""
+    """Persistent WafiCLI subprocess for slash commands."""
 
     def __init__(self, session_key: str, model: str):
         self._lock = threading.Lock()
@@ -140,7 +140,7 @@ atexit.register(lambda: [
 def _get_db():
     global _db
     if _db is None:
-        from hermes_state import SessionDB
+        from wafi_state import SessionDB
         _db = SessionDB()
     return _db
 
@@ -274,7 +274,7 @@ def _load_cfg() -> dict:
     global _cfg_cache, _cfg_mtime
     try:
         import yaml
-        p = _hermes_home / "config.yaml"
+        p = _wafi_home / "config.yaml"
         mtime = p.stat().st_mtime if p.exists() else None
         with _cfg_lock:
             if _cfg_cache is not None and _cfg_mtime == mtime:
@@ -296,7 +296,7 @@ def _load_cfg() -> dict:
 def _save_cfg(cfg: dict):
     global _cfg_cache, _cfg_mtime
     import yaml
-    path = _hermes_home / "config.yaml"
+    path = _wafi_home / "config.yaml"
     with open(path, "w") as f:
         yaml.safe_dump(cfg, f)
     with _cfg_lock:
@@ -364,7 +364,7 @@ def _clear_pending(sid: str | None = None) -> None:
 
 def resolve_skin() -> dict:
     try:
-        from hermes_cli.skin_engine import init_skin_from_config, get_active_skin
+        from wafi_cli.skin_engine import init_skin_from_config, get_active_skin
         init_skin_from_config(_load_cfg())
         skin = get_active_skin()
         return {
@@ -405,7 +405,7 @@ def _write_config_key(key_path: str, value):
 
 
 def _load_reasoning_config() -> dict | None:
-    from hermes_constants import parse_reasoning_effort
+    from wafi_constants import parse_reasoning_effort
 
     effort = str(_load_cfg().get("agent", {}).get("reasoning_effort", "") or "").strip()
     return parse_reasoning_effort(effort)
@@ -436,8 +436,8 @@ def _load_tool_progress_mode() -> str:
 
 def _load_enabled_toolsets() -> list[str] | None:
     try:
-        from hermes_cli.config import load_config
-        from hermes_cli.tools_config import _get_platform_tools
+        from wafi_cli.config import load_config
+        from wafi_cli.tools_config import _get_platform_tools
 
         enabled = sorted(_get_platform_tools(load_config(), "cli", include_default_mcp_servers=False))
         return enabled or None
@@ -467,7 +467,7 @@ def _restart_slash_worker(session: dict):
 
 
 def _persist_model_switch(result) -> None:
-    from hermes_cli.config import save_config
+    from wafi_cli.config import save_config
 
     cfg = _load_cfg()
     model_cfg = cfg.get("model")
@@ -485,8 +485,8 @@ def _persist_model_switch(result) -> None:
 
 
 def _apply_model_switch(sid: str, session: dict, raw_input: str) -> dict:
-    from hermes_cli.model_switch import parse_model_flags, switch_model
-    from hermes_cli.runtime_provider import resolve_runtime_provider
+    from wafi_cli.model_switch import parse_model_flags, switch_model
+    from wafi_cli.runtime_provider import resolve_runtime_provider
 
     model_input, explicit_provider, persist_global = parse_model_flags(raw_input)
     if not model_input:
@@ -621,7 +621,7 @@ def _session_info(agent) -> dict:
         "usage": _get_usage(agent),
     }
     try:
-        from hermes_cli import __version__, __release_date__
+        from wafi_cli import __version__, __release_date__
         info["version"] = __version__
         info["release_date"] = __release_date__
     except Exception:
@@ -634,7 +634,7 @@ def _session_info(agent) -> dict:
     except Exception:
         pass
     try:
-        from hermes_cli.banner import get_available_skills
+        from wafi_cli.banner import get_available_skills
         info["skills"] = get_available_skills()
     except Exception:
         pass
@@ -644,8 +644,8 @@ def _session_info(agent) -> dict:
     except Exception:
         info["mcp_servers"] = []
     try:
-        from hermes_cli.banner import get_update_result
-        from hermes_cli.config import recommended_update_command
+        from wafi_cli.banner import get_update_result
+        from wafi_cli.config import recommended_update_command
         info["update_behind"] = get_update_result(timeout=0.5)
         info["update_command"] = recommended_update_command()
     except Exception:
@@ -812,7 +812,7 @@ def _wire_callbacks(sid: str):
         val = _block("secret.request", sid, pl)
         if not val:
             return {"success": True, "stored_as": env_var, "validated": False, "skipped": True, "message": "skipped"}
-        from hermes_cli.config import save_env_value_secure
+        from wafi_cli.config import save_env_value_secure
         return {**save_env_value_secure(env_var, val), "skipped": False, "message": "ok"}
 
     set_secret_capture_callback(secret_cb)
@@ -829,7 +829,7 @@ def _resolve_personality_prompt(cfg: dict) -> str:
         personalities = load_cli_config().get("agent", {}).get("personalities", {})
     except Exception:
         try:
-            from hermes_cli.config import load_config as _load_full_cfg
+            from wafi_cli.config import load_config as _load_full_cfg
 
             personalities = _load_full_cfg().get("agent", {}).get("personalities", {})
         except Exception:
@@ -858,7 +858,7 @@ def _available_personalities(cfg: dict | None = None) -> dict:
         return load_cli_config().get("agent", {}).get("personalities", {}) or {}
     except Exception:
         try:
-            from hermes_cli.config import load_config as _load_full_cfg
+            from wafi_cli.config import load_config as _load_full_cfg
 
             return _load_full_cfg().get("agent", {}).get("personalities", {}) or {}
         except Exception:
@@ -1354,7 +1354,7 @@ def _(rid, params: dict) -> dict:
     if err:
         return err
     import time as _time
-    filename = os.path.abspath(f"hermes_conversation_{_time.strftime('%Y%m%d_%H%M%S')}.json")
+    filename = os.path.abspath(f"wafi_conversation_{_time.strftime('%Y%m%d_%H%M%S')}.json")
     try:
         with open(filename, "w") as f:
             json.dump({"model": getattr(session["agent"], "model", ""), "messages": session.get("history", [])},
@@ -1609,12 +1609,12 @@ def _(rid, params: dict) -> dict:
         return err
     try:
         from datetime import datetime
-        from hermes_cli.clipboard import has_clipboard_image, save_clipboard_image
+        from wafi_cli.clipboard import has_clipboard_image, save_clipboard_image
     except Exception as e:
         return _err(rid, 5027, f"clipboard unavailable: {e}")
 
     session["image_counter"] = session.get("image_counter", 0) + 1
-    img_dir = _hermes_home / "images"
+    img_dir = _wafi_home / "images"
     img_dir.mkdir(parents=True, exist_ok=True)
     img_path = img_dir / f"clip_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{session['image_counter']}.png"
 
@@ -1890,7 +1890,7 @@ def _(rid, params: dict) -> dict:
 
     if key == "reasoning":
         try:
-            from hermes_constants import parse_reasoning_effort
+            from wafi_constants import parse_reasoning_effort
 
             arg = str(value or "").strip().lower()
             if arg in ("show", "on"):
@@ -1990,7 +1990,7 @@ def _(rid, params: dict) -> dict:
     key = params.get("key", "")
     if key == "provider":
         try:
-            from hermes_cli.models import list_available_providers, normalize_provider
+            from wafi_cli.models import list_available_providers, normalize_provider
             model = _resolve_model()
             parts = model.split("/", 1)
             return _ok(rid, {"model": model, "provider": normalize_provider(parts[0]) if len(parts) > 1 else "unknown",
@@ -1998,8 +1998,8 @@ def _(rid, params: dict) -> dict:
         except Exception as e:
             return _err(rid, 5013, str(e))
     if key == "profile":
-        from hermes_constants import display_hermes_home
-        return _ok(rid, {"home": str(_hermes_home), "display": display_hermes_home()})
+        from wafi_constants import display_wafi_home
+        return _ok(rid, {"home": str(_wafi_home), "display": display_wafi_home()})
     if key == "full":
         return _ok(rid, {"config": _load_cfg()})
     if key == "prompt":
@@ -2035,7 +2035,7 @@ def _(rid, params: dict) -> dict:
         on = bool(_load_cfg().get("display", {}).get("tui_statusbar", True))
         return _ok(rid, {"value": "on" if on else "off"})
     if key == "mtime":
-        cfg_path = _hermes_home / "config.yaml"
+        cfg_path = _wafi_home / "config.yaml"
         try:
             return _ok(rid, {"mtime": cfg_path.stat().st_mtime if cfg_path.exists() else 0})
         except Exception:
@@ -2046,7 +2046,7 @@ def _(rid, params: dict) -> dict:
 @method("setup.status")
 def _(rid, params: dict) -> dict:
     try:
-        from hermes_cli.main import _has_any_provider_configured
+        from wafi_cli.main import _has_any_provider_configured
         return _ok(rid, {"provider_configured": bool(_has_any_provider_configured())})
     except Exception as e:
         return _err(rid, 5016, str(e))
@@ -2101,7 +2101,7 @@ _PENDING_INPUT_COMMANDS: frozenset[str] = frozenset({
 def _(rid, params: dict) -> dict:
     """Registry-backed slash metadata for the TUI — categorized, no aliases."""
     try:
-        from hermes_cli.commands import COMMAND_REGISTRY, SUBCOMMANDS, _build_description
+        from wafi_cli.commands import COMMAND_REGISTRY, SUBCOMMANDS, _build_description
 
         all_pairs: list[list[str]] = []
         canon: dict[str, str] = {}
@@ -2191,22 +2191,22 @@ def _(rid, params: dict) -> dict:
 def _cli_exec_blocked(argv: list[str]) -> str | None:
     """Return user hint if this argv must not run headless in the gateway process."""
     if not argv:
-        return "bare `hermes` is interactive — use `/hermes chat -q …` or run `hermes` in another terminal"
+        return "bare `wafi` is interactive — use `/wafi chat -q …` or run `wafi` in another terminal"
     a0 = argv[0].lower()
     if a0 == "setup":
-        return "`hermes setup` needs a full terminal — run it outside the TUI"
+        return "`wafi setup` needs a full terminal — run it outside the TUI"
     if a0 == "gateway":
-        return "`hermes gateway` is long-running — run it in another terminal"
+        return "`wafi gateway` is long-running — run it in another terminal"
     if a0 == "sessions" and len(argv) > 1 and argv[1].lower() == "browse":
-        return "`hermes sessions browse` is interactive — use /resume here, or run browse in another terminal"
+        return "`wafi sessions browse` is interactive — use /resume here, or run browse in another terminal"
     if a0 == "config" and len(argv) > 1 and argv[1].lower() == "edit":
-        return "`hermes config edit` needs $EDITOR in a real terminal"
+        return "`wafi config edit` needs $EDITOR in a real terminal"
     return None
 
 
 @method("cli.exec")
 def _(rid, params: dict) -> dict:
-    """Run `python -m hermes_cli.main` with argv; capture stdout/stderr (non-interactive only)."""
+    """Run `python -m wafi_cli.main` with argv; capture stdout/stderr (non-interactive only)."""
     argv = params.get("argv", [])
     if not isinstance(argv, list) or not all(isinstance(x, str) for x in argv):
         return _err(rid, 4003, "argv must be list[str]")
@@ -2215,7 +2215,7 @@ def _(rid, params: dict) -> dict:
         return _ok(rid, {"blocked": True, "hint": hint, "code": -1, "output": ""})
     try:
         r = subprocess.run(
-            [sys.executable, "-m", "hermes_cli.main", *argv],
+            [sys.executable, "-m", "wafi_cli.main", *argv],
             capture_output=True,
             text=True,
             timeout=min(int(params.get("timeout", 240)), 600),
@@ -2234,7 +2234,7 @@ def _(rid, params: dict) -> dict:
 @method("command.resolve")
 def _(rid, params: dict) -> dict:
     try:
-        from hermes_cli.commands import resolve_command
+        from wafi_cli.commands import resolve_command
         r = resolve_command(params.get("name", ""))
         if r:
             return _ok(rid, {"canonical": r.name, "description": r.description, "category": r.category})
@@ -2245,7 +2245,7 @@ def _(rid, params: dict) -> dict:
 
 def _resolve_name(name: str) -> str:
     try:
-        from hermes_cli.commands import resolve_command
+        from wafi_cli.commands import resolve_command
         r = resolve_command(name)
         return r.name if r else name
     except Exception:
@@ -2273,7 +2273,7 @@ def _(rid, params: dict) -> dict:
             return _ok(rid, {"type": "alias", "target": qc.get("target", "")})
 
     try:
-        from hermes_cli.plugins import get_plugin_command_handler
+        from wafi_cli.plugins import get_plugin_command_handler
         handler = get_plugin_command_handler(name)
         if handler:
             return _ok(rid, {"type": "plugin", "output": str(handler(arg) or "")})
@@ -2378,7 +2378,7 @@ def _(rid, params: dict) -> dict:
 
     _paste_counter += 1
     line_count = text.count('\n') + 1
-    paste_dir = _hermes_home / "pastes"
+    paste_dir = _wafi_home / "pastes"
     paste_dir.mkdir(parents=True, exist_ok=True)
 
     from datetime import datetime
@@ -2469,7 +2469,7 @@ def _(rid, params: dict) -> dict:
         return _ok(rid, {"items": []})
 
     try:
-        from hermes_cli.commands import SlashCommandCompleter
+        from wafi_cli.commands import SlashCommandCompleter
         from prompt_toolkit.document import Document
         from prompt_toolkit.formatted_text import to_plain_text
 
@@ -2498,7 +2498,7 @@ def _(rid, params: dict) -> dict:
 @method("model.options")
 def _(rid, params: dict) -> dict:
     try:
-        from hermes_cli.model_switch import list_authenticated_providers
+        from wafi_cli.model_switch import list_authenticated_providers
 
         session = _sessions.get(params.get("session_id", ""))
         agent = session.get("agent") if session else None
@@ -2506,7 +2506,7 @@ def _(rid, params: dict) -> dict:
         current_provider = getattr(agent, "provider", "") or ""
         current_model = getattr(agent, "model", "") or _resolve_model()
         # list_authenticated_providers already populates each provider's
-        # "models" with the curated list (same source as `hermes model` and
+        # "models" with the curated list (same source as `wafi model` and
         # classic CLI's /model picker). Do NOT overwrite with live
         # provider_model_ids() — that bypasses curation and pulls in
         # non-agentic models (e.g. Nous /models returns ~400 IDs including
@@ -2653,11 +2653,11 @@ def _(rid, params: dict) -> dict:
     action = params.get("action", "start")
     try:
         if action == "start":
-            from hermes_cli.voice import start_recording
+            from wafi_cli.voice import start_recording
             start_recording()
             return _ok(rid, {"status": "recording"})
         if action == "stop":
-            from hermes_cli.voice import stop_and_transcribe
+            from wafi_cli.voice import stop_and_transcribe
             return _ok(rid, {"text": stop_and_transcribe() or ""})
         return _err(rid, 4019, f"unknown voice action: {action}")
     except ImportError:
@@ -2672,7 +2672,7 @@ def _(rid, params: dict) -> dict:
     if not text:
         return _err(rid, 4020, "text required")
     try:
-        from hermes_cli.voice import speak_text
+        from wafi_cli.voice import speak_text
         threading.Thread(target=speak_text, args=(text,), daemon=True).start()
         return _ok(rid, {"status": "speaking"})
     except ImportError:
@@ -2827,7 +2827,7 @@ def _(rid, params: dict) -> dict:
 @method("plugins.list")
 def _(rid, params: dict) -> dict:
     try:
-        from hermes_cli.plugins import get_plugin_manager
+        from wafi_cli.plugins import get_plugin_manager
         return _ok(rid, {"plugins": [
             {"name": n, "version": getattr(i, "version", "?"), "enabled": getattr(i, "enabled", True)}
             for n, i in get_plugin_manager()._plugins.items()]})
@@ -2862,7 +2862,7 @@ def _(rid, params: dict) -> dict:
             "title": "Environment",
             "rows": [
                 ["Working Dir", os.getcwd()],
-                ["Config File", str(_hermes_home / "config.yaml")],
+                ["Config File", str(_wafi_home / "config.yaml")],
             ]
         }]
         return _ok(rid, {"sections": sections})
@@ -2932,8 +2932,8 @@ def _(rid, params: dict) -> dict:
         return _err(rid, 4018, "names required")
 
     try:
-        from hermes_cli.config import load_config, save_config
-        from hermes_cli.tools_config import (
+        from wafi_cli.config import load_config, save_config
+        from wafi_cli.tools_config import (
             CONFIGURABLE_TOOLSETS,
             _apply_mcp_change,
             _apply_toolset_change,
@@ -3036,24 +3036,24 @@ def _(rid, params: dict) -> dict:
     action, query = params.get("action", "list"), params.get("query", "")
     try:
         if action == "list":
-            from hermes_cli.banner import get_available_skills
+            from wafi_cli.banner import get_available_skills
             return _ok(rid, {"skills": get_available_skills()})
         if action == "search":
-            from hermes_cli.skills_hub import unified_search, GitHubAuth, create_source_router
+            from wafi_cli.skills_hub import unified_search, GitHubAuth, create_source_router
             raw = unified_search(query, create_source_router(GitHubAuth()), source_filter="all", limit=20) or []
             return _ok(rid, {"results": [{"name": r.name, "description": r.description} for r in raw]})
         if action == "install":
-            from hermes_cli.skills_hub import do_install
+            from wafi_cli.skills_hub import do_install
             class _Q:
                 def print(self, *a, **k): pass
             do_install(query, skip_confirm=True, console=_Q())
             return _ok(rid, {"installed": True, "name": query})
         if action == "browse":
-            from hermes_cli.skills_hub import browse_skills
+            from wafi_cli.skills_hub import browse_skills
             pg = int(params.get("page", 0) or 0) or (int(query) if query.isdigit() else 1)
             return _ok(rid, browse_skills(page=pg, page_size=int(params.get("page_size", 20))))
         if action == "inspect":
-            from hermes_cli.skills_hub import inspect_skill
+            from wafi_cli.skills_hub import inspect_skill
             return _ok(rid, {"info": inspect_skill(query) or {}})
         return _err(rid, 4017, f"unknown skills action: {action}")
     except Exception as e:

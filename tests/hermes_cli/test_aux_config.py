@@ -1,4 +1,4 @@
-"""Tests for the auxiliary-model configuration UI in ``hermes model``.
+"""Tests for the auxiliary-model configuration UI in ``wafi model``.
 
 Covers the helper functions:
   - ``_save_aux_choice`` writes to config.yaml without touching main model config
@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import pytest
 
-from hermes_cli.config import DEFAULT_CONFIG, load_config
-from hermes_cli.main import (
+from wafi_cli.config import DEFAULT_CONFIG, load_config
+from wafi_cli.main import (
     _AUX_TASKS,
     _format_aux_current,
     _reset_aux_to_auto,
@@ -96,9 +96,9 @@ def test_format_aux_current_handles_non_dict():
 def test_save_aux_choice_persists_to_config_yaml(tmp_path, monkeypatch):
     """Saving a task writes provider/model/base_url/api_key to auxiliary.<task>."""
     from pathlib import Path
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".wafi"))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    (tmp_path / ".hermes").mkdir(exist_ok=True)
+    (tmp_path / ".wafi").mkdir(exist_ok=True)
 
     _save_aux_choice(
         "vision", provider="openrouter", model="google/gemini-2.5-flash",
@@ -114,9 +114,9 @@ def test_save_aux_choice_persists_to_config_yaml(tmp_path, monkeypatch):
 def test_save_aux_choice_preserves_timeout(tmp_path, monkeypatch):
     """Saving must NOT clobber user-tuned timeout values."""
     from pathlib import Path
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".wafi"))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    (tmp_path / ".hermes").mkdir(exist_ok=True)
+    (tmp_path / ".wafi").mkdir(exist_ok=True)
 
     # Default vision timeout is 120
     cfg_before = load_config()
@@ -133,12 +133,12 @@ def test_save_aux_choice_preserves_timeout(tmp_path, monkeypatch):
 def test_save_aux_choice_does_not_touch_main_model(tmp_path, monkeypatch):
     """Aux config must never mutate model.default / model.provider / model.base_url."""
     from pathlib import Path
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".wafi"))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    (tmp_path / ".hermes").mkdir(exist_ok=True)
+    (tmp_path / ".wafi").mkdir(exist_ok=True)
 
     # Simulate a configured main model
-    from hermes_cli.config import save_config
+    from wafi_cli.config import save_config
 
     cfg = load_config()
     cfg["model"] = {
@@ -167,12 +167,12 @@ def test_save_aux_choice_does_not_touch_main_model(tmp_path, monkeypatch):
 def test_save_aux_choice_creates_missing_task_entry(tmp_path, monkeypatch):
     """Saving a task that was wiped from config.yaml should recreate it."""
     from pathlib import Path
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".wafi"))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    (tmp_path / ".hermes").mkdir(exist_ok=True)
+    (tmp_path / ".wafi").mkdir(exist_ok=True)
 
     # Remove vision from config entirely
-    from hermes_cli.config import save_config
+    from wafi_cli.config import save_config
 
     cfg = load_config()
     cfg.setdefault("auxiliary", {}).pop("vision", None)
@@ -189,14 +189,14 @@ def test_save_aux_choice_creates_missing_task_entry(tmp_path, monkeypatch):
 
 def test_reset_aux_to_auto_clears_routing_preserves_timeouts(tmp_path, monkeypatch):
     from pathlib import Path
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".wafi"))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    (tmp_path / ".hermes").mkdir(exist_ok=True)
+    (tmp_path / ".wafi").mkdir(exist_ok=True)
 
     # Configure two tasks non-auto, and bump a timeout
     _save_aux_choice("vision", provider="openrouter", model="gpt-4o")
     _save_aux_choice("compression", provider="nous", model="gemini-3-flash")
-    from hermes_cli.config import save_config
+    from wafi_cli.config import save_config
 
     cfg = load_config()
     cfg["auxiliary"]["vision"]["timeout"] = 300  # user-tuned
@@ -221,9 +221,9 @@ def test_reset_aux_to_auto_clears_routing_preserves_timeouts(tmp_path, monkeypat
 def test_reset_aux_to_auto_idempotent(tmp_path, monkeypatch):
     """Second reset on already-auto config returns 0 without errors."""
     from pathlib import Path
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".wafi"))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    (tmp_path / ".hermes").mkdir(exist_ok=True)
+    (tmp_path / ".wafi").mkdir(exist_ok=True)
 
     assert _reset_aux_to_auto() == 0
     _save_aux_choice("vision", provider="nous", model="gemini-3-flash")
@@ -237,11 +237,11 @@ def test_reset_aux_to_auto_idempotent(tmp_path, monkeypatch):
 def test_select_provider_and_model_dispatches_to_aux_menu(tmp_path, monkeypatch):
     """Picking 'Configure auxiliary models...' in the provider list calls _aux_config_menu."""
     from pathlib import Path
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".wafi"))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    (tmp_path / ".hermes").mkdir(exist_ok=True)
+    (tmp_path / ".wafi").mkdir(exist_ok=True)
 
-    from hermes_cli import main as main_mod
+    from wafi_cli import main as main_mod
 
     called = {"aux": 0, "flow": 0}
 
@@ -267,11 +267,11 @@ def test_select_provider_and_model_dispatches_to_aux_menu(tmp_path, monkeypatch)
 def test_leave_unchanged_replaces_cancel_label(tmp_path, monkeypatch):
     """The bottom cancel entry now reads 'Leave unchanged' (UX polish)."""
     from pathlib import Path
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".wafi"))
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
-    (tmp_path / ".hermes").mkdir(exist_ok=True)
+    (tmp_path / ".wafi").mkdir(exist_ok=True)
 
-    from hermes_cli import main as main_mod
+    from wafi_cli import main as main_mod
 
     captured: list[list[str]] = []
 

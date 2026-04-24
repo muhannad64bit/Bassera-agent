@@ -32,8 +32,8 @@ class TestWriteDenyExactPaths:
         path = os.path.join(str(Path.home()), ".netrc")
         assert _is_write_denied(path) is True
 
-    def test_hermes_env(self):
-        path = os.path.join(str(Path.home()), ".hermes", ".env")
+    def test_wafi_env(self):
+        path = os.path.join(str(Path.home()), ".wafi", ".env")
         assert _is_write_denied(path) is True
 
     def test_shell_profiles(self):
@@ -78,6 +78,6 @@ class TestWriteAllowed:
     def test_project_file(self):
         assert _is_write_denied("/home/user/project/main.py") is False
 
-    def test_hermes_config_not_env(self):
-        path = os.path.join(str(Path.home()), ".hermes", "config.yaml")
+    def test_wafi_config_not_env(self):
+        path = os.path.join(str(Path.home()), ".wafi", "config.yaml")
         assert _is_write_denied(path) is False

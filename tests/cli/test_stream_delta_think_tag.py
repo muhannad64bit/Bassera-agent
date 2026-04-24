@@ -7,10 +7,10 @@ import pytest
 
 
 def _make_cli_stub():
-    """Create a minimal HermesCLI-like object with stream state."""
-    from cli import HermesCLI
+    """Create a minimal WafiCLI-like object with stream state."""
+    from cli import WafiCLI
 
-    cli = HermesCLI.__new__(HermesCLI)
+    cli = WafiCLI.__new__(WafiCLI)
     cli.show_reasoning = False
     cli._stream_buf = ""
     cli._stream_started = False

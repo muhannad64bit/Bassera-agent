@@ -10,9 +10,9 @@ import pytest
 
 
 def _write_auth_store(tmp_path, payload: dict) -> None:
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    (hermes_home / "auth.json").write_text(json.dumps(payload, indent=2))
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
+    (wafi_home / "auth.json").write_text(json.dumps(payload, indent=2))
 
 
 def _jwt_with_email(email: str) -> str:
@@ -36,12 +36,12 @@ def _clear_provider_env(monkeypatch):
 
 
 def test_auth_add_api_key_persists_manual_entry(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     _write_auth_store(tmp_path, {"version": 1, "providers": {}})
 
-    from hermes_cli.auth_commands import auth_add_command
+    from wafi_cli.auth_commands import auth_add_command
 
     class _Args:
         provider = "openrouter"
@@ -51,7 +51,7 @@ def test_auth_add_api_key_persists_manual_entry(tmp_path, monkeypatch):
 
     auth_add_command(_Args())
 
-    payload = json.loads((tmp_path / "hermes" / "auth.json").read_text())
+    payload = json.loads((tmp_path / "wafi" / "auth.json").read_text())
     entries = payload["credential_pool"]["openrouter"]
     entry = next(item for item in entries if item["source"] == "manual")
     assert entry["label"] == "personal"
@@ -61,14 +61,14 @@ def test_auth_add_api_key_persists_manual_entry(tmp_path, monkeypatch):
 
 
 def test_auth_add_anthropic_oauth_persists_pool_entry(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_TOKEN", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
     _write_auth_store(tmp_path, {"version": 1, "providers": {}})
     token = _jwt_with_email("claude@example.com")
     monkeypatch.setattr(
-        "agent.anthropic_adapter.run_hermes_oauth_login_pure",
+        "agent.anthropic_adapter.run_wafi_oauth_login_pure",
         lambda: {
             "access_token": token,
             "refresh_token": "refresh-token",
@@ -76,7 +76,7 @@ def test_auth_add_anthropic_oauth_persists_pool_entry(tmp_path, monkeypatch):
         },
     )
 
-    from hermes_cli.auth_commands import auth_add_command
+    from wafi_cli.auth_commands import auth_add_command
 
     class _Args:
         provider = "anthropic"
@@ -86,25 +86,25 @@ def test_auth_add_anthropic_oauth_persists_pool_entry(tmp_path, monkeypatch):
 
     auth_add_command(_Args())
 
-    payload = json.loads((tmp_path / "hermes" / "auth.json").read_text())
+    payload = json.loads((tmp_path / "wafi" / "auth.json").read_text())
     entries = payload["credential_pool"]["anthropic"]
-    entry = next(item for item in entries if item["source"] == "manual:hermes_pkce")
+    entry = next(item for item in entries if item["source"] == "manual:wafi_pkce")
     assert entry["label"] == "claude@example.com"
-    assert entry["source"] == "manual:hermes_pkce"
+    assert entry["source"] == "manual:wafi_pkce"
     assert entry["refresh_token"] == "refresh-token"
     assert entry["expires_at_ms"] == 1711234567000
 
 
 def test_auth_add_nous_oauth_persists_pool_entry(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     _write_auth_store(tmp_path, {"version": 1, "providers": {}})
     token = _jwt_with_email("nous@example.com")
     monkeypatch.setattr(
-        "hermes_cli.auth._nous_device_code_login",
+        "wafi_cli.auth._nous_device_code_login",
         lambda **kwargs: {
             "portal_base_url": "https://portal.example.com",
             "inference_base_url": "https://inference.example.com/v1",
-            "client_id": "hermes-cli",
+            "client_id": "wafi-cli",
             "scope": "inference:mint_agent_key",
             "token_type": "Bearer",
             "access_token": token,
@@ -122,7 +122,7 @@ def test_auth_add_nous_oauth_persists_pool_entry(tmp_path, monkeypatch):
         },
     )
 
-    from hermes_cli.auth_commands import auth_add_command
+    from wafi_cli.auth_commands import auth_add_command
 
     class _Args:
         provider = "nous"
@@ -140,7 +140,7 @@ def test_auth_add_nous_oauth_persists_pool_entry(tmp_path, monkeypatch):
 
     auth_add_command(_Args())
 
-    payload = json.loads((tmp_path / "hermes" / "auth.json").read_text())
+    payload = json.loads((tmp_path / "wafi" / "auth.json").read_text())
 
     # Pool has exactly one canonical `device_code` entry — not a duplicate
     # pair of `manual:device_code` + `device_code` (the latter would be
@@ -156,10 +156,10 @@ def test_auth_add_nous_oauth_persists_pool_entry(tmp_path, monkeypatch):
     assert entry["agent_key"] == "ak-test"
     assert entry["portal_base_url"] == "https://portal.example.com"
 
-    # `hermes auth add nous` must also populate providers.nous so the
+    # `wafi auth add nous` must also populate providers.nous so the
     # 401-recovery path (resolve_nous_runtime_credentials) can mint a fresh
     # agent_key when the 24h TTL expires. If this mirror is missing, recovery
-    # raises "Hermes is not logged into Nous Portal" and the agent dies.
+    # raises "Wafi is not logged into Nous Portal" and the agent dies.
     singleton = payload["providers"]["nous"]
     assert singleton["access_token"] == token
     assert singleton["refresh_token"] == "refresh-token"
@@ -169,19 +169,19 @@ def test_auth_add_nous_oauth_persists_pool_entry(tmp_path, monkeypatch):
 
 
 def test_auth_add_nous_oauth_honors_custom_label(tmp_path, monkeypatch):
-    """`hermes auth add nous --type oauth --label <name>` must preserve the
+    """`wafi auth add nous --type oauth --label <name>` must preserve the
     custom label end-to-end — it was silently dropped in the first cut of the
     persist_nous_credentials helper because `--label` wasn't threaded through.
     """
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     _write_auth_store(tmp_path, {"version": 1, "providers": {}})
     token = _jwt_with_email("nous@example.com")
     monkeypatch.setattr(
-        "hermes_cli.auth._nous_device_code_login",
+        "wafi_cli.auth._nous_device_code_login",
         lambda **kwargs: {
             "portal_base_url": "https://portal.example.com",
             "inference_base_url": "https://inference.example.com/v1",
-            "client_id": "hermes-cli",
+            "client_id": "wafi-cli",
             "scope": "inference:mint_agent_key",
             "token_type": "Bearer",
             "access_token": token,
@@ -199,7 +199,7 @@ def test_auth_add_nous_oauth_honors_custom_label(tmp_path, monkeypatch):
         },
     )
 
-    from hermes_cli.auth_commands import auth_add_command
+    from wafi_cli.auth_commands import auth_add_command
 
     class _Args:
         provider = "nous"
@@ -217,7 +217,7 @@ def test_auth_add_nous_oauth_honors_custom_label(tmp_path, monkeypatch):
 
     auth_add_command(_Args())
 
-    payload = json.loads((tmp_path / "hermes" / "auth.json").read_text())
+    payload = json.loads((tmp_path / "wafi" / "auth.json").read_text())
 
     # Custom label reaches the pool entry …
     pool_entry = payload["credential_pool"]["nous"][0]
@@ -230,11 +230,11 @@ def test_auth_add_nous_oauth_honors_custom_label(tmp_path, monkeypatch):
 
 
 def test_auth_add_codex_oauth_persists_pool_entry(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     _write_auth_store(tmp_path, {"version": 1, "providers": {}})
     token = _jwt_with_email("codex@example.com")
     monkeypatch.setattr(
-        "hermes_cli.auth._codex_device_code_login",
+        "wafi_cli.auth._codex_device_code_login",
         lambda: {
             "tokens": {
                 "access_token": token,
@@ -245,7 +245,7 @@ def test_auth_add_codex_oauth_persists_pool_entry(tmp_path, monkeypatch):
         },
     )
 
-    from hermes_cli.auth_commands import auth_add_command
+    from wafi_cli.auth_commands import auth_add_command
 
     class _Args:
         provider = "openai-codex"
@@ -255,7 +255,7 @@ def test_auth_add_codex_oauth_persists_pool_entry(tmp_path, monkeypatch):
 
     auth_add_command(_Args())
 
-    payload = json.loads((tmp_path / "hermes" / "auth.json").read_text())
+    payload = json.loads((tmp_path / "wafi" / "auth.json").read_text())
     entries = payload["credential_pool"]["openai-codex"]
     entry = next(item for item in entries if item["source"] == "manual:device_code")
     assert entry["label"] == "codex@example.com"
@@ -265,7 +265,7 @@ def test_auth_add_codex_oauth_persists_pool_entry(tmp_path, monkeypatch):
 
 
 def test_auth_remove_reindexes_priorities(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     # Prevent pool auto-seeding from host env vars and file-backed sources
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_TOKEN", raising=False)
@@ -301,7 +301,7 @@ def test_auth_remove_reindexes_priorities(tmp_path, monkeypatch):
         },
     )
 
-    from hermes_cli.auth_commands import auth_remove_command
+    from wafi_cli.auth_commands import auth_remove_command
 
     class _Args:
         provider = "anthropic"
@@ -309,7 +309,7 @@ def test_auth_remove_reindexes_priorities(tmp_path, monkeypatch):
 
     auth_remove_command(_Args())
 
-    payload = json.loads((tmp_path / "hermes" / "auth.json").read_text())
+    payload = json.loads((tmp_path / "wafi" / "auth.json").read_text())
     entries = payload["credential_pool"]["anthropic"]
     assert len(entries) == 1
     assert entries[0]["label"] == "secondary"
@@ -317,7 +317,7 @@ def test_auth_remove_reindexes_priorities(tmp_path, monkeypatch):
 
 
 def test_auth_remove_accepts_label_target(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     monkeypatch.setattr(
         "agent.credential_pool._seed_from_singletons",
         lambda provider, entries: (False, set()),
@@ -349,7 +349,7 @@ def test_auth_remove_accepts_label_target(tmp_path, monkeypatch):
         },
     )
 
-    from hermes_cli.auth_commands import auth_remove_command
+    from wafi_cli.auth_commands import auth_remove_command
 
     class _Args:
         provider = "openai-codex"
@@ -357,14 +357,14 @@ def test_auth_remove_accepts_label_target(tmp_path, monkeypatch):
 
     auth_remove_command(_Args())
 
-    payload = json.loads((tmp_path / "hermes" / "auth.json").read_text())
+    payload = json.loads((tmp_path / "wafi" / "auth.json").read_text())
     entries = payload["credential_pool"]["openai-codex"]
     assert len(entries) == 1
     assert entries[0]["label"] == "work-account"
 
 
 def test_auth_remove_prefers_exact_numeric_label_over_index(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     monkeypatch.setattr(
         "agent.credential_pool._seed_from_singletons",
         lambda provider, entries: (False, set()),
@@ -404,7 +404,7 @@ def test_auth_remove_prefers_exact_numeric_label_over_index(tmp_path, monkeypatc
         },
     )
 
-    from hermes_cli.auth_commands import auth_remove_command
+    from wafi_cli.auth_commands import auth_remove_command
 
     class _Args:
         provider = "openai-codex"
@@ -412,13 +412,13 @@ def test_auth_remove_prefers_exact_numeric_label_over_index(tmp_path, monkeypatc
 
     auth_remove_command(_Args())
 
-    payload = json.loads((tmp_path / "hermes" / "auth.json").read_text())
+    payload = json.loads((tmp_path / "wafi" / "auth.json").read_text())
     labels = [entry["label"] for entry in payload["credential_pool"]["openai-codex"]]
     assert labels == ["first", "third"]
 
 
 def test_auth_reset_clears_provider_statuses(tmp_path, monkeypatch, capsys):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     _write_auth_store(
         tmp_path,
         {
@@ -441,7 +441,7 @@ def test_auth_reset_clears_provider_statuses(tmp_path, monkeypatch, capsys):
         },
     )
 
-    from hermes_cli.auth_commands import auth_reset_command
+    from wafi_cli.auth_commands import auth_reset_command
 
     class _Args:
         provider = "anthropic"
@@ -451,7 +451,7 @@ def test_auth_reset_clears_provider_statuses(tmp_path, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "Reset status" in out
 
-    payload = json.loads((tmp_path / "hermes" / "auth.json").read_text())
+    payload = json.loads((tmp_path / "wafi" / "auth.json").read_text())
     entry = payload["credential_pool"]["anthropic"][0]
     assert entry["last_status"] is None
     assert entry["last_status_at"] is None
@@ -459,7 +459,7 @@ def test_auth_reset_clears_provider_statuses(tmp_path, monkeypatch, capsys):
 
 
 def test_clear_provider_auth_removes_provider_pool_entries(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     _write_auth_store(
         tmp_path,
         {
@@ -475,7 +475,7 @@ def test_clear_provider_auth_removes_provider_pool_entries(tmp_path, monkeypatch
                         "label": "primary",
                         "auth_type": "oauth",
                         "priority": 0,
-                        "source": "manual:hermes_pkce",
+                        "source": "manual:wafi_pkce",
                         "access_token": "pool-token",
                     }
                 ],
@@ -493,11 +493,11 @@ def test_clear_provider_auth_removes_provider_pool_entries(tmp_path, monkeypatch
         },
     )
 
-    from hermes_cli.auth import clear_provider_auth
+    from wafi_cli.auth import clear_provider_auth
 
     assert clear_provider_auth("anthropic") is True
 
-    payload = json.loads((tmp_path / "hermes" / "auth.json").read_text())
+    payload = json.loads((tmp_path / "wafi" / "auth.json").read_text())
     assert payload["active_provider"] is None
     assert "anthropic" not in payload.get("providers", {})
     assert "anthropic" not in payload.get("credential_pool", {})
@@ -505,7 +505,7 @@ def test_clear_provider_auth_removes_provider_pool_entries(tmp_path, monkeypatch
 
 
 def test_auth_list_does_not_call_mutating_select(monkeypatch, capsys):
-    from hermes_cli.auth_commands import auth_list_command
+    from wafi_cli.auth_commands import auth_list_command
 
     class _Entry:
         id = "cred-1"
@@ -527,7 +527,7 @@ def test_auth_list_does_not_call_mutating_select(monkeypatch, capsys):
             raise AssertionError("auth_list_command should not call select()")
 
     monkeypatch.setattr(
-        "hermes_cli.auth_commands.load_pool",
+        "wafi_cli.auth_commands.load_pool",
         lambda provider: _Pool() if provider == "openrouter" else type("_EmptyPool", (), {"entries": lambda self: []})(),
     )
 
@@ -542,7 +542,7 @@ def test_auth_list_does_not_call_mutating_select(monkeypatch, capsys):
 
 
 def test_auth_list_shows_exhausted_cooldown(monkeypatch, capsys):
-    from hermes_cli.auth_commands import auth_list_command
+    from wafi_cli.auth_commands import auth_list_command
 
     class _Entry:
         id = "cred-1"
@@ -560,8 +560,8 @@ def test_auth_list_shows_exhausted_cooldown(monkeypatch, capsys):
         def peek(self):
             return None
 
-    monkeypatch.setattr("hermes_cli.auth_commands.load_pool", lambda provider: _Pool())
-    monkeypatch.setattr("hermes_cli.auth_commands.time.time", lambda: 1030.0)
+    monkeypatch.setattr("wafi_cli.auth_commands.load_pool", lambda provider: _Pool())
+    monkeypatch.setattr("wafi_cli.auth_commands.time.time", lambda: 1030.0)
 
     class _Args:
         provider = "openrouter"
@@ -574,7 +574,7 @@ def test_auth_list_shows_exhausted_cooldown(monkeypatch, capsys):
 
 
 def test_auth_list_prefers_explicit_reset_time(monkeypatch, capsys):
-    from hermes_cli.auth_commands import auth_list_command
+    from wafi_cli.auth_commands import auth_list_command
 
     class _Entry:
         id = "cred-1"
@@ -595,9 +595,9 @@ def test_auth_list_prefers_explicit_reset_time(monkeypatch, capsys):
         def peek(self):
             return None
 
-    monkeypatch.setattr("hermes_cli.auth_commands.load_pool", lambda provider: _Pool())
+    monkeypatch.setattr("wafi_cli.auth_commands.load_pool", lambda provider: _Pool())
     monkeypatch.setattr(
-        "hermes_cli.auth_commands.time.time",
+        "wafi_cli.auth_commands.time.time",
         lambda: datetime(2026, 4, 5, 10, 30, tzinfo=timezone.utc).timestamp(),
     )
 
@@ -614,12 +614,12 @@ def test_auth_list_prefers_explicit_reset_time(monkeypatch, capsys):
 def test_auth_remove_env_seeded_clears_env_var(tmp_path, monkeypatch):
     """Removing an env-seeded credential should also clear the env var from .env
     so the entry doesn't get re-seeded on the next load_pool() call."""
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     # Write a .env with an OpenRouter key
-    env_path = hermes_home / ".env"
+    env_path = wafi_home / ".env"
     env_path.write_text("OPENROUTER_API_KEY=sk-or-test-key-12345\nOTHER_KEY=keep-me\n")
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test-key-12345")
 
@@ -643,7 +643,7 @@ def test_auth_remove_env_seeded_clears_env_var(tmp_path, monkeypatch):
         },
     )
 
-    from hermes_cli.auth_commands import auth_remove_command
+    from wafi_cli.auth_commands import auth_remove_command
 
     class _Args:
         provider = "openrouter"
@@ -664,12 +664,12 @@ def test_auth_remove_env_seeded_clears_env_var(tmp_path, monkeypatch):
 
 def test_auth_remove_env_seeded_does_not_resurrect(tmp_path, monkeypatch):
     """After removing an env-seeded credential, load_pool should NOT re-create it."""
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     # Write .env with an OpenRouter key
-    env_path = hermes_home / ".env"
+    env_path = wafi_home / ".env"
     env_path.write_text("OPENROUTER_API_KEY=sk-or-test-key-12345\n")
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test-key-12345")
 
@@ -692,7 +692,7 @@ def test_auth_remove_env_seeded_does_not_resurrect(tmp_path, monkeypatch):
         },
     )
 
-    from hermes_cli.auth_commands import auth_remove_command
+    from wafi_cli.auth_commands import auth_remove_command
 
     class _Args:
         provider = "openrouter"
@@ -708,12 +708,12 @@ def test_auth_remove_env_seeded_does_not_resurrect(tmp_path, monkeypatch):
 
 def test_auth_remove_manual_entry_does_not_touch_env(tmp_path, monkeypatch):
     """Removing a manually-added credential should NOT touch .env."""
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
 
-    env_path = hermes_home / ".env"
+    env_path = wafi_home / ".env"
     env_path.write_text("SOME_KEY=some-value\n")
 
     _write_auth_store(
@@ -735,7 +735,7 @@ def test_auth_remove_manual_entry_does_not_touch_env(tmp_path, monkeypatch):
         },
     )
 
-    from hermes_cli.auth_commands import auth_remove_command
+    from wafi_cli.auth_commands import auth_remove_command
 
     class _Args:
         provider = "openrouter"
@@ -749,7 +749,7 @@ def test_auth_remove_manual_entry_does_not_touch_env(tmp_path, monkeypatch):
 
 def test_auth_remove_claude_code_suppresses_reseed(tmp_path, monkeypatch):
     """Removing a claude_code credential must prevent it from being re-seeded."""
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_TOKEN", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
@@ -757,8 +757,8 @@ def test_auth_remove_claude_code_suppresses_reseed(tmp_path, monkeypatch):
         "agent.credential_pool._seed_from_singletons",
         lambda provider, entries: (False, {"claude_code"}),
     )
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
 
     auth_store = {
         "version": 1,
@@ -773,13 +773,13 @@ def test_auth_remove_claude_code_suppresses_reseed(tmp_path, monkeypatch):
             }]
         },
     }
-    (hermes_home / "auth.json").write_text(json.dumps(auth_store))
+    (wafi_home / "auth.json").write_text(json.dumps(auth_store))
 
     from types import SimpleNamespace
-    from hermes_cli.auth_commands import auth_remove_command
+    from wafi_cli.auth_commands import auth_remove_command
     auth_remove_command(SimpleNamespace(provider="anthropic", target="1"))
 
-    updated = json.loads((hermes_home / "auth.json").read_text())
+    updated = json.loads((wafi_home / "auth.json").read_text())
     suppressed = updated.get("suppressed_sources", {})
     assert "anthropic" in suppressed
     assert "claude_code" in suppressed["anthropic"]
@@ -787,10 +787,10 @@ def test_auth_remove_claude_code_suppresses_reseed(tmp_path, monkeypatch):
 
 def test_unsuppress_credential_source_clears_marker(tmp_path, monkeypatch):
     """unsuppress_credential_source() removes a previously-set marker."""
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     _write_auth_store(tmp_path, {"version": 1})
 
-    from hermes_cli.auth import suppress_credential_source, unsuppress_credential_source, is_source_suppressed
+    from wafi_cli.auth import suppress_credential_source, unsuppress_credential_source, is_source_suppressed
 
     suppress_credential_source("openai-codex", "device_code")
     assert is_source_suppressed("openai-codex", "device_code") is True
@@ -799,17 +799,17 @@ def test_unsuppress_credential_source_clears_marker(tmp_path, monkeypatch):
     assert cleared is True
     assert is_source_suppressed("openai-codex", "device_code") is False
 
-    payload = json.loads((tmp_path / "hermes" / "auth.json").read_text())
+    payload = json.loads((tmp_path / "wafi" / "auth.json").read_text())
     # Empty suppressed_sources dict should be cleaned up entirely
     assert "suppressed_sources" not in payload
 
 
 def test_unsuppress_credential_source_returns_false_when_absent(tmp_path, monkeypatch):
     """unsuppress_credential_source() returns False if no marker exists."""
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     _write_auth_store(tmp_path, {"version": 1})
 
-    from hermes_cli.auth import unsuppress_credential_source
+    from wafi_cli.auth import unsuppress_credential_source
 
     assert unsuppress_credential_source("openai-codex", "device_code") is False
     assert unsuppress_credential_source("nonexistent", "whatever") is False
@@ -817,10 +817,10 @@ def test_unsuppress_credential_source_returns_false_when_absent(tmp_path, monkey
 
 def test_unsuppress_credential_source_preserves_other_markers(tmp_path, monkeypatch):
     """Clearing one marker must not affect unrelated markers."""
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     _write_auth_store(tmp_path, {"version": 1})
 
-    from hermes_cli.auth import (
+    from wafi_cli.auth import (
         suppress_credential_source,
         unsuppress_credential_source,
         is_source_suppressed,
@@ -835,13 +835,13 @@ def test_unsuppress_credential_source_preserves_other_markers(tmp_path, monkeypa
 
 def test_auth_remove_codex_device_code_suppresses_reseed(tmp_path, monkeypatch):
     """Removing an auto-seeded openai-codex credential must mark the source as suppressed."""
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     monkeypatch.setattr(
         "agent.credential_pool._seed_from_singletons",
         lambda provider, entries: (False, {"device_code"}),
     )
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
 
     auth_store = {
         "version": 1,
@@ -865,14 +865,14 @@ def test_auth_remove_codex_device_code_suppresses_reseed(tmp_path, monkeypatch):
             }]
         },
     }
-    (hermes_home / "auth.json").write_text(json.dumps(auth_store))
+    (wafi_home / "auth.json").write_text(json.dumps(auth_store))
 
     from types import SimpleNamespace
-    from hermes_cli.auth_commands import auth_remove_command
+    from wafi_cli.auth_commands import auth_remove_command
 
     auth_remove_command(SimpleNamespace(provider="openai-codex", target="1"))
 
-    updated = json.loads((hermes_home / "auth.json").read_text())
+    updated = json.loads((wafi_home / "auth.json").read_text())
     suppressed = updated.get("suppressed_sources", {})
     assert "openai-codex" in suppressed
     assert "device_code" in suppressed["openai-codex"]
@@ -882,13 +882,13 @@ def test_auth_remove_codex_device_code_suppresses_reseed(tmp_path, monkeypatch):
 
 def test_auth_remove_codex_manual_source_suppresses_reseed(tmp_path, monkeypatch):
     """Removing a manually-added (`manual:device_code`) openai-codex credential must also suppress."""
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     monkeypatch.setattr(
         "agent.credential_pool._seed_from_singletons",
         lambda provider, entries: (False, set()),
     )
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
 
     auth_store = {
         "version": 1,
@@ -912,14 +912,14 @@ def test_auth_remove_codex_manual_source_suppresses_reseed(tmp_path, monkeypatch
             }]
         },
     }
-    (hermes_home / "auth.json").write_text(json.dumps(auth_store))
+    (wafi_home / "auth.json").write_text(json.dumps(auth_store))
 
     from types import SimpleNamespace
-    from hermes_cli.auth_commands import auth_remove_command
+    from wafi_cli.auth_commands import auth_remove_command
 
     auth_remove_command(SimpleNamespace(provider="openai-codex", target="1"))
 
-    updated = json.loads((hermes_home / "auth.json").read_text())
+    updated = json.loads((wafi_home / "auth.json").read_text())
     suppressed = updated.get("suppressed_sources", {})
     # Critical: manual:device_code source must also trigger the suppression path
     assert "openai-codex" in suppressed
@@ -928,17 +928,17 @@ def test_auth_remove_codex_manual_source_suppresses_reseed(tmp_path, monkeypatch
 
 
 def test_auth_add_codex_clears_suppression_marker(tmp_path, monkeypatch):
-    """Re-linking codex via `hermes auth add openai-codex` must clear any suppression marker."""
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    """Re-linking codex via `wafi auth add openai-codex` must clear any suppression marker."""
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
     monkeypatch.setattr(
         "agent.credential_pool._seed_from_singletons",
         lambda provider, entries: (False, set()),
     )
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
 
-    # Pre-existing suppression (simulating a prior `hermes auth remove`)
-    (hermes_home / "auth.json").write_text(json.dumps({
+    # Pre-existing suppression (simulating a prior `wafi auth remove`)
+    (wafi_home / "auth.json").write_text(json.dumps({
         "version": 1,
         "providers": {},
         "suppressed_sources": {"openai-codex": ["device_code"]},
@@ -946,7 +946,7 @@ def test_auth_add_codex_clears_suppression_marker(tmp_path, monkeypatch):
 
     token = _jwt_with_email("codex@example.com")
     monkeypatch.setattr(
-        "hermes_cli.auth._codex_device_code_login",
+        "wafi_cli.auth._codex_device_code_login",
         lambda: {
             "tokens": {
                 "access_token": token,
@@ -957,7 +957,7 @@ def test_auth_add_codex_clears_suppression_marker(tmp_path, monkeypatch):
         },
     )
 
-    from hermes_cli.auth_commands import auth_add_command
+    from wafi_cli.auth_commands import auth_add_command
 
     class _Args:
         provider = "openai-codex"
@@ -967,7 +967,7 @@ def test_auth_add_codex_clears_suppression_marker(tmp_path, monkeypatch):
 
     auth_add_command(_Args())
 
-    payload = json.loads((hermes_home / "auth.json").read_text())
+    payload = json.loads((wafi_home / "auth.json").read_text())
     # Suppression marker must be cleared
     assert "openai-codex" not in payload.get("suppressed_sources", {})
     # New pool entry must be present
@@ -977,12 +977,12 @@ def test_auth_add_codex_clears_suppression_marker(tmp_path, monkeypatch):
 
 def test_seed_from_singletons_respects_codex_suppression(tmp_path, monkeypatch):
     """_seed_from_singletons() for openai-codex must skip auto-import when suppressed."""
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "wafi"))
+    wafi_home = tmp_path / "wafi"
+    wafi_home.mkdir(parents=True, exist_ok=True)
 
     # Suppression marker in place
-    (hermes_home / "auth.json").write_text(json.dumps({
+    (wafi_home / "auth.json").write_text(json.dumps({
         "version": 1,
         "providers": {},
         "suppressed_sources": {"openai-codex": ["device_code"]},
@@ -996,7 +996,7 @@ def test_seed_from_singletons_respects_codex_suppression(tmp_path, monkeypatch):
             "refresh_token": "would-be-reimported",
         }
 
-    monkeypatch.setattr("hermes_cli.auth._import_codex_cli_tokens", _fake_import)
+    monkeypatch.setattr("wafi_cli.auth._import_codex_cli_tokens", _fake_import)
 
     from agent.credential_pool import _seed_from_singletons
 
@@ -1009,5 +1009,5 @@ def test_seed_from_singletons_respects_codex_suppression(tmp_path, monkeypatch):
     assert active_sources == set()
 
     # Verify the auth store was NOT modified (no auto-import happened)
-    after = json.loads((hermes_home / "auth.json").read_text())
+    after = json.loads((wafi_home / "auth.json").read_text())
     assert "openai-codex" not in after.get("providers", {})

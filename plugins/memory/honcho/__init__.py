@@ -242,11 +242,11 @@ class HonchoMemoryProvider(MemoryProvider):
         except Exception:
             return False
 
-    def save_config(self, values, hermes_home):
+    def save_config(self, values, wafi_home):
         """Write config to $HERMES_HOME/honcho.json (Honcho SDK native format)."""
         import json
         from pathlib import Path
-        config_path = Path(hermes_home) / "honcho.json"
+        config_path = Path(wafi_home) / "honcho.json"
         existing = {}
         if config_path.exists():
             try:
@@ -262,7 +262,7 @@ class HonchoMemoryProvider(MemoryProvider):
             {"key": "baseUrl", "description": "Honcho base URL (for self-hosted)"},
         ]
 
-    def post_setup(self, hermes_home: str, config: dict) -> None:
+    def post_setup(self, wafi_home: str, config: dict) -> None:
         """Run the full Honcho setup wizard after provider selection."""
         import types
         from plugins.memory.honcho.cli import cmd_setup
@@ -306,7 +306,7 @@ class HonchoMemoryProvider(MemoryProvider):
                 self._context_cadence = int(raw.get("contextCadence", 1))
                 # Backwards-compat: unset dialecticCadence falls back to 1
                 # (every turn) so existing honcho.json configs without the key
-                # behave as they did before. New setups via `hermes honcho setup`
+                # behave as they did before. New setups via `wafi honcho setup`
                 # get dialecticCadence=2 written explicitly by the wizard.
                 self._dialectic_cadence = int(raw.get("dialecticCadence", 1))
                 self._dialectic_depth = max(1, min(cfg.dialectic_depth, 3))
@@ -368,7 +368,7 @@ class HonchoMemoryProvider(MemoryProvider):
                 gateway_session_key=gateway_session_key,
             )
             or session_id
-            or "hermes-default"
+            or "wafi-default"
         )
         logger.debug("Honcho session key resolved: %s", self._session_key)
 
@@ -377,14 +377,14 @@ class HonchoMemoryProvider(MemoryProvider):
         self._session_initialized = True
 
         # ----- B6: Memory file migration (one-time, for new sessions) -----
-        # Skip under per-session strategy: every Hermes run creates a fresh
+        # Skip under per-session strategy: every Wafi run creates a fresh
         # Honcho session by design, so uploading MEMORY.md/USER.md/SOUL.md to
         # each one would flood the backend with short-lived duplicates instead
         # of performing a one-time migration.
         try:
             if not session.messages and cfg.session_strategy != "per-session":
-                from hermes_constants import get_hermes_home
-                mem_dir = str(get_hermes_home() / "memories")
+                from wafi_constants import get_wafi_home
+                mem_dir = str(get_wafi_home() / "memories")
                 self._manager.migrate_memory_files(self._session_key, mem_dir)
                 logger.debug("Honcho memory file migration attempted for new session: %s", self._session_key)
             elif cfg.session_strategy == "per-session":
@@ -450,7 +450,7 @@ class HonchoMemoryProvider(MemoryProvider):
         try:
             self._do_session_init(
                 self._config,
-                self._lazy_init_session_id or "hermes-default",
+                self._lazy_init_session_id or "wafi-default",
                 **self._lazy_init_kwargs,
             )
             # Clear lazy refs

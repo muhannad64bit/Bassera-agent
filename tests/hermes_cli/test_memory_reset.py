@@ -1,4 +1,4 @@
-"""Tests for the `hermes memory reset` CLI command.
+"""Tests for the `wafi memory reset` CLI command.
 
 Covers:
 - Reset both stores (MEMORY.md + USER.md)
@@ -17,31 +17,31 @@ from pathlib import Path
 @pytest.fixture
 def memory_env(tmp_path, monkeypatch):
     """Set up a fake HERMES_HOME with memory files."""
-    hermes_home = tmp_path / ".hermes"
-    memories = hermes_home / "memories"
+    wafi_home = tmp_path / ".wafi"
+    memories = wafi_home / "memories"
     memories.mkdir(parents=True)
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
     # Create sample memory files
     (memories / "MEMORY.md").write_text(
-        "§\nHermes repo is at ~/.hermes/hermes-agent\n§\nUser prefers dark themes",
+        "§\nWafi repo is at ~/.wafi/wafi-agent\n§\nUser prefers dark themes",
         encoding="utf-8",
     )
     (memories / "USER.md").write_text(
         "§\nUser is Teknium\n§\nTimezone: US Pacific",
         encoding="utf-8",
     )
-    return hermes_home, memories
+    return wafi_home, memories
 
 
 def _run_memory_reset(target="all", yes=False, monkeypatch=None, confirm_input="no"):
     """Invoke the memory reset logic from cmd_memory in main.py.
 
-    Simulates what happens when `hermes memory reset` is run.
+    Simulates what happens when `wafi memory reset` is run.
     """
-    from hermes_constants import get_hermes_home, display_hermes_home
+    from wafi_constants import get_wafi_home, display_wafi_home
 
-    mem_dir = get_hermes_home() / "memories"
+    mem_dir = get_wafi_home() / "memories"
     files_to_reset = []
     if target in ("all", "memory"):
         files_to_reset.append(("MEMORY.md", "agent notes"))
@@ -63,11 +63,11 @@ def _run_memory_reset(target="all", yes=False, monkeypatch=None, confirm_input="
 
 
 class TestMemoryReset:
-    """Tests for `hermes memory reset` subcommand."""
+    """Tests for `wafi memory reset` subcommand."""
 
     def test_reset_all_with_yes_flag(self, memory_env):
         """--yes flag should skip confirmation and delete both files."""
-        hermes_home, memories = memory_env
+        wafi_home, memories = memory_env
         assert (memories / "MEMORY.md").exists()
         assert (memories / "USER.md").exists()
 
@@ -78,7 +78,7 @@ class TestMemoryReset:
 
     def test_reset_memory_only(self, memory_env):
         """--target memory should only delete MEMORY.md."""
-        hermes_home, memories = memory_env
+        wafi_home, memories = memory_env
 
         result = _run_memory_reset(target="memory", yes=True)
         assert result == "deleted"
@@ -87,7 +87,7 @@ class TestMemoryReset:
 
     def test_reset_user_only(self, memory_env):
         """--target user should only delete USER.md."""
-        hermes_home, memories = memory_env
+        wafi_home, memories = memory_env
 
         result = _run_memory_reset(target="user", yes=True)
         assert result == "deleted"
@@ -96,16 +96,16 @@ class TestMemoryReset:
 
     def test_reset_no_files_exist(self, tmp_path, monkeypatch):
         """Should return 'nothing' when no memory files exist."""
-        hermes_home = tmp_path / ".hermes"
-        (hermes_home / "memories").mkdir(parents=True)
-        monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+        wafi_home = tmp_path / ".wafi"
+        (wafi_home / "memories").mkdir(parents=True)
+        monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
         result = _run_memory_reset(target="all", yes=True)
         assert result == "nothing"
 
     def test_reset_confirmation_denied(self, memory_env):
         """Without --yes and without typing 'yes', should be cancelled."""
-        hermes_home, memories = memory_env
+        wafi_home, memories = memory_env
 
         result = _run_memory_reset(target="all", yes=False, confirm_input="no")
         assert result == "cancelled"
@@ -115,7 +115,7 @@ class TestMemoryReset:
 
     def test_reset_confirmation_accepted(self, memory_env):
         """Typing 'yes' should proceed with deletion."""
-        hermes_home, memories = memory_env
+        wafi_home, memories = memory_env
 
         result = _run_memory_reset(target="all", yes=False, confirm_input="yes")
         assert result == "deleted"
@@ -138,7 +138,7 @@ class TestMemoryReset:
 
     def test_reset_partial_files(self, memory_env):
         """Reset should work when only one memory file exists."""
-        hermes_home, memories = memory_env
+        wafi_home, memories = memory_env
         (memories / "USER.md").unlink()
 
         result = _run_memory_reset(target="all", yes=True)
@@ -147,11 +147,11 @@ class TestMemoryReset:
 
     def test_reset_empty_memories_dir(self, tmp_path, monkeypatch):
         """No memories dir at all should report nothing."""
-        hermes_home = tmp_path / ".hermes"
-        hermes_home.mkdir(parents=True)
+        wafi_home = tmp_path / ".wafi"
+        wafi_home.mkdir(parents=True)
         # No memories dir
-        monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+        monkeypatch.setenv("HERMES_HOME", str(wafi_home))
 
-        # The memories dir won't exist; get_hermes_home() / "memories" won't have files
+        # The memories dir won't exist; get_wafi_home() / "memories" won't have files
         result = _run_memory_reset(target="all", yes=True)
         assert result == "nothing"

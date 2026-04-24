@@ -1,11 +1,11 @@
-"""Tests for hermes_cli.cron command handling."""
+"""Tests for wafi_cli.cron command handling."""
 
 from argparse import Namespace
 
 import pytest
 
 from cron.jobs import create_job, get_job, list_jobs
-from hermes_cli.cron import cron_command
+from wafi_cli.cron import cron_command
 
 
 @pytest.fixture()

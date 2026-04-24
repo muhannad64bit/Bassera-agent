@@ -17,7 +17,7 @@ def _args(**overrides):
 
 @pytest.fixture
 def main_mod(monkeypatch):
-    import hermes_cli.main as mod
+    import wafi_cli.main as mod
 
     monkeypatch.setattr(mod, "_has_any_provider_configured", lambda: True)
     return mod
@@ -90,7 +90,7 @@ def test_cmd_chat_tui_resume_resolves_title_before_launch(monkeypatch, main_mod)
 
 
 def test_print_tui_exit_summary_includes_resume_and_token_totals(monkeypatch, capsys):
-    import hermes_cli.main as main_mod
+    import wafi_cli.main as main_mod
 
     class _FakeDB:
         def get_session(self, session_id):
@@ -110,12 +110,12 @@ def test_print_tui_exit_summary_includes_resume_and_token_totals(monkeypatch, ca
         def close(self):
             return None
 
-    monkeypatch.setitem(sys.modules, "hermes_state", types.SimpleNamespace(SessionDB=lambda: _FakeDB()))
+    monkeypatch.setitem(sys.modules, "wafi_state", types.SimpleNamespace(SessionDB=lambda: _FakeDB()))
 
     main_mod._print_tui_exit_summary("20260409_000001_abc123")
     out = capsys.readouterr().out
 
     assert "Resume this session with:" in out
-    assert "hermes --tui --resume 20260409_000001_abc123" in out
-    assert 'hermes --tui -c "demo title"' in out
+    assert "wafi --tui --resume 20260409_000001_abc123" in out
+    assert 'wafi --tui -c "demo title"' in out
     assert "Tokens:         21 (in 10, out 6, cache 4, reasoning 1)" in out

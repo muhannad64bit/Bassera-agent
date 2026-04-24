@@ -559,13 +559,13 @@ class TestRegistration:
 
 
 # ---------------------------------------------------------------------------
-# Toolset: discord_server only in hermes-discord
+# Toolset: discord_server only in wafi-discord
 # ---------------------------------------------------------------------------
 
 class TestToolsetInclusion:
-    def test_discord_server_in_hermes_discord_toolset(self):
+    def test_discord_server_in_wafi_discord_toolset(self):
         from toolsets import TOOLSETS
-        assert "discord_server" in TOOLSETS["hermes-discord"]["tools"]
+        assert "discord_server" in TOOLSETS["wafi-discord"]["tools"]
 
     def test_discord_server_not_in_core_tools(self):
         from toolsets import _HERMES_CORE_TOOLS
@@ -574,10 +574,10 @@ class TestToolsetInclusion:
     def test_discord_server_not_in_other_toolsets(self):
         from toolsets import TOOLSETS
         for name, ts in TOOLSETS.items():
-            if name == "hermes-discord":
+            if name == "wafi-discord":
                 continue
             # The gateway toolset might include it if it unions all platform tools
-            if name == "hermes-gateway":
+            if name == "wafi-gateway":
                 continue
             assert "discord_server" not in ts.get("tools", []), (
                 f"discord_server should not be in toolset '{name}'"
@@ -684,21 +684,21 @@ class TestConfigAllowlist:
     def test_empty_string_returns_none(self, monkeypatch):
         """Empty config means no allowlist — all actions visible."""
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": ""}},
         )
         assert _load_allowed_actions_config() is None
 
     def test_missing_key_returns_none(self, monkeypatch):
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {}},
         )
         assert _load_allowed_actions_config() is None
 
     def test_comma_separated_string(self, monkeypatch):
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": "list_guilds,list_channels,fetch_messages"}},
         )
         result = _load_allowed_actions_config()
@@ -706,7 +706,7 @@ class TestConfigAllowlist:
 
     def test_yaml_list(self, monkeypatch):
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": ["list_guilds", "server_info"]}},
         )
         result = _load_allowed_actions_config()
@@ -714,7 +714,7 @@ class TestConfigAllowlist:
 
     def test_unknown_names_dropped(self, monkeypatch, caplog):
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": "list_guilds,bogus_action,fetch_messages"}},
         )
         with caplog.at_level("WARNING"):
@@ -726,12 +726,12 @@ class TestConfigAllowlist:
         """If config can't be loaded at all, fall back to None (all allowed)."""
         def bad_load():
             raise RuntimeError("disk gone")
-        monkeypatch.setattr("hermes_cli.config.load_config", bad_load)
+        monkeypatch.setattr("wafi_cli.config.load_config", bad_load)
         assert _load_allowed_actions_config() is None
 
     def test_unexpected_type_ignored(self, monkeypatch, caplog):
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": {"unexpected": "dict"}}},
         )
         with caplog.at_level("WARNING"):
@@ -805,7 +805,7 @@ class TestDynamicSchema:
     def test_full_intents_full_schema(self, mock_req, monkeypatch):
         monkeypatch.setenv("DISCORD_BOT_TOKEN", "tok")
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": ""}},
         )
         mock_req.return_value = {"flags": (1 << 14) | (1 << 18)}
@@ -821,7 +821,7 @@ class TestDynamicSchema:
     ):
         monkeypatch.setenv("DISCORD_BOT_TOKEN", "tok")
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": ""}},
         )
         mock_req.return_value = {"flags": 1 << 18}  # only MESSAGE_CONTENT
@@ -837,7 +837,7 @@ class TestDynamicSchema:
     def test_no_message_content_adds_warning_note(self, mock_req, monkeypatch):
         monkeypatch.setenv("DISCORD_BOT_TOKEN", "tok")
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": ""}},
         )
         mock_req.return_value = {"flags": 1 << 14}  # only GUILD_MEMBERS
@@ -851,7 +851,7 @@ class TestDynamicSchema:
     def test_config_allowlist_narrows_schema(self, mock_req, monkeypatch):
         monkeypatch.setenv("DISCORD_BOT_TOKEN", "tok")
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": "list_guilds,list_channels"}},
         )
         mock_req.return_value = {"flags": (1 << 14) | (1 << 18)}
@@ -871,7 +871,7 @@ class TestDynamicSchema:
         entirely rather than showing an empty enum."""
         monkeypatch.setenv("DISCORD_BOT_TOKEN", "tok")
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": "typo_one,typo_two"}},
         )
         mock_req.return_value = {"flags": (1 << 14) | (1 << 18)}
@@ -887,7 +887,7 @@ class TestRuntimeAllowlistEnforcement:
     def test_denied_action_blocked_at_runtime(self, mock_req, monkeypatch):
         monkeypatch.setenv("DISCORD_BOT_TOKEN", "tok")
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": "list_guilds"}},
         )
         result = json.loads(discord_server(action="add_role", guild_id="1", user_id="2", role_id="3"))
@@ -899,7 +899,7 @@ class TestRuntimeAllowlistEnforcement:
     def test_allowed_action_proceeds(self, mock_req, monkeypatch):
         monkeypatch.setenv("DISCORD_BOT_TOKEN", "tok")
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": "list_guilds"}},
         )
         mock_req.return_value = []
@@ -926,7 +926,7 @@ class Test403Enrichment:
     def test_403_in_runtime_is_enriched(self, mock_req, monkeypatch):
         monkeypatch.setenv("DISCORD_BOT_TOKEN", "tok")
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": ""}},
         )
         mock_req.side_effect = DiscordAPIError(403, '{"message":"Missing Permissions"}')
@@ -940,7 +940,7 @@ class Test403Enrichment:
     def test_non_403_errors_are_not_enriched(self, mock_req, monkeypatch):
         monkeypatch.setenv("DISCORD_BOT_TOKEN", "tok")
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": ""}},
         )
         mock_req.side_effect = DiscordAPIError(500, "server error")
@@ -968,14 +968,14 @@ class TestModelToolsIntegration:
         available, it should replace the static schema with the dynamic one."""
         monkeypatch.setenv("DISCORD_BOT_TOKEN", "tok")
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": "list_guilds,server_info"}},
         )
         # Bot without GUILD_MEMBERS intent
         mock_req.return_value = {"flags": 0}
 
         from model_tools import get_tool_definitions
-        tools = get_tool_definitions(enabled_toolsets=["hermes-discord"], quiet_mode=True)
+        tools = get_tool_definitions(enabled_toolsets=["wafi-discord"], quiet_mode=True)
         discord_tool = next(
             (t for t in tools if t.get("function", {}).get("name") == "discord_server"),
             None,
@@ -990,12 +990,12 @@ class TestModelToolsIntegration:
     ):
         monkeypatch.setenv("DISCORD_BOT_TOKEN", "tok")
         monkeypatch.setattr(
-            "hermes_cli.config.load_config",
+            "wafi_cli.config.load_config",
             lambda: {"discord": {"server_actions": "all_bogus_names"}},
         )
         mock_req.return_value = {"flags": 0}
 
         from model_tools import get_tool_definitions
-        tools = get_tool_definitions(enabled_toolsets=["hermes-discord"], quiet_mode=True)
+        tools = get_tool_definitions(enabled_toolsets=["wafi-discord"], quiet_mode=True)
         names = [t.get("function", {}).get("name") for t in tools]
         assert "discord_server" not in names

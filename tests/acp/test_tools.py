@@ -29,8 +29,8 @@ COMMON_HERMES_TOOLS = ["read_file", "search_files", "terminal", "patch", "write_
 
 
 class TestToolKindMap:
-    def test_all_hermes_tools_have_kind(self):
-        """Every common hermes tool should appear in TOOL_KIND_MAP."""
+    def test_all_wafi_tools_have_kind(self):
+        """Every common wafi tool should appear in TOOL_KIND_MAP."""
         for tool in COMMON_HERMES_TOOLS:
             assert tool in TOOL_KIND_MAP, f"{tool} missing from TOOL_KIND_MAP"
 
@@ -238,13 +238,13 @@ class TestBuildToolComplete:
     def test_build_tool_complete_for_write_file_uses_snapshot_diff(self, tmp_path):
         target = tmp_path / "diff-test.txt"
         snapshot = type("Snapshot", (), {"paths": [target], "before": {str(target): None}})()
-        target.write_text("hello from hermes\n", encoding="utf-8")
+        target.write_text("hello from wafi\n", encoding="utf-8")
 
         result = build_tool_complete(
             "tc-wf1",
             "write_file",
             '{"bytes_written": 18, "dirs_created": false}',
-            function_args={"path": str(target), "content": "hello from hermes\n"},
+            function_args={"path": str(target), "content": "hello from wafi\n"},
             snapshot=snapshot,
         )
         assert isinstance(result, ToolCallProgress)
@@ -253,7 +253,7 @@ class TestBuildToolComplete:
         assert isinstance(diff_item, FileEditToolCallContent)
         assert diff_item.path.endswith("diff-test.txt")
         assert diff_item.old_text is None
-        assert diff_item.new_text == "hello from hermes"
+        assert diff_item.new_text == "hello from wafi"
 
 
 # ---------------------------------------------------------------------------

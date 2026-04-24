@@ -328,6 +328,25 @@ class MemoryManager:
                     provider.name, e,
                 )
 
+    def on_reflection_records(self, records: List[Dict[str, Any]]) -> None:
+        """Notify external providers about structured reflective writes.
+
+        The built-in MemoryStore remains the authority; this hook is only for
+        additive mirroring or auxiliary learning in external providers.
+        """
+        if not records:
+            return
+        for provider in self._providers:
+            if provider.name == "builtin":
+                continue
+            try:
+                provider.on_reflection_records(records)
+            except Exception as e:
+                logger.debug(
+                    "Memory provider '%s' on_reflection_records failed: %s",
+                    provider.name, e,
+                )
+
     def on_delegation(self, task: str, result: str, *,
                       child_session_id: str = "", **kwargs) -> None:
         """Notify all providers that a subagent completed."""
@@ -356,13 +375,13 @@ class MemoryManager:
     def initialize_all(self, session_id: str, **kwargs) -> None:
         """Initialize all providers.
 
-        Automatically injects ``hermes_home`` into *kwargs* so that every
+        Automatically injects ``wafi_home`` into *kwargs* so that every
         provider can resolve profile-scoped storage paths without importing
-        ``get_hermes_home()`` themselves.
+        ``get_wafi_home()`` themselves.
         """
-        if "hermes_home" not in kwargs:
-            from hermes_constants import get_hermes_home
-            kwargs["hermes_home"] = str(get_hermes_home())
+        if "wafi_home" not in kwargs:
+            from wafi_constants import get_wafi_home
+            kwargs["wafi_home"] = str(get_wafi_home())
         for provider in self._providers:
             try:
                 provider.initialize(session_id=session_id, **kwargs)

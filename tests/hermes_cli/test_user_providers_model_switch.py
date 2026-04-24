@@ -6,8 +6,8 @@ are exposed in the model picker.
 """
 
 import pytest
-from hermes_cli.model_switch import list_authenticated_providers, switch_model
-from hermes_cli import runtime_provider as rp
+from wafi_cli.model_switch import list_authenticated_providers, switch_model
+from wafi_cli import runtime_provider as rp
 
 
 # =============================================================================
@@ -20,7 +20,7 @@ def test_list_authenticated_providers_includes_full_models_list_from_user_provid
     Regression test: previously only default_model was shown in /model picker.
     """
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
-    monkeypatch.setattr("hermes_cli.providers.HERMES_OVERLAYS", {})
+    monkeypatch.setattr("wafi_cli.providers.HERMES_OVERLAYS", {})
     
     user_providers = {
         "local-ollama": {
@@ -60,7 +60,7 @@ def test_list_authenticated_providers_includes_full_models_list_from_user_provid
 def test_list_authenticated_providers_dedupes_models_when_default_in_list(monkeypatch):
     """When default_model is also in models list, don't duplicate."""
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
-    monkeypatch.setattr("hermes_cli.providers.HERMES_OVERLAYS", {})
+    monkeypatch.setattr("wafi_cli.providers.HERMES_OVERLAYS", {})
     
     user_providers = {
         "my-provider": {
@@ -88,14 +88,14 @@ def test_list_authenticated_providers_dedupes_models_when_default_in_list(monkey
 
 def test_list_authenticated_providers_enumerates_dict_format_models(monkeypatch):
     """providers: dict entries with ``models:`` as a dict keyed by model id
-    (canonical Hermes write format) should surface every key in the picker.
+    (canonical Wafi write format) should surface every key in the picker.
 
     Regression: the ``providers:`` dict path previously only accepted
     list-format ``models:`` and silently dropped dict-format entries,
-    even though Hermes's own writer and downstream readers use dict format.
+    even though Wafi's own writer and downstream readers use dict format.
     """
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
-    monkeypatch.setattr("hermes_cli.providers.HERMES_OVERLAYS", {})
+    monkeypatch.setattr("wafi_cli.providers.HERMES_OVERLAYS", {})
 
     user_providers = {
         "local-ollama": {
@@ -135,7 +135,7 @@ def test_list_authenticated_providers_dict_models_without_default_model(monkeypa
     """Dict-format ``models:`` without a ``default_model`` must still expose
     every dict key, not collapse to an empty list."""
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
-    monkeypatch.setattr("hermes_cli.providers.HERMES_OVERLAYS", {})
+    monkeypatch.setattr("wafi_cli.providers.HERMES_OVERLAYS", {})
 
     user_providers = {
         "multimodel": {
@@ -167,7 +167,7 @@ def test_list_authenticated_providers_dict_models_dedupe_with_default(monkeypatc
     """When ``default_model`` is also a key in the ``models:`` dict, it must
     appear exactly once (list already had this for list-format models)."""
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
-    monkeypatch.setattr("hermes_cli.providers.HERMES_OVERLAYS", {})
+    monkeypatch.setattr("wafi_cli.providers.HERMES_OVERLAYS", {})
 
     user_providers = {
         "my-provider": {
@@ -200,7 +200,7 @@ def test_list_authenticated_providers_dict_models_dedupe_with_default(monkeypatc
 def test_list_authenticated_providers_fallback_to_default_only(monkeypatch):
     """When no models array is provided, should fall back to default_model."""
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
-    monkeypatch.setattr("hermes_cli.providers.HERMES_OVERLAYS", {})
+    monkeypatch.setattr("wafi_cli.providers.HERMES_OVERLAYS", {})
     
     user_providers = {
         "simple-provider": {
@@ -228,16 +228,16 @@ def test_list_authenticated_providers_fallback_to_default_only(monkeypatch):
 
 
 def test_list_authenticated_providers_accepts_base_url_and_singular_model(monkeypatch):
-    """providers: dict entries written in canonical Hermes shape
+    """providers: dict entries written in canonical Wafi shape
     (``base_url`` + singular ``model``) should resolve the same as the
     legacy ``api`` + ``default_model`` shape.
 
     Regression: section 3 previously only read ``api``/``url`` and
-    ``default_model``, so new-shape entries written by Hermes's own writer
+    ``default_model``, so new-shape entries written by Wafi's own writer
     surfaced with empty ``api_url`` and no default.
     """
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
-    monkeypatch.setattr("hermes_cli.providers.HERMES_OVERLAYS", {})
+    monkeypatch.setattr("wafi_cli.providers.HERMES_OVERLAYS", {})
 
     user_providers = {
         "custom": {
@@ -274,7 +274,7 @@ def test_list_authenticated_providers_dedupes_when_user_and_custom_overlap(monke
     overlapping entries produced two picker rows for the same provider.
     """
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
-    monkeypatch.setattr("hermes_cli.providers.HERMES_OVERLAYS", {})
+    monkeypatch.setattr("wafi_cli.providers.HERMES_OVERLAYS", {})
 
     providers = list_authenticated_providers(
         current_provider="custom",
@@ -314,7 +314,7 @@ def test_list_authenticated_providers_no_duplicate_labels_across_schemas(monkeyp
     identically, bypassing ``seen_slugs`` dedup because the slug shapes differ.
     """
     monkeypatch.setattr("agent.models_dev.fetch_models_dev", lambda: {})
-    monkeypatch.setattr("hermes_cli.providers.HERMES_OVERLAYS", {})
+    monkeypatch.setattr("wafi_cli.providers.HERMES_OVERLAYS", {})
 
     shared_entries = [
         ("endpoint-a", "http://a.local/v1"),
@@ -499,7 +499,7 @@ def test_switch_model_resolves_user_provider_credentials(monkeypatch, tmp_path):
     
     # Mock validation to pass
     monkeypatch.setattr(
-        "hermes_cli.models.validate_requested_model",
+        "wafi_cli.models.validate_requested_model",
         lambda *a, **k: {"accepted": True, "persist": True, "recognized": True, "message": None}
     )
     
