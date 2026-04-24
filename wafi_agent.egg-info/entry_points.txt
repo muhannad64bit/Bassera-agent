@@ -1,4 +1,0 @@
-[console_scripts]
-wafi = wafi_cli.main:main
-wafi-acp = acp_adapter.entry:main
-wafi-agent = run_agent:main

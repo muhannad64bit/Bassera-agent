@@ -14,3 +14,4 @@ tokens/
 *.key
 .DS_Store
 node_modules/
+*.egg-info/
