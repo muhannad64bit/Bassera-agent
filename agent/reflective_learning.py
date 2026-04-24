@@ -18,10 +18,13 @@ from agent.memory_schema import (
     DEFAULT_CATEGORY_TARGETS,
     MemoryRecord,
     OwnerDNATrait,
+    OwnerDoctrineRule,
     SkillCandidate,
     build_memory_key,
     owner_dna_trait_to_record,
+    owner_doctrine_rule_to_record,
     parse_owner_dna_trait,
+    parse_owner_doctrine_rule,
     parse_skill_candidate,
     skill_candidate_to_record,
 )
@@ -40,6 +43,7 @@ OWNER_DNA_RULES: tuple[Dict[str, Any], ...] = (
         "positive": ("concise", "brief", "focused", "direct", "no fluff"),
         "negative": ("detailed", "thorough", "verbose"),
         "sources": {"owner_preference", "owner_dna"},
+        "min_distinct_records": 2,
         "applicability": "Applies when presenting answers, plans, and summaries.",
     },
     {
@@ -48,6 +52,7 @@ OWNER_DNA_RULES: tuple[Dict[str, Any], ...] = (
         "positive": ("focused test", "pytest", "incremental", "before broader", "validation", "workflow reuse"),
         "negative": ("one-shot", "skip validation", "big bang"),
         "sources": {"procedural", "skill_candidate", "episodic"},
+        "min_distinct_records": 2,
         "applicability": "Applies to debugging, implementation, and verification tasks.",
     },
     {
@@ -56,6 +61,7 @@ OWNER_DNA_RULES: tuple[Dict[str, Any], ...] = (
         "positive": ("backward compatibility", "incremental", "safe", "non-destructive", "low-risk"),
         "negative": ("rewrite the whole runtime", "destructive", "big-bang"),
         "sources": {"owner_preference", "reflective", "owner_dna"},
+        "min_distinct_records": 2,
         "applicability": "Applies when choosing between refactors, migrations, and patches.",
     },
     {
@@ -64,6 +70,7 @@ OWNER_DNA_RULES: tuple[Dict[str, Any], ...] = (
         "positive": ("avoid destructive", "safe", "approvals", "verify", "controlled", "check inputs"),
         "negative": ("reckless", "force through", "ignore approvals"),
         "sources": {"owner_preference", "reflective", "owner_dna"},
+        "min_distinct_records": 2,
         "applicability": "Applies to execution, tool use, and environment changes.",
     },
     {
@@ -72,7 +79,101 @@ OWNER_DNA_RULES: tuple[Dict[str, Any], ...] = (
         "positive": ("memory", "owner-specific", "personal", "continuity", "self-improving", "maintainability"),
         "negative": (),
         "sources": {"episodic", "skill_candidate", "owner_preference", "owner_dna"},
+        "min_distinct_records": 2,
         "applicability": "Applies to long-term product direction and prioritization.",
+    },
+)
+
+OWNER_DOCTRINE_RULES: tuple[Dict[str, Any], ...] = (
+    {
+        "doctrine_name": "plan_incrementally_before_expanding_scope",
+        "category": "planning_style",
+        "guidance": "Prefer incremental planning that starts with the smallest viable verification loop before broadening scope.",
+        "positive": ("incremental", "focused test", "before broader", "validation", "workflow reuse"),
+        "negative": ("big bang", "rewrite the whole runtime", "one-shot"),
+        "sources": {"owner_dna", "owner_preference", "procedural", "skill_candidate"},
+        "min_distinct_records": 2,
+        "applicability": "Default planning behavior; explicit user urgency or scope overrides this.",
+    },
+    {
+        "doctrine_name": "execute_with_minimal_safe_change_first",
+        "category": "execution_style",
+        "guidance": "Default to the smallest safe change that resolves the task before considering broader redesign.",
+        "positive": ("safe", "incremental", "minimal", "non-destructive", "backward compatibility"),
+        "negative": ("aggressive refactor", "destructive", "rewrite the whole runtime"),
+        "sources": {"owner_dna", "owner_preference", "reflective", "episodic"},
+        "min_distinct_records": 2,
+        "applicability": "Applies when choosing an implementation path under ambiguity.",
+    },
+    {
+        "doctrine_name": "safety_over_speed_for_high_impact_actions",
+        "category": "safety_posture",
+        "guidance": "For high-impact actions, optimize for safety and reversibility before speed.",
+        "positive": ("avoid destructive", "safe", "verify", "controlled", "approvals"),
+        "negative": ("force through", "ignore approvals", "reckless"),
+        "sources": {"owner_dna", "owner_preference", "reflective"},
+        "min_distinct_records": 2,
+        "applicability": "Applies to destructive commands, risky edits, and environment changes.",
+    },
+    {
+        "doctrine_name": "ask_before_high_impact_or_ambiguous_actions",
+        "category": "autonomy_threshold",
+        "guidance": "Act directly on low-risk clear tasks, but ask first when actions are high-impact, ambiguous, or hard to reverse.",
+        "positive": ("ask before", "approvals", "controlled", "verify", "high-impact"),
+        "negative": ("act without asking", "ignore approvals"),
+        "sources": {"owner_preference", "owner_dna", "reflective"},
+        "min_distinct_records": 2,
+        "applicability": "Doctrine guides defaults only; explicit user commands and platform approval flows still govern.",
+    },
+    {
+        "doctrine_name": "preserve_structure_before_refactoring",
+        "category": "refactor_bias",
+        "guidance": "Preserve working structure and interfaces unless repeated evidence shows redesign is necessary.",
+        "positive": ("backward compatibility", "preserve", "incremental", "safe"),
+        "negative": ("redesign", "rewrite", "aggressive refactor"),
+        "sources": {"owner_dna", "owner_preference", "episodic", "reflective"},
+        "min_distinct_records": 2,
+        "applicability": "Applies to existing codepaths and stable runtime components.",
+    },
+    {
+        "doctrine_name": "respond_directly_and_concisely_by_default",
+        "category": "verbosity_preference",
+        "guidance": "Default to direct, concise communication unless the user explicitly asks for depth.",
+        "positive": ("concise", "brief", "direct", "focused", "no fluff"),
+        "negative": ("verbose", "digression", "thorough"),
+        "sources": {"owner_dna", "owner_preference"},
+        "min_distinct_records": 2,
+        "applicability": "Applies to explanations, plans, and status updates.",
+    },
+    {
+        "doctrine_name": "intervene_when_repeated_patterns_are_reusable",
+        "category": "intervention_preference",
+        "guidance": "Promote reusable patterns and continuity help only after repeated success signals, not from one-off events.",
+        "positive": ("workflow reuse", "repeated", "candidate", "continuity", "formalizing"),
+        "negative": ("one-off", "single event"),
+        "sources": {"skill_candidate", "reflective", "episodic"},
+        "min_distinct_records": 2,
+        "applicability": "Applies to suggesting process improvements and reusable workflows.",
+    },
+    {
+        "doctrine_name": "validate_before_promoting_or_finishing",
+        "category": "validation_rigor",
+        "guidance": "Prefer focused validation before claiming completion or promoting a pattern as doctrine.",
+        "positive": ("focused test", "validation", "verify", "pytest", "before broader"),
+        "negative": ("skip validation", "ship without checking"),
+        "sources": {"owner_dna", "procedural", "skill_candidate", "reflective"},
+        "min_distinct_records": 2,
+        "applicability": "Applies to code changes, debugging, and memory promotion.",
+    },
+    {
+        "doctrine_name": "maintain_workflow_discipline_and_continuity",
+        "category": "workflow_discipline",
+        "guidance": "Prefer continuity with the current task thread and reuse established workflows before inventing a new path.",
+        "positive": ("continuity", "workflow reuse", "current task", "preserve", "ongoing work"),
+        "negative": ("reset context", "start over", "discard workflow"),
+        "sources": {"owner_dna", "episodic", "skill_candidate", "procedural"},
+        "min_distinct_records": 2,
+        "applicability": "Applies to follow-up work and ongoing task threads.",
     },
 )
 
@@ -183,10 +284,18 @@ def _extract_reusable_tool_chain(messages: List[Dict[str, Any]]) -> List[str]:
 class ReflectiveLearningEngine:
     """Deterministic extractor for structured reflective memory."""
 
-    def __init__(self, *, max_records: int = 4, max_candidates: int = 2, max_owner_dna_traits: int = 3):
+    def __init__(
+        self,
+        *,
+        max_records: int = 4,
+        max_candidates: int = 2,
+        max_owner_dna_traits: int = 3,
+        max_owner_doctrine_rules: int = 4,
+    ):
         self.max_records = max_records
         self.max_candidates = max_candidates
         self.max_owner_dna_traits = max_owner_dna_traits
+        self.max_owner_doctrine_rules = max_owner_doctrine_rules
 
     def build_records(
         self,
@@ -256,6 +365,28 @@ class ReflectiveLearningEngine:
                 )
             )
         for record in self._build_owner_dna_records(
+            store=store,
+            messages=messages,
+            user_message=user_message,
+            assistant_response=assistant_response,
+            base_records=base_records,
+        ):
+            dedupe = (record.target, record.key)
+            if dedupe in seen:
+                continue
+            seen.add(dedupe)
+            result = store.upsert_record(record)
+            if not result.get("success"):
+                continue
+            persisted.append(
+                PersistedReflection(
+                    action=str(result.get("action") or "add"),
+                    target=record.target,
+                    entry=str(result.get("entry") or ""),
+                    record=record,
+                )
+            )
+        for record in self._build_owner_doctrine_records(
             store=store,
             messages=messages,
             user_message=user_message,
@@ -433,6 +564,27 @@ class ReflectiveLearningEngine:
             for trait in traits[: self.max_owner_dna_traits]
         ]
 
+    def _build_owner_doctrine_records(
+        self,
+        *,
+        store,
+        messages: List[Dict[str, Any]],
+        user_message: str,
+        assistant_response: str,
+        base_records: List[MemoryRecord],
+    ) -> List[MemoryRecord]:
+        rules = self._derive_owner_doctrine_rules(
+            store=store,
+            messages=messages,
+            user_message=user_message,
+            assistant_response=assistant_response,
+            base_records=base_records,
+        )
+        return [
+            owner_doctrine_rule_to_record(rule)
+            for rule in rules[: self.max_owner_doctrine_rules]
+        ]
+
     def _derive_skill_candidates(
         self,
         *,
@@ -591,52 +743,78 @@ class ReflectiveLearningEngine:
             *existing_memory_records,
             *current_records,
         ]
-        evidence_by_category: Dict[str, List[str]] = {}
+        evidence_by_category: Dict[str, List[tuple[str, str]]] = {}
         for record in evidence_records:
-            evidence_by_category.setdefault(record.category, []).append(record.content.lower())
+            evidence_by_category.setdefault(record.category, []).append(
+                (record.content.lower(), record.content)
+            )
         for trait in existing_dna:
             evidence_by_category.setdefault("owner_dna", []).append(
-                f"{trait.trait_name} {trait.category} {' '.join(trait.supporting_signals).lower()}"
+                (
+                    f"{trait.trait_name} {trait.category} {' '.join(trait.supporting_signals).lower()} "
+                    f"{' '.join(trait.supporting_examples).lower()}",
+                    f"{trait.trait_name}: {'; '.join(trait.supporting_examples or trait.supporting_signals)}",
+                )
             )
 
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
         traits: List[OwnerDNATrait] = []
+        existing_dna_by_name = {trait.trait_name: trait for trait in existing_dna}
 
         for rule in OWNER_DNA_RULES:
-            texts: List[str] = []
+            evidence_items: List[tuple[str, str, str]] = []
             for source in rule["sources"]:
-                texts.extend(evidence_by_category.get(source, []))
-            if not texts:
+                for normalized_text, original_text in evidence_by_category.get(source, []):
+                    evidence_items.append((source, normalized_text, original_text))
+            if not evidence_items:
                 continue
             positive_hits = 0
+            matched_records: List[tuple[str, str]] = []
             supporting_signals: List[str] = []
-            for text in texts:
+            supporting_examples: List[str] = []
+            supporting_sources: set[str] = set()
+            for source, text, original_text in evidence_items:
                 matched = [token for token in rule["positive"] if token in text]
                 if not matched:
                     continue
                 positive_hits += 1
+                matched_records.append((source, original_text))
+                supporting_sources.add(source)
                 supporting_signals.extend(matched[:2])
+                supporting_examples.append(_summarize_prompt(original_text, limit=96))
             contradiction_hits = sum(
                 1
-                for text in texts
+                for _, text, _ in evidence_items
                 if any(token in text for token in rule["negative"])
             )
+            distinct_records = len({example for _, example in matched_records})
             if positive_hits < 2:
+                continue
+            if distinct_records < int(rule.get("min_distinct_records", 2)):
+                continue
+            if len(supporting_sources) < 2 and positive_hits < 3:
                 continue
             if contradiction_hits >= positive_hits:
                 continue
-            stability = min(1.0, positive_hits / max(positive_hits + contradiction_hits, 1))
+            stability = min(1.0, distinct_records / max(distinct_records + contradiction_hits, 1))
             confidence = min(0.95, 0.58 + min(positive_hits, 5) * 0.07 + stability * 0.12)
             if confidence < 0.72:
                 continue
+            existing_trait = existing_dna_by_name.get(rule["trait_name"])
+            evidence_count = positive_hits
+            if existing_trait is not None:
+                evidence_count = max(existing_trait.evidence_count + 1, positive_hits)
+                supporting_signals = list(existing_trait.supporting_signals) + supporting_signals
+                supporting_examples = list(existing_trait.supporting_examples) + supporting_examples
             traits.append(
                 OwnerDNATrait(
                     trait_name=rule["trait_name"],
                     category=rule["category"],
                     confidence=confidence,
-                    evidence_count=positive_hits,
+                    evidence_count=evidence_count,
                     last_updated=now,
                     supporting_signals=tuple(dict.fromkeys(supporting_signals))[:5],
+                    supporting_examples=tuple(dict.fromkeys(supporting_examples))[:3],
                     stability_score=stability,
                     applicability_notes=rule["applicability"],
                 )
@@ -651,6 +829,132 @@ class ReflectiveLearningEngine:
             reverse=True,
         )
         return traits
+
+    def _derive_owner_doctrine_rules(
+        self,
+        *,
+        store,
+        messages: List[Dict[str, Any]],
+        user_message: str,
+        assistant_response: str,
+        base_records: List[MemoryRecord],
+    ) -> List[OwnerDoctrineRule]:
+        current_records = list(base_records)
+        existing_user_records = store.list_structured_records(target="user")
+        existing_memory_records = store.list_structured_records(target="memory")
+        existing_dna = [
+            trait
+            for trait in (
+                parse_owner_dna_trait(record)
+                for record in existing_user_records
+            )
+            if trait is not None
+        ]
+        existing_doctrine = [
+            rule
+            for rule in (
+                parse_owner_doctrine_rule(record)
+                for record in existing_user_records
+            )
+            if rule is not None
+        ]
+
+        evidence_by_category: Dict[str, List[tuple[str, str]]] = {}
+        for record in [*existing_user_records, *existing_memory_records, *current_records]:
+            evidence_by_category.setdefault(record.category, []).append(
+                (record.content.lower(), record.content)
+            )
+        for trait in existing_dna:
+            evidence_by_category.setdefault("owner_dna", []).append(
+                (
+                    f"{trait.trait_name} {trait.category} {' '.join(trait.supporting_signals).lower()} {' '.join(trait.supporting_examples).lower()}",
+                    f"{trait.trait_name}: {'; '.join(trait.supporting_examples or trait.supporting_signals)}",
+                )
+            )
+        for rule in existing_doctrine:
+            evidence_by_category.setdefault("owner_doctrine", []).append(
+                (
+                    f"{rule.doctrine_name} {rule.category} {rule.guidance.lower()} {' '.join(rule.supporting_signals).lower()}",
+                    f"{rule.doctrine_name}: {rule.guidance}",
+                )
+            )
+
+        existing_doctrine_by_name = {rule.doctrine_name: rule for rule in existing_doctrine}
+        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        doctrine_rules: List[OwnerDoctrineRule] = []
+
+        for doctrine in OWNER_DOCTRINE_RULES:
+            evidence_items: List[tuple[str, str, str]] = []
+            for source in doctrine["sources"]:
+                for normalized_text, original_text in evidence_by_category.get(source, []):
+                    evidence_items.append((source, normalized_text, original_text))
+            if not evidence_items:
+                continue
+
+            positive_hits = 0
+            contradiction_hits = 0
+            supporting_signals: List[str] = []
+            supporting_examples: List[str] = []
+            supporting_sources: set[str] = set()
+            distinct_examples: set[str] = set()
+
+            for source, text, original_text in evidence_items:
+                positive = [token for token in doctrine["positive"] if token in text]
+                negative = [token for token in doctrine["negative"] if token in text]
+                if negative:
+                    contradiction_hits += 1
+                if not positive:
+                    continue
+                positive_hits += 1
+                supporting_sources.add(source)
+                distinct_examples.add(original_text)
+                supporting_signals.extend(positive[:2])
+                supporting_examples.append(_summarize_prompt(original_text, limit=96))
+
+            distinct_records = len(distinct_examples)
+            if positive_hits < 2:
+                continue
+            if distinct_records < int(doctrine.get("min_distinct_records", 2)):
+                continue
+            if len(supporting_sources) < 2 and positive_hits < 3:
+                continue
+
+            stability = min(1.0, distinct_records / max(distinct_records + contradiction_hits, 1))
+            confidence = min(0.95, 0.56 + min(positive_hits, 5) * 0.07 + stability * 0.14 - min(contradiction_hits, 3) * 0.04)
+            if confidence < 0.74:
+                continue
+
+            existing_rule = existing_doctrine_by_name.get(doctrine["doctrine_name"])
+            evidence_count = positive_hits
+            if existing_rule is not None:
+                evidence_count = max(existing_rule.evidence_count + 1, positive_hits)
+                supporting_signals = list(existing_rule.supporting_signals) + supporting_signals
+                supporting_examples = list(existing_rule.supporting_examples) + supporting_examples
+
+            doctrine_rules.append(
+                OwnerDoctrineRule(
+                    doctrine_name=doctrine["doctrine_name"],
+                    category=doctrine["category"],
+                    guidance=doctrine["guidance"],
+                    confidence=confidence,
+                    evidence_count=evidence_count,
+                    last_updated=now,
+                    supporting_signals=tuple(dict.fromkeys(supporting_signals))[:5],
+                    supporting_examples=tuple(dict.fromkeys(supporting_examples))[:3],
+                    stability_score=stability,
+                    applicability_notes=doctrine["applicability"],
+                )
+            )
+
+        doctrine_rules.sort(
+            key=lambda rule: (
+                rule.confidence,
+                rule.evidence_count,
+                rule.stability_score,
+            ),
+            reverse=True,
+        )
+        return doctrine_rules
 
     @staticmethod
     def _owner_applicability_note(store) -> str:

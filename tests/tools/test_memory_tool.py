@@ -15,10 +15,13 @@ from tools.memory_tool import (
 from agent.memory_schema import (
     MemoryRecord,
     OwnerDNATrait,
+    OwnerDoctrineRule,
     SkillCandidate,
     owner_dna_trait_to_record,
+    owner_doctrine_rule_to_record,
     parse_memory_record,
     parse_owner_dna_trait,
+    parse_owner_doctrine_rule,
     parse_skill_candidate,
     skill_candidate_to_record,
 )
@@ -309,6 +312,7 @@ class TestStructuredMemoryRecords:
             evidence_count=3,
             last_updated="2026-04-23T12:00:00+00:00",
             supporting_signals=("concise", "focused", "direct"),
+            supporting_examples=("Prefers concise responses",),
             stability_score=0.85,
             applicability_notes="Applies when presenting answers and plans.",
         )
@@ -321,6 +325,106 @@ class TestStructuredMemoryRecords:
         assert parsed.trait_name == "concise_direct_communication"
         assert parsed.category == "response_style"
         assert parsed.evidence_count == 3
+        assert parsed.supporting_examples == ("Prefers concise responses",)
+
+    def test_owner_doctrine_round_trip(self):
+        rule = OwnerDoctrineRule(
+            doctrine_name="execute_with_minimal_safe_change_first",
+            category="execution_style",
+            guidance="Default to the smallest safe change before broader redesign.",
+            confidence=0.86,
+            evidence_count=3,
+            last_updated="2026-04-24T12:00:00+00:00",
+            supporting_signals=("safe", "incremental", "backward compatibility"),
+            supporting_examples=("Avoids destructive rewrites",),
+            stability_score=0.83,
+            applicability_notes="Explicit user instructions override doctrine.",
+        )
+
+        record = owner_doctrine_rule_to_record(rule)
+        parsed = parse_owner_doctrine_rule(record)
+
+        assert record.category == "owner_doctrine"
+        assert parsed is not None
+        assert parsed.doctrine_name == "execute_with_minimal_safe_change_first"
+        assert parsed.category == "execution_style"
+        assert parsed.guidance.startswith("Default to the smallest safe change")
+
+    def test_upsert_owner_dna_merges_evidence_and_examples(self, store):
+        initial = owner_dna_trait_to_record(
+            OwnerDNATrait(
+                trait_name="concise_direct_communication",
+                category="response_style",
+                confidence=0.84,
+                evidence_count=2,
+                last_updated="2026-04-23T12:00:00+00:00",
+                supporting_signals=("concise", "focused"),
+                supporting_examples=("Prefers concise responses",),
+                stability_score=0.8,
+                applicability_notes="Applies when presenting answers and plans.",
+            )
+        )
+        store.upsert_record(initial)
+
+        updated = owner_dna_trait_to_record(
+            OwnerDNATrait(
+                trait_name="concise_direct_communication",
+                category="response_style",
+                confidence=0.9,
+                evidence_count=3,
+                last_updated="2026-04-24T12:00:00+00:00",
+                supporting_signals=("direct",),
+                supporting_examples=("Keep the answer concise",),
+                stability_score=0.86,
+                applicability_notes="Applies when presenting answers and plans.",
+            )
+        )
+        result = store.upsert_record(updated)
+
+        assert result["success"] is True
+        parsed = parse_owner_dna_trait(store.user_entries[0])
+        assert parsed is not None
+        assert parsed.evidence_count == 5
+        assert "Prefers concise responses" in parsed.supporting_examples
+        assert "Keep the answer concise" in parsed.supporting_examples
+
+    def test_upsert_owner_doctrine_merges_evidence_and_examples(self, store):
+        initial = owner_doctrine_rule_to_record(
+            OwnerDoctrineRule(
+                doctrine_name="safety_over_speed_for_high_impact_actions",
+                category="safety_posture",
+                guidance="For high-impact actions, optimize for safety before speed.",
+                confidence=0.82,
+                evidence_count=2,
+                last_updated="2026-04-24T12:00:00+00:00",
+                supporting_signals=("safe", "verify"),
+                supporting_examples=("Avoids destructive rewrites",),
+                stability_score=0.8,
+                applicability_notes="Explicit instructions still win.",
+            )
+        )
+        store.upsert_record(initial)
+
+        updated = owner_doctrine_rule_to_record(
+            OwnerDoctrineRule(
+                doctrine_name="safety_over_speed_for_high_impact_actions",
+                category="safety_posture",
+                guidance="For high-impact actions, optimize for safety before speed.",
+                confidence=0.89,
+                evidence_count=3,
+                last_updated="2026-04-25T12:00:00+00:00",
+                supporting_signals=("controlled",),
+                supporting_examples=("Check approvals before retrying",),
+                stability_score=0.86,
+                applicability_notes="Explicit instructions still win.",
+            )
+        )
+        store.upsert_record(updated)
+
+        parsed = parse_owner_doctrine_rule(store.user_entries[0])
+        assert parsed is not None
+        assert parsed.evidence_count == 5
+        assert "Check approvals before retrying" in parsed.supporting_examples
 
     def test_upsert_structured_record_merges_existing_key(self, store):
         record = MemoryRecord(
@@ -532,6 +636,112 @@ class TestStructuredMemoryRetrieval:
         assert ranked
         top_categories = [item["category"] for item in ranked[:2]]
         assert "owner_dna" in top_categories
+
+    def test_low_confidence_owner_dna_excluded_from_system_prompt_snapshot(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("tools.memory_tool.get_memory_dir", lambda: tmp_path)
+        store = MemoryStore(memory_char_limit=500, user_char_limit=500)
+        store.load_from_disk()
+        store.upsert_record(
+            owner_dna_trait_to_record(
+                OwnerDNATrait(
+                    trait_name="weak_signal_trait",
+                    category="workflow_preference",
+                    confidence=0.6,
+                    evidence_count=1,
+                    last_updated="2026-04-24T12:00:00+00:00",
+                    supporting_signals=("incremental",),
+                    supporting_examples=("One isolated example",),
+                    stability_score=0.5,
+                    applicability_notes="Should not be injected.",
+                )
+            )
+        )
+        store.upsert_record(
+            owner_dna_trait_to_record(
+                OwnerDNATrait(
+                    trait_name="strong_signal_trait",
+                    category="workflow_preference",
+                    confidence=0.84,
+                    evidence_count=3,
+                    last_updated="2026-04-24T12:00:00+00:00",
+                    supporting_signals=("pytest", "incremental"),
+                    supporting_examples=("Run focused tests before broad validation",),
+                    stability_score=0.82,
+                    applicability_notes="Should be injected.",
+                )
+            )
+        )
+
+        rendered = store._render_block("user", store.user_entries)
+
+        assert "strong_signal_trait" in rendered
+        assert "weak_signal_trait" not in rendered
+
+    def test_low_confidence_owner_doctrine_excluded_from_system_prompt_snapshot(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("tools.memory_tool.get_memory_dir", lambda: tmp_path)
+        store = MemoryStore(memory_char_limit=500, user_char_limit=800)
+        store.load_from_disk()
+        store.upsert_record(
+            owner_doctrine_rule_to_record(
+                OwnerDoctrineRule(
+                    doctrine_name="weak_doctrine",
+                    category="autonomy_threshold",
+                    guidance="Ask first sometimes.",
+                    confidence=0.6,
+                    evidence_count=1,
+                    last_updated="2026-04-24T12:00:00+00:00",
+                    supporting_signals=("ask first",),
+                    supporting_examples=("One isolated example",),
+                    stability_score=0.5,
+                    applicability_notes="Should not be injected.",
+                )
+            )
+        )
+        store.upsert_record(
+            owner_doctrine_rule_to_record(
+                OwnerDoctrineRule(
+                    doctrine_name="strong_doctrine",
+                    category="validation_rigor",
+                    guidance="Prefer focused validation before claiming completion.",
+                    confidence=0.86,
+                    evidence_count=3,
+                    last_updated="2026-04-24T12:00:00+00:00",
+                    supporting_signals=("validation", "pytest"),
+                    supporting_examples=("Run focused tests before broad validation",),
+                    stability_score=0.83,
+                    applicability_notes="Should be injected.",
+                )
+            )
+        )
+
+        rendered = store._render_block("user", store.user_entries)
+
+        assert "strong_doctrine" in rendered
+        assert "weak_doctrine" not in rendered
+
+    def test_build_doctrine_guidance_returns_bounded_override_safe_block(self, store):
+        store.upsert_record(
+            owner_doctrine_rule_to_record(
+                OwnerDoctrineRule(
+                    doctrine_name="respond_directly_and_concisely_by_default",
+                    category="verbosity_preference",
+                    guidance="Default to direct, concise communication unless the user asks for depth.",
+                    confidence=0.88,
+                    evidence_count=3,
+                    last_updated="2026-04-24T12:00:00+00:00",
+                    supporting_signals=("concise", "direct"),
+                    supporting_examples=("Prefers concise responses",),
+                    stability_score=0.84,
+                    applicability_notes="Explicit user instructions override doctrine.",
+                )
+            )
+        )
+
+        block = store.build_doctrine_guidance("How should you respond by default?")
+
+        assert "WAFI OWNER DOCTRINE" in block
+        assert "Explicit user instructions" in block
+        assert "verbosity_preference" in block
 
     def test_episodic_recall_prefers_same_file_and_workflow_continuity(self, store):
         store.set_active_session("session-live")

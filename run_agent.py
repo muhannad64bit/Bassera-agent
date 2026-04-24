@@ -2703,7 +2703,12 @@ class AIAgent:
         if not self._memory_store or not user_message or not assistant_response:
             return
         try:
-            persisted = ReflectiveLearningEngine(max_records=4).persist_records(
+            persisted = ReflectiveLearningEngine(
+                max_records=4,
+                max_candidates=2,
+                max_owner_dna_traits=3,
+                max_owner_doctrine_rules=4,
+            ).persist_records(
                 store=self._memory_store,
                 messages=messages,
                 user_message=user_message,
@@ -9309,10 +9314,12 @@ class AIAgent:
                 pass
 
         _builtin_prefetch_cache = ""
+        _doctrine_guidance_cache = ""
         if self._memory_store:
             try:
                 _query = original_user_message if isinstance(original_user_message, str) else ""
                 _builtin_prefetch_cache = self._memory_store.build_recall_context(_query) or ""
+                _doctrine_guidance_cache = self._memory_store.build_doctrine_guidance(_query) or ""
             except Exception:
                 pass
 
@@ -9395,6 +9402,10 @@ class AIAgent:
                     _injections = []
                     if _builtin_prefetch_cache:
                         _fenced = build_memory_context_block(_builtin_prefetch_cache)
+                        if _fenced:
+                            _injections.append(_fenced)
+                    if _doctrine_guidance_cache:
+                        _fenced = build_memory_context_block(_doctrine_guidance_cache)
                         if _fenced:
                             _injections.append(_fenced)
                     if _ext_prefetch_cache:

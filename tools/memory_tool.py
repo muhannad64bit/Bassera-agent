@@ -41,6 +41,7 @@ from agent.memory_schema import (
     normalize_memory_record,
     normalize_memory_timestamp,
     parse_owner_dna_trait,
+    parse_owner_doctrine_rule,
     parse_memory_record,
 )
 
@@ -78,6 +79,12 @@ _PREFERENCE_HINTS = (
     "prefer", "preference", "style", "tone", "format", "always", "never",
     "avoid", "please", "concise", "detailed", "brief",
 )
+_OWNER_DNA_MIN_CONFIDENCE = 0.72
+_OWNER_DNA_MIN_EVIDENCE = 2
+_OWNER_DNA_MAX_SYSTEM_PROMPT_TRAITS = 4
+_OWNER_DOCTRINE_MIN_CONFIDENCE = 0.74
+_OWNER_DOCTRINE_MIN_EVIDENCE = 2
+_OWNER_DOCTRINE_MAX_SYSTEM_PROMPT_RULES = 5
 _PROCEDURAL_HINTS = (
     "fix", "debug", "implement", "build", "update", "run", "test", "edit",
     "write", "patch", "refactor", "execute", "deploy",
@@ -89,6 +96,11 @@ _FAILURE_HINTS = (
 _CONTINUITY_HINTS = (
     "continue", "continued", "again", "earlier", "before", "previous",
     "last", "resume", "pick up", "we were",
+)
+_DOCTRINE_HINTS = (
+    "plan", "planning", "execution", "risk", "autonomy", "refactor",
+    "verbosity", "intervention", "validation", "workflow", "discipline",
+    "safety", "speed", "completeness", "default behavior", "ask first",
 )
 _WORKFLOW_TERMS = (
     "debug", "fix", "implement", "patch", "refactor", "inspect", "trace",
@@ -322,7 +334,16 @@ class MemoryStore:
                 continue
             category = parsed.category if parsed else None
             owner_dna = parse_owner_dna_trait(parsed) if parsed and category == "owner_dna" else None
-            if owner_dna is not None and (owner_dna.evidence_count < 2 or owner_dna.confidence < 0.72):
+            owner_doctrine = parse_owner_doctrine_rule(parsed) if parsed and category == "owner_doctrine" else None
+            if owner_dna is not None and (
+                owner_dna.evidence_count < _OWNER_DNA_MIN_EVIDENCE
+                or owner_dna.confidence < _OWNER_DNA_MIN_CONFIDENCE
+            ):
+                continue
+            if owner_doctrine is not None and (
+                owner_doctrine.evidence_count < _OWNER_DOCTRINE_MIN_EVIDENCE
+                or owner_doctrine.confidence < _OWNER_DOCTRINE_MIN_CONFIDENCE
+            ):
                 continue
             overlap = len(query_terms & _extract_query_terms(content))
             continuity = self._continuity_signal_strength(
@@ -368,6 +389,7 @@ class MemoryStore:
                     "key": parsed.key if parsed else "",
                     "namespace": self._key_namespace(parsed.key) if parsed else "",
                     "owner_dna": owner_dna,
+                    "owner_doctrine": owner_doctrine,
                 }
             )
         return candidates
@@ -460,6 +482,13 @@ class MemoryStore:
                 score += 2.0
             if overlap > 0:
                 score += 1.1
+        elif category == "owner_doctrine":
+            if any(hint in query_lower for hint in (*_PREFERENCE_HINTS, *_DOCTRINE_HINTS)):
+                score += 3.0
+            if any(term in query_lower for term in ("default", "should", "when", "act", "ask", "safe", "risk", "validate", "refactor")):
+                score += 2.0
+            if overlap > 0:
+                score += 1.2
 
         if overlap == 0 and not self._looks_globally_relevant(query_lower, content.lower(), category):
             score -= 1.2
@@ -579,6 +608,7 @@ class MemoryStore:
             "episodic": 1.0,
             "skill_candidate": 1.1,
             "owner_dna": 2.1,
+            "owner_doctrine": 2.5,
         }
         return weights.get(category, 0.0)
 
@@ -605,6 +635,8 @@ class MemoryStore:
                     "risk", "priority", "style", "habit",
                 )
             )
+        if category == "owner_doctrine":
+            return any(hint in query_lower for hint in (*_PREFERENCE_HINTS, *_DOCTRINE_HINTS))
         return any(term in content_lower for term in _extract_query_terms(query_lower))
 
     @staticmethod
@@ -623,6 +655,8 @@ class MemoryStore:
             return "Skill Candidate"
         if category == "owner_dna":
             return "Owner DNA"
+        if category == "owner_doctrine":
+            return "Owner Doctrine"
         return "User Memory" if target == "user" else "Memory"
 
     @staticmethod
@@ -914,6 +948,93 @@ class MemoryStore:
 
     # -- Internal helpers --
 
+    @staticmethod
+    def _owner_dna_is_prompt_eligible(entry: str, *, target: str) -> bool:
+        parsed = parse_memory_record(entry, default_target=target)
+        if parsed is None or parsed.category != "owner_dna":
+            return True
+        trait = parse_owner_dna_trait(parsed)
+        if trait is None:
+            return False
+        return (
+            trait.evidence_count >= _OWNER_DNA_MIN_EVIDENCE
+            and trait.confidence >= _OWNER_DNA_MIN_CONFIDENCE
+        )
+
+    @staticmethod
+    def _owner_doctrine_is_prompt_eligible(entry: str, *, target: str) -> bool:
+        parsed = parse_memory_record(entry, default_target=target)
+        if parsed is None or parsed.category != "owner_doctrine":
+            return True
+        rule = parse_owner_doctrine_rule(parsed)
+        if rule is None:
+            return False
+        return (
+            rule.evidence_count >= _OWNER_DOCTRINE_MIN_EVIDENCE
+            and rule.confidence >= _OWNER_DOCTRINE_MIN_CONFIDENCE
+        )
+
+    def _filter_entries_for_system_prompt(self, target: str, entries: List[str]) -> List[str]:
+        if target != "user":
+            return list(entries)
+
+        filtered: List[str] = []
+        owner_dna_entries: List[tuple[float, int, str]] = []
+        owner_doctrine_entries: List[tuple[float, int, str]] = []
+        for entry in entries:
+            parsed = parse_memory_record(entry, default_target=target)
+            if parsed is None or parsed.category not in {"owner_dna", "owner_doctrine"}:
+                filtered.append(entry)
+                continue
+            if parsed.category == "owner_dna":
+                if not self._owner_dna_is_prompt_eligible(entry, target=target):
+                    continue
+                owner_dna_entries.append((parsed.confidence, parsed.hits, entry))
+                continue
+            if not self._owner_doctrine_is_prompt_eligible(entry, target=target):
+                continue
+            owner_doctrine_entries.append((parsed.confidence, parsed.hits, entry))
+
+        owner_dna_entries.sort(key=lambda item: (item[0], item[1]), reverse=True)
+        owner_doctrine_entries.sort(key=lambda item: (item[0], item[1]), reverse=True)
+        filtered.extend(
+            entry for _, _, entry in owner_dna_entries[:_OWNER_DNA_MAX_SYSTEM_PROMPT_TRAITS]
+        )
+        filtered.extend(
+            entry for _, _, entry in owner_doctrine_entries[:_OWNER_DOCTRINE_MAX_SYSTEM_PROMPT_RULES]
+        )
+        return filtered
+
+    def build_doctrine_guidance(self, query: str, *, max_rules: int = 3, max_chars: int = 900) -> str:
+        """Build a bounded doctrine guidance block for API-call-time injection."""
+        ranked = [
+            item
+            for item in self.rank_entries_for_query(query, max_entries=max_rules * 3)
+            if item.get("category") == "owner_doctrine"
+        ]
+        if not ranked:
+            return ""
+
+        lines = [
+            "WAFI OWNER DOCTRINE",
+            "Use these as default operating preferences only.",
+            "Explicit user instructions, approvals, and safety checks override doctrine.",
+        ]
+        current_chars = sum(len(line) for line in lines) + 2
+        added = 0
+        for item in ranked:
+            rule = item.get("owner_doctrine")
+            if rule is None:
+                continue
+            line = f"- {rule.category}: {rule.guidance}"
+            projected = current_chars + 1 + len(line)
+            if added >= max_rules or projected > max_chars:
+                break
+            lines.append(line)
+            current_chars = projected
+            added += 1
+        return "\n".join(lines) if added else ""
+
     def _success_response(self, target: str, message: str = None) -> Dict[str, Any]:
         entries = self._entries_for(target)
         current = self._char_count(target)
@@ -933,6 +1054,7 @@ class MemoryStore:
 
     def _render_block(self, target: str, entries: List[str]) -> str:
         """Render a system prompt block with header and usage indicator."""
+        entries = self._filter_entries_for_system_prompt(target, entries)
         if not entries:
             return ""
 

@@ -23,6 +23,7 @@ MemoryCategory = Literal[
     "owner_preference",
     "skill_candidate",
     "owner_dna",
+    "owner_doctrine",
 ]
 
 MemoryTarget = Literal["memory", "user"]
@@ -50,6 +51,7 @@ DEFAULT_CATEGORY_TARGETS: dict[MemoryCategory, MemoryTarget] = {
     "owner_preference": "user",
     "skill_candidate": "memory",
     "owner_dna": "user",
+    "owner_doctrine": "user",
 }
 
 
@@ -109,6 +111,22 @@ class OwnerDNATrait:
 
     trait_name: str
     category: str
+    confidence: float
+    evidence_count: int
+    last_updated: str
+    supporting_signals: tuple[str, ...]
+    supporting_examples: tuple[str, ...] = ()
+    stability_score: float = 0.0
+    applicability_notes: str = ""
+
+
+@dataclass(frozen=True)
+class OwnerDoctrineRule:
+    """Evidence-based operating doctrine for how WAFI should default to behaving."""
+
+    doctrine_name: str
+    category: str
+    guidance: str
     confidence: float
     evidence_count: int
     last_updated: str
@@ -181,6 +199,46 @@ def normalize_owner_dna_trait(trait: OwnerDNATrait) -> OwnerDNATrait:
     return OwnerDNATrait(
         trait_name=trait_name,
         category=category,
+        confidence=confidence,
+        evidence_count=evidence_count,
+        last_updated=last_updated,
+        supporting_signals=signals,
+        supporting_examples=examples,
+        stability_score=stability_score,
+        applicability_notes=applicability,
+    )
+
+
+def normalize_owner_doctrine_rule(rule: OwnerDoctrineRule) -> OwnerDoctrineRule:
+    """Clamp Owner Doctrine fields for stable persistence."""
+    doctrine_name = " ".join((rule.doctrine_name or "").strip().split())
+    category = (rule.category or "execution_style").strip() or "execution_style"
+    guidance = " ".join((rule.guidance or "").strip().split())
+    evidence_count = max(1, int(rule.evidence_count))
+    confidence = min(1.0, max(0.0, float(rule.confidence)))
+    last_updated = normalize_memory_timestamp(rule.last_updated)
+    signals = tuple(
+        sorted(
+            {
+                " ".join((signal or "").strip().split())
+                for signal in rule.supporting_signals
+                if (signal or "").strip()
+            }
+        )
+    )
+    examples = tuple(
+        dict.fromkeys(
+            " ".join((example or "").strip().split())
+            for example in rule.supporting_examples
+            if (example or "").strip()
+        )
+    )
+    stability_score = min(1.0, max(0.0, float(rule.stability_score)))
+    applicability = " ".join((rule.applicability_notes or "").strip().split())
+    return OwnerDoctrineRule(
+        doctrine_name=doctrine_name,
+        category=category,
+        guidance=guidance,
         confidence=confidence,
         evidence_count=evidence_count,
         last_updated=last_updated,
@@ -326,6 +384,82 @@ def parse_owner_dna_trait(value: str | MemoryRecord, *, default_target: MemoryTa
     )
 
 
+def owner_doctrine_rule_to_record(rule: OwnerDoctrineRule) -> MemoryRecord:
+    """Encode an Owner Doctrine rule as a structured memory record."""
+    normalized = normalize_owner_doctrine_rule(rule)
+    content_parts = [
+        f"Doctrine Name: {normalized.doctrine_name}",
+        f"Doctrine Category: {normalized.category}",
+        f"Guidance: {normalized.guidance}",
+        f"Evidence Count: {normalized.evidence_count}",
+        f"Stability Score: {normalized.stability_score:.2f}",
+        f"Supporting Signals: {', '.join(normalized.supporting_signals)}",
+    ]
+    if normalized.supporting_examples:
+        content_parts.append(f"Supporting Examples: {' || '.join(normalized.supporting_examples)}")
+    if normalized.applicability_notes:
+        content_parts.append(f"Applicability Notes: {normalized.applicability_notes}")
+    content = " | ".join(content_parts)
+    return normalize_memory_record(
+        MemoryRecord(
+            category="owner_doctrine",
+            content=content,
+            key=build_memory_key("owner-doctrine", f"{normalized.category}:{normalized.doctrine_name}"),
+            target=DEFAULT_CATEGORY_TARGETS["owner_doctrine"],
+            hits=normalized.evidence_count,
+            confidence=normalized.confidence,
+            source="owner_doctrine",
+            updated_at=normalized.last_updated,
+        )
+    )
+
+
+def parse_owner_doctrine_rule(
+    value: str | MemoryRecord,
+    *,
+    default_target: MemoryTarget = "user",
+) -> Optional[OwnerDoctrineRule]:
+    """Parse an Owner Doctrine rule from a memory entry or parsed record."""
+    record = value if isinstance(value, MemoryRecord) else parse_memory_record(value, default_target=default_target)
+    if record is None or record.category != "owner_doctrine":
+        return None
+    fields: dict[str, str] = {}
+    for part in record.content.split(" | "):
+        if ": " not in part:
+            continue
+        key, raw = part.split(": ", 1)
+        fields[key.strip()] = raw.strip()
+    doctrine_name = fields.get("Doctrine Name", "")
+    category = fields.get("Doctrine Category", "")
+    guidance = fields.get("Guidance", "")
+    signals = tuple(
+        signal.strip()
+        for signal in fields.get("Supporting Signals", "").split(",")
+        if signal.strip()
+    )
+    examples = tuple(
+        example.strip()
+        for example in fields.get("Supporting Examples", "").split(" || ")
+        if example.strip()
+    )
+    if not doctrine_name or not category or not guidance or not signals:
+        return None
+    return normalize_owner_doctrine_rule(
+        OwnerDoctrineRule(
+            doctrine_name=doctrine_name,
+            category=category,
+            guidance=guidance,
+            confidence=record.confidence,
+            evidence_count=int(fields.get("Evidence Count", str(record.hits)) or record.hits),
+            last_updated=record.updated_at,
+            supporting_signals=signals,
+            supporting_examples=examples,
+            stability_score=float(fields.get("Stability Score", "0") or 0),
+            applicability_notes=fields.get("Applicability Notes", ""),
+        )
+    )
+
+
 def normalize_memory_record(record: MemoryRecord) -> MemoryRecord:
     """Clamp fields and normalize whitespace for stable persistence."""
     content = record.normalized_content()
@@ -410,6 +544,37 @@ def merge_memory_records(existing: MemoryRecord, new_record: MemoryRecord) -> Me
                 MemoryRecord(
                     category="owner_dna",
                     content=owner_dna_trait_to_record(merged_trait).content,
+                    key=existing.key,
+                    target=existing.target,
+                    hits=max(existing.hits, 0) + max(new_record.hits, 1),
+                    confidence=max(existing.confidence, new_record.confidence),
+                    source=new_record.source or existing.source,
+                    updated_at=new_record.updated_at or existing.updated_at,
+                    session_id=new_record.session_id or existing.session_id,
+                )
+            )
+    if existing.category == "owner_doctrine":
+        existing_rule = parse_owner_doctrine_rule(existing)
+        new_rule = parse_owner_doctrine_rule(new_record)
+        if existing_rule is not None and new_rule is not None:
+            merged_rule = normalize_owner_doctrine_rule(
+                OwnerDoctrineRule(
+                    doctrine_name=existing_rule.doctrine_name,
+                    category=existing_rule.category,
+                    guidance=new_rule.guidance or existing_rule.guidance,
+                    confidence=max(existing_rule.confidence, new_rule.confidence),
+                    evidence_count=max(existing_rule.evidence_count, 0) + max(new_rule.evidence_count, 1),
+                    last_updated=new_rule.last_updated or existing_rule.last_updated,
+                    supporting_signals=tuple(existing_rule.supporting_signals) + tuple(new_rule.supporting_signals),
+                    supporting_examples=tuple(existing_rule.supporting_examples) + tuple(new_rule.supporting_examples),
+                    stability_score=max(existing_rule.stability_score, new_rule.stability_score),
+                    applicability_notes=new_rule.applicability_notes or existing_rule.applicability_notes,
+                )
+            )
+            return normalize_memory_record(
+                MemoryRecord(
+                    category="owner_doctrine",
+                    content=owner_doctrine_rule_to_record(merged_rule).content,
                     key=existing.key,
                     target=existing.target,
                     hits=max(existing.hits, 0) + max(new_record.hits, 1),

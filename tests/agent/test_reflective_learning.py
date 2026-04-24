@@ -6,7 +6,13 @@ from pathlib import Path
 
 from agent.reflective_learning import ReflectiveLearningEngine
 from tools.memory_tool import MemoryStore
-from agent.memory_schema import parse_memory_record, parse_owner_dna_trait, parse_skill_candidate
+from agent.memory_schema import (
+    MemoryRecord,
+    parse_memory_record,
+    parse_owner_dna_trait,
+    parse_owner_doctrine_rule,
+    parse_skill_candidate,
+)
 
 
 def _assistant_tool_call(tool_id: str, tool_name: str) -> dict:
@@ -176,6 +182,111 @@ def test_reflective_learning_builds_owner_dna_from_repeated_evidence(tmp_path, m
     assert all(trait.evidence_count >= 2 for trait in parsed_owner)
 
 
+def test_reflective_learning_skips_owner_dna_when_evidence_is_contradictory(tmp_path, monkeypatch):
+    monkeypatch.setattr("tools.memory_tool.get_memory_dir", lambda: tmp_path)
+    store = MemoryStore(memory_char_limit=3000, user_char_limit=1800)
+    store.load_from_disk()
+
+    store.upsert_record(
+        MemoryRecord(
+            category="owner_preference",
+            content="Prefers concise responses",
+            key="owner-pref:concise:test-a",
+            target="user",
+            confidence=0.9,
+            source="reflection",
+        )
+    )
+    store.upsert_record(
+        MemoryRecord(
+            category="owner_preference",
+            content="Prefers detailed responses",
+            key="owner-pref:detailed:test-b",
+            target="user",
+            confidence=0.9,
+            source="reflection",
+        )
+    )
+
+    ReflectiveLearningEngine(max_records=4, max_candidates=2, max_owner_dna_traits=3).persist_records(
+        store=store,
+        messages=[],
+        user_message="Be concise here, but I also want detailed responses elsewhere.",
+        assistant_response="Understood.",
+    )
+
+    parsed_owner = [parse_owner_dna_trait(entry) for entry in store.user_entries]
+    parsed_owner = [trait for trait in parsed_owner if trait is not None]
+    assert all(trait.trait_name != "concise_direct_communication" for trait in parsed_owner)
+
+
+def test_reflective_learning_builds_owner_doctrine_from_repeated_evidence(tmp_path, monkeypatch):
+    monkeypatch.setattr("tools.memory_tool.get_memory_dir", lambda: tmp_path)
+    store = MemoryStore(memory_char_limit=3200, user_char_limit=2200)
+    store.load_from_disk()
+    store.set_active_session("session-live")
+
+    store.upsert_record(
+        MemoryRecord(
+            category="owner_preference",
+            content="Avoids destructive rewrites",
+            key="owner-pref:safe:test-a",
+            target="user",
+            confidence=0.9,
+            source="reflection",
+        )
+    )
+    store.upsert_record(
+        MemoryRecord(
+            category="owner_preference",
+            content="Prefers concise responses",
+            key="owner-pref:concise:test-b",
+            target="user",
+            confidence=0.9,
+            source="reflection",
+        )
+    )
+    store.upsert_record(
+        MemoryRecord(
+            category="procedural",
+            content="Reusable workflow for 'debug parser tests': read_file -> terminal",
+            key="workflow:read-file-terminal:test",
+            target="memory",
+            confidence=0.8,
+            source="reflection",
+        )
+    )
+    store.upsert_record(
+        MemoryRecord(
+            category="skill_candidate",
+            content="Title: Workflow reuse: read_file -> terminal | Candidate Category: workflow_reuse | Source Memory Types: procedural, reflective | Pattern Summary: Run focused pytest validation before broader changes. | Evidence Count: 3 | Success Count: 3 | Failure Count: 0 | Owner Applicability: Prefers concise responses",
+            key="skill-candidate:workflow:test",
+            target="memory",
+            confidence=0.84,
+            source="skill_candidate",
+        )
+    )
+
+    ReflectiveLearningEngine(max_records=4, max_candidates=2, max_owner_dna_traits=3, max_owner_doctrine_rules=4).persist_records(
+        store=store,
+        messages=[
+            _assistant_tool_call("tool-1", "terminal"),
+            _tool_result("tool-1", success=True),
+            _assistant_tool_call("tool-2", "terminal"),
+            _tool_result("tool-2", success=True),
+        ],
+        user_message="Keep this incremental, validate before broad changes, and avoid destructive rewrites.",
+        assistant_response="I used a small safe fix and validated the focused path first.",
+    )
+
+    parsed_doctrine = [parse_owner_doctrine_rule(entry) for entry in store.user_entries]
+    parsed_doctrine = [rule for rule in parsed_doctrine if rule is not None]
+    assert parsed_doctrine
+    assert any(rule.category == "execution_style" for rule in parsed_doctrine)
+    assert any(rule.category == "validation_rigor" for rule in parsed_doctrine)
+    assert all(rule.evidence_count >= 2 for rule in parsed_doctrine)
+
+
 def test_reflective_learning_builds_workflow_skill_candidate(tmp_path, monkeypatch):
     monkeypatch.setattr("tools.memory_tool.get_memory_dir", lambda: tmp_path)
     store = MemoryStore(memory_char_limit=2500, user_char_limit=1200)
@@ -216,3 +327,9 @@ def test_run_agent_source_wires_reflective_learning_post_turn():
     idx_reflect = src.index("self._run_reflective_learning(")
     idx_review = src.index("self._spawn_background_review(")
     assert idx_sync < idx_reflect < idx_review
+
+
+def test_run_agent_source_injects_doctrine_guidance():
+    src = Path("run_agent.py").read_text(encoding="utf-8")
+    assert "build_doctrine_guidance" in src
+    assert "_doctrine_guidance_cache" in src
