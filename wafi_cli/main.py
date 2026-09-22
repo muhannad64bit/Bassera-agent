@@ -4386,20 +4386,38 @@ def cmd_version(args):
     # Show Python version
     print(f"Python: {sys.version.split()[0]}")
 
-    # Check for key dependencies
+    # Check for key dependencies — read the version from package metadata
+    # (importlib.metadata) instead of importing the SDK: importing openai
+    # costs ~0.45s and dominated the entire --version path, which scripts
+    # and shell completions call. The metadata version is identical to
+    # openai.__version__.
     try:
-        import openai
+        from importlib.metadata import version as _pkg_version
 
-        print(f"OpenAI SDK: {openai.__version__}")
-    except ImportError:
+        print(f"OpenAI SDK: {_pkg_version('openai')}")
+    except Exception:
         print("OpenAI SDK: Not installed")
 
-    # Show update status (synchronous — acceptable since user asked for version info)
+    # Update status. Two paths:
+    # - `version` subcommand (interactive "am I up to date?"): full
+    #   synchronous check — the user explicitly asked.
+    # - `--version` flag (scripts, shell completions, wrappers): must be
+    #   instant. Read the fresh cache only and kick a background refresh
+    #   so the next run has current data. Previously this could stall up
+    #   to 10s on a hung network before ever printing the version.
     try:
-        from wafi_cli.banner import check_for_updates
+        from wafi_cli.banner import (
+            check_for_updates,
+            get_cached_update_result,
+            prefetch_update_check,
+        )
         from wafi_cli.config import recommended_update_command
 
-        behind = check_for_updates()
+        if getattr(args, "version", False):
+            behind = get_cached_update_result()
+            prefetch_update_check()
+        else:
+            behind = check_for_updates()
         if behind and behind > 0:
             commits_word = "commit" if behind == 1 else "commits"
             print(
