@@ -14,6 +14,12 @@ from pathlib import Path
 
 from wafi_constants import get_wafi_home
 from wafi_cli.env_loader import load_wafi_dotenv
+from tui_gateway.transport import (
+    StdioTransport,
+    bind_transport,
+    current_transport,
+    reset_transport,
+)
 
 _wafi_home = get_wafi_home()
 load_wafi_dotenv(wafi_home=_wafi_home, project_env=Path(__file__).parent.parent / ".env")
@@ -59,6 +65,18 @@ atexit.register(lambda: _pool.shutdown(wait=False, cancel_futures=True))
 # of corrupting the JSON protocol.
 _real_stdout = sys.stdout
 sys.stdout = sys.stderr
+
+
+class _DropTransport:
+    def write(self, obj: dict) -> bool:
+        return False
+
+    def close(self) -> None:
+        return None
+
+
+_stdio_transport = StdioTransport(lambda: _real_stdout, _stdout_lock)
+_detached_ws_transport = _DropTransport()
 
 
 class _SlashWorker:
@@ -146,14 +164,13 @@ def _get_db():
 
 
 def write_json(obj: dict) -> bool:
-    line = json.dumps(obj, ensure_ascii=False) + "\n"
-    try:
-        with _stdout_lock:
-            _real_stdout.write(line)
-            _real_stdout.flush()
-        return True
-    except BrokenPipeError:
-        return False
+    transport = current_transport()
+    if transport is None:
+        sid = ((obj.get("params") or {}).get("session_id") if isinstance(obj, dict) else None)
+        if sid:
+            session = _sessions.get(str(sid))
+            transport = session.get("transport") if session else None
+    return (transport or _stdio_transport).write(obj)
 
 
 def _emit(event: str, sid: str, payload: dict | None = None):
@@ -228,13 +245,18 @@ def dispatch(req: dict) -> dict | None:
     if req.get("method") not in _LONG_HANDLERS:
         return handle_request(req)
 
+    transport = current_transport()
+
     def run():
+        token = bind_transport(transport)
         try:
             resp = handle_request(req)
         except Exception as exc:
             resp = _err(req.get("id"), -32000, f"handler error: {exc}")
+        finally:
+            reset_transport(token)
         if resp is not None:
-            write_json(resp)
+            (transport or _stdio_transport).write(resp)
 
     _pool.submit(run)
 
@@ -1114,6 +1136,7 @@ def _(rid, params: dict) -> dict:
         "agent_error": None,
         "agent_ready": ready,
         "attached_images": [],
+        "close_on_disconnect": bool(params.get("close_on_disconnect")),
         "cols": cols,
         "edit_snapshots": {},
         "history": [],
@@ -1126,6 +1149,7 @@ def _(rid, params: dict) -> dict:
         "slash_worker": None,
         "tool_progress_mode": _load_tool_progress_mode(),
         "tool_started_at": {},
+        "transport": current_transport(),
     }
 
     def _build() -> None:
