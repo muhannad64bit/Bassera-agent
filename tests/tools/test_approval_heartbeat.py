@@ -39,6 +39,19 @@ class TestApprovalHeartbeat:
 
     def setup_method(self):
         _clear_approval_state()
+        # These tests exercise the blocking approval wait-loop, not the
+        # tirith security scan. Mock tirith to "allow" so the first guard
+        # call in a fresh process can't stall on tirith's one-time runtime
+        # auto-install (a network download whose latency varies wildly with
+        # the environment) — that would otherwise land inside the timed
+        # windows below and cause flaky failures unrelated to the
+        # wait-loop behavior under test. Tirith itself has its own suite
+        # in tests/tools/test_tirith_security.py.
+        self._tirith_patch = patch(
+            "tools.tirith_security.check_command_security",
+            return_value={"action": "allow", "findings": [], "summary": ""},
+        )
+        self._tirith_patch.start()
         self._saved_env = {
             k: os.environ.get(k)
             for k in ("HERMES_GATEWAY_SESSION", "HERMES_YOLO_MODE",
@@ -52,6 +65,7 @@ class TestApprovalHeartbeat:
         os.environ["HERMES_SESSION_KEY"] = self.SESSION_KEY
 
     def teardown_method(self):
+        self._tirith_patch.stop()
         for k, v in self._saved_env.items():
             if v is None:
                 os.environ.pop(k, None)
@@ -198,3 +212,4 @@ class TestApprovalHeartbeat:
         assert not thread.is_alive()
         # Even when heartbeat import fails, the approval flow completes.
         assert result_holder["result"]["approved"] is True
+

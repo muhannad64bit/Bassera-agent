@@ -345,11 +345,26 @@ class TestBlockingApprovalE2E:
 
     def setup_method(self):
         _clear_approval_state()
+        # These tests exercise the blocking approval flow, not the tirith
+        # security scan. Mock tirith to "allow" so the first guard call in a
+        # fresh process can't stall on tirith's one-time runtime auto-install
+        # (network download with environment-dependent latency) — that stall
+        # would otherwise land inside the blocking windows below and cause
+        # flaky failures unrelated to the approval flow under test. Tirith
+        # itself has its own suite in tests/tools/test_tirith_security.py.
+        self._tirith_patch = patch(
+            "tools.tirith_security.check_command_security",
+            return_value={"action": "allow", "findings": [], "summary": ""},
+        )
+        self._tirith_patch.start()
         os.environ.pop("HERMES_YOLO_MODE", None)
         os.environ.pop("HERMES_INTERACTIVE", None)
         os.environ.pop("HERMES_GATEWAY_SESSION", None)
         os.environ.pop("HERMES_EXEC_ASK", None)
         os.environ.pop("HERMES_SESSION_KEY", None)
+
+    def teardown_method(self):
+        self._tirith_patch.stop()
 
     def test_blocking_approval_approve_once(self):
         """check_all_command_guards blocks until resolve_gateway_approval is called."""

@@ -20,8 +20,10 @@ test runner at ``scripts/run_tests.sh``.
 """
 
 import asyncio
+import atexit
 import os
 import re
+import shutil
 import signal
 import sys
 import tempfile
@@ -34,6 +36,29 @@ import pytest
 PROJECT_ROOT = Path(__file__).parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+
+# ── Import-time home isolation ─────────────────────────────────────────────
+#
+# Many project modules freeze HERMES_HOME into module-level constants at
+# import time (wafi_state.DEFAULT_DB_PATH, tools.process_registry
+# .CHECKPOINT_PATH, gateway.channel_directory.DIRECTORY_PATH, gateway
+# .platforms.base.DOCUMENT_CACHE_DIR, ...). pytest imports this conftest
+# BEFORE any test module imports those, so pointing HERMES_HOME at a
+# throwaway directory here makes every frozen constant resolve into that
+# directory instead of the developer's real ~/.wafi. Without this, test
+# runs leak state.db, processes.json, document caches, gateway state and
+# pairing data into the real home (observed in practice).
+#
+# The per-test hermetic fixture below still redirects HERMES_HOME to a
+# fresh per-test tempdir for everything that resolves the home at RUNTIME;
+# this block covers the import-time-frozen half of the codebase.
+_TEST_HOME_ROOT = tempfile.mkdtemp(prefix="wafi-import-isolated-")
+os.environ["HERMES_HOME"] = _TEST_HOME_ROOT
+for _sub in ("sessions", "cron", "memories", "skills", "logs", "plugins", "cache"):
+    os.makedirs(os.path.join(_TEST_HOME_ROOT, _sub), exist_ok=True)
+
+atexit.register(shutil.rmtree, _TEST_HOME_ROOT, ignore_errors=True)
 
 
 # ── Credential env-var filter ──────────────────────────────────────────────
@@ -184,6 +209,14 @@ _HERMES_BEHAVIORAL_VARS = frozenset({
     "HERMES_BACKGROUND_NOTIFICATIONS",
     "HERMES_EXEC_ASK",
     "HERMES_HOME_MODE",
+    # Terminal backend selection — determines tool availability
+    # (check_terminal_requirements). Some tests select modal/docker/ssh
+    # backends; without clearing, a leak makes terminal+file tools
+    # "unavailable" for every later test in the worker.
+    "TERMINAL_ENV",
+    "TERMINAL_CWD",
+    "TERMINAL_TIMEOUT",
+    "TERMINAL_LIFETIME_SECONDS",
     "BROWSER_CDP_URL",
     "CAMOFOX_URL",
 })
@@ -205,6 +238,10 @@ def _hermetic_environment(tmp_path, monkeypatch):
     # 2. Blank behavioral HERMES_* vars that could change test semantics.
     for name in _HERMES_BEHAVIORAL_VARS:
         monkeypatch.delenv(name, raising=False)
+
+    # 2b. Blank BASSERA_HOME so a developer's Bassera home alias can't
+    #     override the isolated HERMES_HOME we set in step 3.
+    monkeypatch.delenv("BASSERA_HOME", raising=False)
 
     # 3. Redirect HERMES_HOME to a per-test tempdir. Code that reads
     #    ``~/.wafi/*`` via ``get_wafi_home()`` now gets the tempdir.

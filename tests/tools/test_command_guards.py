@@ -38,6 +38,29 @@ def _clean_state():
     approval_module._session_approved.clear()
     approval_module._pending.clear()
     approval_module._permanent_approved.clear()
+    # Cross-file order dependence: tests in other files share this worker
+    # process and can leave approval state behind (yo bypass sets, pending
+    # gateway queues, notify callbacks, or a leaked approval-session
+    # contextvar). Clear the full shared surface so this file's assertions
+    # depend only on what each test itself sets up.
+    approval_module._session_yolo.clear()
+    approval_module._gateway_queues.clear()
+    approval_module._gateway_notify_cbs.clear()
+    approval_module._approval_session_key.set("")
+    # Session contextvars: a gateway test that ran set_session_vars()/
+    # clear_session_vars() in this worker leaves _SESSION_KEY holding ""
+    # in the main-thread context. get_session_env then returns "" (no
+    # os.environ fallback), so the guard resolves a "" session key while
+    # this test approves under "default" — approval never matches.
+    # Reset all session vars to the "never set" sentinel.
+    import gateway.session_context as _session_ctx
+    for _var in (
+        _session_ctx._SESSION_PLATFORM, _session_ctx._SESSION_CHAT_ID,
+        _session_ctx._SESSION_CHAT_NAME, _session_ctx._SESSION_THREAD_ID,
+        _session_ctx._SESSION_USER_ID, _session_ctx._SESSION_USER_NAME,
+        _session_ctx._SESSION_KEY,
+    ):
+        _var.set(_session_ctx._UNSET)
     saved = {}
     for k in ("HERMES_INTERACTIVE", "HERMES_GATEWAY_SESSION", "HERMES_EXEC_ASK", "HERMES_YOLO_MODE"):
         if k in os.environ:

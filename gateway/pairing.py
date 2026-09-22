@@ -43,7 +43,16 @@ LOCKOUT_SECONDS = 3600              # Lockout duration after too many failures
 MAX_PENDING_PER_PLATFORM = 3        # Max pending codes per platform
 MAX_FAILED_ATTEMPTS = 5             # Failed approvals before lockout
 
-PAIRING_DIR = get_wafi_dir("platforms/pairing", "pairing")
+def _pairing_dir() -> Path:
+    """Resolve the pairing directory lazily on each access.
+
+    get_wafi_dir() reads HERMES_HOME, which is set by the profile override
+    at startup and by the hermetic test fixture per test. Computing this at
+    import time would freeze the first-seen home and (in tests) leak
+    pairing state into the real ~/.wafi. In production HERMES_HOME never
+    changes mid-process, so lazy resolution is behavior-identical.
+    """
+    return get_wafi_dir("platforms/pairing", "pairing")
 
 
 def _secure_write(path: Path, data: str) -> None:
@@ -83,19 +92,19 @@ class PairingStore:
     """
 
     def __init__(self):
-        PAIRING_DIR.mkdir(parents=True, exist_ok=True)
+        _pairing_dir().mkdir(parents=True, exist_ok=True)
         # Protects all read-modify-write cycles. The gateway runs multiple
         # platform adapters concurrently in threads sharing one PairingStore.
         self._lock = threading.RLock()
 
     def _pending_path(self, platform: str) -> Path:
-        return PAIRING_DIR / f"{platform}-pending.json"
+        return _pairing_dir() / f"{platform}-pending.json"
 
     def _approved_path(self, platform: str) -> Path:
-        return PAIRING_DIR / f"{platform}-approved.json"
+        return _pairing_dir() / f"{platform}-approved.json"
 
     def _rate_limit_path(self) -> Path:
-        return PAIRING_DIR / "_rate_limits.json"
+        return _pairing_dir() / "_rate_limits.json"
 
     def _load_json(self, path: Path) -> dict:
         if path.exists():
@@ -301,7 +310,7 @@ class PairingStore:
     def _all_platforms(self, suffix: str) -> list:
         """List all platforms that have data files of a given suffix."""
         platforms = []
-        for f in PAIRING_DIR.iterdir():
+        for f in _pairing_dir().iterdir():
             if f.name.endswith(f"-{suffix}.json"):
                 platform = f.name.replace(f"-{suffix}.json", "")
                 if not platform.startswith("_"):
