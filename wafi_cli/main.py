@@ -2452,7 +2452,7 @@ def _model_flow_custom(config):
     else:
         print(
             f"Warning: could not verify this endpoint via {probe.get('probed_url')}. "
-            f"Wafi will still save it."
+            f"Bassera will still save it."
         )
         if probe.get("suggested_base_url"):
             suggested = probe["suggested_base_url"]
@@ -7149,7 +7149,7 @@ Examples:
         "import",
         help="Restore a Wafi backup from a zip file",
         description="Extract a previously created Wafi backup into your "
-        "Wafi home directory, restoring configuration, skills, "
+        "Bassera home directory, restoring configuration, skills, "
         "sessions, and data",
     )
     import_parser.add_argument("zipfile", help="Path to the backup zip file")
