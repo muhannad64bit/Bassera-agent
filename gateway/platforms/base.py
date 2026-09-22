@@ -37,6 +37,26 @@ def utf16_len(s: str) -> int:
     return len(s.encode("utf-16-le")) // 2
 
 
+def utf16_slice(s: str, offset: int, length: int) -> str:
+    """Slice *s* using Telegram's UTF-16 code-unit offset/length.
+
+    The inverse of ``utf16_len``: Telegram's MessageEntity offsets and lengths
+    are measured in UTF-16 code units, so slicing a Python string by code
+    points with the raw values lands in the wrong place whenever a non-BMP
+    character (emoji, …) precedes the entity. Use the UTF-16 byte
+    representation so entity extraction is exact regardless of what precedes
+    it — otherwise mentions after emoji are silently dropped.
+    """
+    try:
+        return s.encode("utf-16-le")[offset * 2:(offset + length) * 2].decode(
+            "utf-16-le"
+        )
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        # Defensive: fall back to the code-point interpretation rather than
+        # raising in a message-parsing hot path.
+        return s[offset:offset + length]
+
+
 def _prefix_within_utf16_limit(s: str, limit: int) -> str:
     """Return the longest prefix of *s* whose UTF-16 length ≤ *limit*.
 

@@ -226,3 +226,74 @@ Manual Smoke Test Checklist:
    Type interrupt during the first tool call.
    Expected: only 1 tool executes, remaining are skipped.
 """
+
+
+# ---------------------------------------------------------------------------
+# Stale-flag / thread-ident reuse guard
+# ---------------------------------------------------------------------------
+
+class TestStaleInterruptPruning:
+    """A dead interrupted thread's flag must not poison a reused ident."""
+
+    def test_flag_for_dead_thread_is_pruned(self):
+        """Signal a live thread, let it die without clearing — the flag
+        is discarded once the Thread object is gone."""
+        import threading as _threading
+        from tools.interrupt import (
+            set_interrupt, is_interrupted, prune_dead_interrupts,
+            _interrupted_threads, _interrupt_targets, _lock,
+        )
+        with _lock:
+            _interrupted_threads.clear()
+            _interrupt_targets.clear()
+
+        t = _threading.Thread(target=lambda: None)
+        t.start()
+        t.join()  # dead — but ident was captured while... not yet.
+
+        # Signal the tid of a thread that is ALIVE so a weakref is recorded.
+        alive = _threading.Thread(
+            target=lambda: (
+                set_interrupt(True),
+            ),
+        )
+        alive.start()
+        alive.join()  # the thread signalled itself and died without clearing
+
+        with _lock:
+            recorded = set(_interrupted_threads)
+        assert recorded, "expected at least one interrupt flag to be recorded"
+
+        # Drop the last strong reference to the dead Thread object so the
+        # weakref recorded by set_interrupt can actually report it dead.
+        alive_ident = alive.ident
+        del alive
+
+        # Prune — the dead thread's flag must go away.
+        pruned = prune_dead_interrupts()
+        assert pruned >= 1, f"expected stale flag for tid={alive_ident} to be pruned"
+        with _lock:
+            assert not _interrupted_threads
+            assert not _interrupt_targets
+
+        # And the main thread (and any other thread) is not interrupted.
+        assert is_interrupted() is False
+
+    def test_synthetic_ident_keeps_legacy_semantics(self):
+        """Signaling a tid with no live Thread object keeps bare-ident
+        behavior (membership + is_interrupted from that tid's perspective
+        via the set), for test/stub compatibility."""
+        from tools.interrupt import (
+            set_interrupt, _interrupted_threads, _lock, prune_dead_interrupts,
+        )
+        with _lock:
+            _interrupted_threads.clear()
+        synthetic = 99990077
+        set_interrupt(True, synthetic)
+        with _lock:
+            assert synthetic in _interrupted_threads
+        # Prune must NOT remove synthetic entries (no recorded target).
+        assert prune_dead_interrupts() == 0
+        set_interrupt(False, synthetic)
+        with _lock:
+            assert synthetic not in _interrupted_threads

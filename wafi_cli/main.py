@@ -100,6 +100,22 @@ def _apply_profile_override() -> None:
             consume = 1
             break
 
+    # 1b. A -p/--profile value that doesn't even look like a profile id is
+    # some OTHER program's flag (e.g. pytest's ``-p no:cacheprovider``) —
+    # never claim it. Claiming it would hijack HERMES_HOME and crash this
+    # module's import when the value fails profile validation. Shape-check
+    # only; resolution of legitimately-named profiles happens below and
+    # still produces a proper CLI error for real user mistakes.
+    if profile_name is not None and consume > 0:
+        try:
+            from wafi_cli.profiles import _PROFILE_ID_RE
+
+            if profile_name != "default" and not _PROFILE_ID_RE.match(profile_name):
+                profile_name = None
+                consume = 0
+        except ImportError:
+            pass  # profiles module unavailable — let step 3 handle it
+
     # 2. If no flag, check active_profile in the wafi root
     if profile_name is None:
         try:

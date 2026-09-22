@@ -56,6 +56,31 @@ def _message(text=None, caption=None, entities=None, caption_entities=None):
 class TestRealMentionsAreDetected:
     """A real Telegram mention always comes with a MENTION entity — detect those."""
 
+    def test_mention_after_emoji_uses_utf16_offsets(self):
+        """Regression: entity offsets are UTF-16 code units, not code points.
+
+        Real Telegram sends offsets in UTF-16 units, so emoji (surrogate
+        pairs) before the mention shift the offset relative to Python's
+        code-point indexing. The old code-point slice extracted the wrong
+        text and silently dropped the mention.
+        """
+        adapter = _make_adapter()
+        text = "\U0001f389\U0001f389 hi @wafi_bot"  # 🎉🎉 hi @wafi_bot
+        # Telegram's UTF-16 offset: each 🎉 is 2 UTF-16 units.
+        u16_offset = len("\U0001f389\U0001f389 hi ".encode("utf-16-le")) // 2  # 7
+        entity = SimpleNamespace(type="mention", offset=u16_offset, length=11)
+        msg = _message(text=text, entities=[entity])
+        assert adapter._message_mentions_bot(msg) is True
+
+    def test_mention_after_emoji_in_caption(self):
+        """Same UTF-16 handling must apply to caption entities."""
+        adapter = _make_adapter()
+        caption = "\U0001f389\U0001f389 @wafi_bot"
+        u16_offset = len("\U0001f389\U0001f389 ".encode("utf-16-le")) // 2  # 5
+        entity = SimpleNamespace(type="mention", offset=u16_offset, length=11)
+        msg = _message(caption=caption, caption_entities=[entity])
+        assert adapter._message_mentions_bot(msg) is True
+
     def test_mention_at_start_of_message(self):
         adapter = _make_adapter()
         text = "@wafi_bot hello world"
@@ -174,8 +199,8 @@ class TestCaseInsensitivity:
 
     def test_uppercase_mention(self):
         adapter = _make_adapter()
-        text = "hi @HERMES_BOT"
-        msg = _message(text=text, entities=[_mention_entity(text, mention="@HERMES_BOT")])
+        text = "hi @WAFI_BOT"
+        msg = _message(text=text, entities=[_mention_entity(text, mention="@WAFI_BOT")])
         assert adapter._message_mentions_bot(msg) is True
 
     def test_mixed_case_mention(self):

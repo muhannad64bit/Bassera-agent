@@ -74,6 +74,7 @@ from gateway.platforms.base import (
     resolve_proxy_url,
     SUPPORTED_DOCUMENT_TYPES,
     utf16_len,
+    utf16_slice,
     _prefix_within_utf16_limit,
 )
 from gateway.platforms.telegram_network import (
@@ -442,7 +443,7 @@ class TelegramAdapter(BasePlatformAdapter):
         message = (
             "Another process is already polling this Telegram bot token "
             "(possibly OpenClaw or another Wafi instance). "
-            "Wafi stopped Telegram polling after %d retries. "
+            "Bassera stopped Telegram polling after %d retries. "
             "Only one poller can run per token — stop the other process "
             "and restart with 'wafi start'."
             % MAX_CONFLICT_RETRIES
@@ -2278,7 +2279,11 @@ class TelegramAdapter(BasePlatformAdapter):
                     length = int(getattr(entity, "length", 0))
                     if offset < 0 or length <= 0:
                         continue
-                    if source_text[offset:offset + length].strip().lower() == expected:
+                    # Entity offsets/lengths are UTF-16 code units, not
+                    # Python code points — slice through the UTF-16 view so
+                    # emoji before the mention don't shift the extraction
+                    # and silently drop a legitimate mention.
+                    if utf16_slice(source_text, offset, length).strip().lower() == expected:
                         return True
                 elif entity_type == "text_mention":
                     user = getattr(entity, "user", None)

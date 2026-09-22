@@ -32,6 +32,7 @@ import base64
 import json
 import logging
 import os
+import tempfile
 import uuid
 from pathlib import Path
 from typing import Any, Awaitable, Dict, Optional
@@ -435,7 +436,8 @@ async def vision_analyze_tool(
         Exception: If download fails, analysis fails, or API key is not set
         
     Note:
-        - For URLs, temporary images are stored in ./temp_vision_images/ and cleaned up
+        - For URLs, temporary images are stored under the OS temp directory
+          and cleaned up after analysis
         - For local file paths, the file is used directly and NOT deleted
         - Supports common image formats (JPEG, PNG, GIF, WebP, etc.)
     """
@@ -483,7 +485,11 @@ async def vision_analyze_tool(
             if blocked:
                 raise PermissionError(blocked["message"])
             logger.info("Downloading image from URL...")
-            temp_dir = Path("./temp_vision_images")
+            # OS temp dir, never the process CWD: a CWD-relative path
+            # pollutes whatever directory the agent happens to run in
+            # (repo root in dev, the messaging working directory in
+            # gateway mode) and leftover files there escape cleanup.
+            temp_dir = Path(tempfile.gettempdir()) / "bassera_vision_images"
             temp_image_path = temp_dir / f"temp_image_{uuid.uuid4()}.jpg"
             await _download_image(image_url, temp_image_path)
             should_cleanup = True

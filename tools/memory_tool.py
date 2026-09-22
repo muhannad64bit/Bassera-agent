@@ -169,11 +169,37 @@ class MemoryStore:
         Tool responses always reflect this live state.
     """
 
-    def __init__(self, memory_char_limit: int = 2200, user_char_limit: int = 1375):
+    def __init__(
+        self,
+        memory_char_limit: int = 2200,
+        user_char_limit: int = 1375,
+        *,
+        structured_memory_char_limit: Optional[int] = None,
+        structured_user_char_limit: Optional[int] = None,
+    ):
         self.memory_entries: List[str] = []
         self.user_entries: List[str] = []
         self.memory_char_limit = memory_char_limit
         self.user_char_limit = user_char_limit
+        # Structured records (the @wafi-memory prefixed entries written by the
+        # reflective-learning engine) are machine-curated observations, not
+        # the agent's hand-written notes. Giving them their own (generous)
+        # budget prevents the self-improvement loop from being silently
+        # starved when the curated free-text store is near its limit, and
+        # vice versa: free-text notes are no longer crowded out by structured
+        # entries. Both still live in the same file; only the accounting is
+        # partitioned. Defaults scale with the free-text limit so a deployment
+        # that raises one gets a proportional raise in the other.
+        self.structured_memory_char_limit = (
+            structured_memory_char_limit
+            if structured_memory_char_limit is not None
+            else max(memory_char_limit * 4, 8000)
+        )
+        self.structured_user_char_limit = (
+            structured_user_char_limit
+            if structured_user_char_limit is not None
+            else max(user_char_limit * 4, 6000)
+        )
         self._active_session_id: str = ""
         # Frozen snapshot for system prompt -- set once at load_from_disk()
         self._system_prompt_snapshot: Dict[str, str] = {"memory": "", "user": ""}
@@ -716,7 +742,6 @@ class MemoryStore:
         with self._file_lock(self._path_for(normalized.target)):
             self._reload_target(normalized.target)
             entries = self._entries_for(normalized.target)
-            limit = self._char_limit(normalized.target)
 
             match_index = -1
             merged_record = normalized
@@ -741,13 +766,20 @@ class MemoryStore:
             else:
                 test_entries.append(new_entry)
 
-            new_total = len(ENTRY_DELIMITER.join(test_entries)) if test_entries else 0
-            if new_total > limit:
-                current = self._char_count(normalized.target)
+            # Structured records are budgeted separately from curated free-text
+            # entries (see __init__). A structured upsert may not crowd out the
+            # agent's hand-written notes, and is not crowded out by them.
+            structured_test = self._structured_entries(test_entries, normalized.target)
+            new_structured_total = (
+                len(ENTRY_DELIMITER.join(structured_test)) if structured_test else 0
+            )
+            structured_limit = self._structured_char_limit(normalized.target)
+            if new_structured_total > structured_limit:
+                current_structured = self._structured_char_count(normalized.target)
                 return {
                     "success": False,
                     "error": (
-                        f"Memory at {current:,}/{limit:,} chars. "
+                        f"Structured memory at {current_structured:,}/{structured_limit:,} chars. "
                         f"Saving structured memory would exceed the limit."
                     ),
                 }
@@ -795,6 +827,21 @@ class MemoryStore:
         if target == "user":
             return self.user_char_limit
         return self.memory_char_limit
+
+    def _structured_char_limit(self, target: str) -> int:
+        if target == "user":
+            return self.structured_user_char_limit
+        return self.structured_memory_char_limit
+
+    def _structured_entries(self, entries: List[str], target: str) -> List[str]:
+        """Return only the @wafi-memory structured entries from a list."""
+        return [e for e in entries if parse_memory_record(e, default_target=target) is not None]
+
+    def _structured_char_count(self, target: str) -> int:
+        entries = self._structured_entries(self._entries_for(target), target)
+        if not entries:
+            return 0
+        return len(ENTRY_DELIMITER.join(entries))
 
     def add(self, target: str, content: str) -> Dict[str, Any]:
         """Append a new entry. Returns error if it would exceed the char limit."""

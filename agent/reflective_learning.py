@@ -30,6 +30,50 @@ from agent.memory_schema import (
 )
 
 
+# Negation/safety prefixes that flip a would-be "negative" token into positive
+# evidence. "avoid destructive", "non-destructive", and "no rewrite" express
+# the *safe* stance a rule is looking for, not the recklessness the negative
+# list is meant to penalize. Without this, "Avoids destructive rewrites" is
+# scored as a contradiction against the very safety doctrine it supports,
+# silently suppressing it. We look at a small window before each occurrence
+# so a token only counts as a real contradiction when it appears in a
+# non-negated context.
+_NEGATION_PREFIXES = (
+    "avoid ",
+    "avoids ",
+    "avoided ",
+    "non-",
+    "no ",
+    "without ",
+    "not ",
+    "never ",
+    "rather than ",
+    "instead of ",
+)
+
+
+def _has_real_negative(text: str, negative_tokens: Iterable[str]) -> bool:
+    """True if any negative token occurs in a non-negated context.
+
+    A token is ignored when every occurrence is preceded (within ~14 chars) by
+    a negation/safety prefix such as "avoid ", "non-", or "no ". This keeps the
+    contradiction signal precise: "destructive" in "avoid destructive changes"
+    is positive evidence, while "destructive" in "aggressive destructive
+    refactor" is a real contradiction.
+    """
+    for token in negative_tokens:
+        idx = 0
+        while True:
+            pos = text.find(token, idx)
+            if pos == -1:
+                break
+            prefix = text[max(0, pos - 14):pos]
+            if not any(neg in prefix for neg in _NEGATION_PREFIXES):
+                return True
+            idx = pos + len(token)
+    return False
+
+
 PREFERENCE_PATTERNS = (
     re.compile(r"\b(?:i\s+)?prefer\s+(?P<body>[^.;\n]{4,160})", re.IGNORECASE),
     re.compile(r"\b(?:please\s+)?(?:be|keep)\s+(?P<body>[^.;\n]{4,160})", re.IGNORECASE),
@@ -60,7 +104,7 @@ OWNER_DNA_RULES: tuple[Dict[str, Any], ...] = (
         "category": "decision_preference",
         "positive": ("backward compatibility", "incremental", "safe", "non-destructive", "low-risk"),
         "negative": ("rewrite the whole runtime", "destructive", "big-bang"),
-        "sources": {"owner_preference", "reflective", "owner_dna"},
+        "sources": {"owner_preference", "reflective", "owner_dna", "episodic"},
         "min_distinct_records": 2,
         "applicability": "Applies when choosing between refactors, migrations, and patches.",
     },
@@ -69,7 +113,7 @@ OWNER_DNA_RULES: tuple[Dict[str, Any], ...] = (
         "category": "risk_posture",
         "positive": ("avoid destructive", "safe", "approvals", "verify", "controlled", "check inputs"),
         "negative": ("reckless", "force through", "ignore approvals"),
-        "sources": {"owner_preference", "reflective", "owner_dna"},
+        "sources": {"owner_preference", "reflective", "owner_dna", "episodic"},
         "min_distinct_records": 2,
         "applicability": "Applies to execution, tool use, and environment changes.",
     },
@@ -159,9 +203,9 @@ OWNER_DOCTRINE_RULES: tuple[Dict[str, Any], ...] = (
         "doctrine_name": "validate_before_promoting_or_finishing",
         "category": "validation_rigor",
         "guidance": "Prefer focused validation before claiming completion or promoting a pattern as doctrine.",
-        "positive": ("focused test", "validation", "verify", "pytest", "before broader"),
+        "positive": ("focused test", "validation", "validate", "verify", "verified", "pytest", "before broader"),
         "negative": ("skip validation", "ship without checking"),
-        "sources": {"owner_dna", "procedural", "skill_candidate", "reflective"},
+        "sources": {"owner_dna", "owner_preference", "procedural", "skill_candidate", "reflective", "episodic"},
         "min_distinct_records": 2,
         "applicability": "Applies to code changes, debugging, and memory promotion.",
     },
@@ -785,14 +829,16 @@ class ReflectiveLearningEngine:
             contradiction_hits = sum(
                 1
                 for _, text, _ in evidence_items
-                if any(token in text for token in rule["negative"])
+                if _has_real_negative(text, rule["negative"])
             )
             distinct_records = len({example for _, example in matched_records})
             if positive_hits < 2:
                 continue
             if distinct_records < int(rule.get("min_distinct_records", 2)):
                 continue
-            if len(supporting_sources) < 2 and positive_hits < 3:
+            # A single source is acceptable when at least two distinct records
+            # corroborate it (min_distinct_records already enforces distinctness).
+            if len(supporting_sources) < 2 and positive_hits < 2:
                 continue
             if contradiction_hits >= positive_hits:
                 continue
@@ -900,8 +946,7 @@ class ReflectiveLearningEngine:
 
             for source, text, original_text in evidence_items:
                 positive = [token for token in doctrine["positive"] if token in text]
-                negative = [token for token in doctrine["negative"] if token in text]
-                if negative:
+                if _has_real_negative(text, doctrine["negative"]):
                     contradiction_hits += 1
                 if not positive:
                     continue

@@ -43,8 +43,30 @@ PYTHON="$VENV/bin/python"
 
 # ── Ensure pytest-split is installed (required for shard-equivalent runs) ──
 if ! "$PYTHON" -c "import pytest_split" 2>/dev/null; then
-  echo "→ installing pytest-split into $VENV"
-  "$PYTHON" -m pip install --quiet "pytest-split>=0.9,<1"
+  if "$PYTHON" -m pip --version >/dev/null 2>&1; then
+    echo "→ installing pytest-split into $VENV"
+    "$PYTHON" -m pip install --quiet "pytest-split>=0.9,<1"
+  elif command -v uv >/dev/null 2>&1; then
+    # uv-created venvs don't ship pip (and the documented install path uses
+    # uv) — install through uv instead.
+    echo "→ installing pytest-split into $VENV via uv"
+    VIRTUAL_ENV="$VENV" uv pip install --quiet "pytest-split>=0.9,<1"
+  else
+    echo "error: pytest-split missing and neither pip nor uv available" >&2
+    exit 1
+  fi
+fi
+
+# ── File-descriptor headroom ────────────────────────────────────────────────
+# macOS defaults to a 256-fd soft limit; the gateway suites open many
+# sockets/sessions under 4 xdist workers and exhaust it, causing cascading
+# "[Errno 24] Too many open files" failures that never appear in CI. The
+# api-server / SSE tests have been observed to exceed 1024 under 4 workers,
+# so target 4096 (best effort — the hard limit may cap it).
+if [ "$(ulimit -n)" -lt 4096 ] 2>/dev/null; then
+  ulimit -n 4096 2>/dev/null || {
+    [ "$(ulimit -n)" -lt 1024 ] 2>/dev/null && ulimit -n 1024 2>/dev/null || true
+  }
 fi
 
 # ── Hermetic environment ────────────────────────────────────────────────────
@@ -94,11 +116,14 @@ ARGS=("$@")
 echo "▶ running pytest with $WORKERS workers, hermetic env, in $REPO_ROOT"
 echo "  (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; all credential env vars unset)"
 
-# -o "addopts=" clears pyproject.toml's `-n auto` so our -n wins.
+# `"${ARGS[@]}"` on an empty array is an "unbound variable" error under
+# `set -u` on bash < 4.4 (macOS ships bash 3.2), so use the portable
+# `${arr[@]+...}` expansion.
+# shellcheck disable=SC2068
 exec "$PYTHON" -m pytest \
   -o "addopts=" \
   -n "$WORKERS" \
   --ignore=tests/integration \
   --ignore=tests/e2e \
   -m "not integration" \
-  "${ARGS[@]}"
+  ${ARGS[@]+"${ARGS[@]}"}

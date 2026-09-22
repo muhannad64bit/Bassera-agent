@@ -17,6 +17,7 @@ Usage in tools:
 import logging
 import os
 import threading
+import weakref
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,22 @@ if _DEBUG_INTERRUPT:
 
 # Set of thread idents that have been interrupted.
 _interrupted_threads: set[int] = set()
+# ident → weakref to the Thread object that was signaled. Thread idents
+# can be REUSED by the OS once a thread dies, so a bare ident flag from a
+# dead interrupted thread can land on an unrelated new thread in a
+# long-lived gateway — silently turning every tool it runs into a
+# "[interrupted]" no-op. Recording the signaled Thread object lets
+# is_interrupted() detect (and discard) stale flags whose thread is gone.
+_interrupt_targets: dict[int, "weakref.ref | None"] = {}
 _lock = threading.Lock()
+
+
+def _find_thread_by_ident(tid: int | None):
+    """Return the live Thread object for *tid*, or None."""
+    for thread in threading.enumerate():
+        if thread.ident == tid:
+            return thread
+    return None
 
 
 def set_interrupt(active: bool, thread_id: int | None = None) -> None:
@@ -48,8 +64,13 @@ def set_interrupt(active: bool, thread_id: int | None = None) -> None:
     with _lock:
         if active:
             _interrupted_threads.add(tid)
+            target = _find_thread_by_ident(tid)
+            # None (no resolvable Thread object) keeps the legacy bare-ident
+            # semantics for synthetic idents used by tests/stubs.
+            _interrupt_targets[tid] = weakref.ref(target) if target is not None else None
         else:
             _interrupted_threads.discard(tid)
+            _interrupt_targets.pop(tid, None)
         _snapshot = set(_interrupted_threads) if _DEBUG_INTERRUPT else None
     if _DEBUG_INTERRUPT:
         logger.info(
@@ -59,15 +80,49 @@ def set_interrupt(active: bool, thread_id: int | None = None) -> None:
         )
 
 
+def prune_dead_interrupts() -> int:
+    """Discard interrupt flags whose signaled thread has died.
+
+    Returns the number of stale flags removed. Called opportunistically by
+    is_interrupted() for the current thread; exposed for long-lived
+    gateways (and tests) that want to sweep all stale flags.
+    """
+    with _lock:
+        stale = [
+            tid for tid, ref in _interrupt_targets.items()
+            if ref is not None and ref() is None
+        ]
+        for tid in stale:
+            _interrupted_threads.discard(tid)
+            _interrupt_targets.pop(tid, None)
+        return len(stale)
+
+
 def is_interrupted() -> bool:
     """Check if an interrupt has been requested for the current thread.
 
     Safe to call from any thread — each thread only sees its own
-    interrupt state.
+    interrupt state.  A flag whose signaled thread has died is treated as
+    stale (ident reuse) and discarded rather than honored.
     """
     tid = threading.current_thread().ident
     with _lock:
-        return tid in _interrupted_threads
+        if tid not in _interrupted_threads:
+            return False
+        ref = _interrupt_targets.get(tid)
+        if ref is not None and ref() is None:
+            # The thread that was signaled has exited; its ident may have
+            # been reused by this unrelated thread. Never propagate the
+            # stale interrupt to it.
+            _interrupted_threads.discard(tid)
+            _interrupt_targets.pop(tid, None)
+            if _DEBUG_INTERRUPT:
+                logger.info(
+                    "[interrupt-debug] discarded stale interrupt for dead tid=%s (ident reuse guard)",
+                    tid,
+                )
+            return False
+        return True
 
 
 # ---------------------------------------------------------------------------

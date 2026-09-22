@@ -268,6 +268,16 @@ def test_run_doctor_termux_does_not_mark_browser_available_without_agent_browser
     monkeypatch.setattr(doctor_mod, "PROJECT_ROOT", project)
     monkeypatch.setattr(doctor_mod, "_DHH", str(home))
     monkeypatch.setattr(doctor_mod.shutil, "which", lambda cmd: "/data/data/com.termux/files/usr/bin/node" if cmd in {"node", "npm"} else None)
+    # The doctor resolves agent-browser via the browser tool's canonical
+    # resolver (global PATH included). This machine may have a real global
+    # install — mock the resolver to simulate "not installed" so the test
+    # is hermetic regardless of dev-machine npm state.
+    import tools.browser_tool as _bt
+    def _no_agent_browser():
+        raise FileNotFoundError("agent-browser CLI not found")
+    monkeypatch.setattr(_bt, "_agent_browser_resolved", True)
+    monkeypatch.setattr(_bt, "_cached_agent_browser", None)
+    monkeypatch.setattr(_bt, "_find_agent_browser", _no_agent_browser)
 
     fake_model_tools = types.SimpleNamespace(
         check_tool_availability=lambda *a, **kw: (["terminal"], [{"name": "browser", "env_vars": [], "tools": ["browser_navigate"]}]),
@@ -296,6 +306,50 @@ def test_run_doctor_termux_does_not_mark_browser_available_without_agent_browser
     assert "system dependency not met" in out
     assert "agent-browser is not installed (expected in the tested Termux path)" in out
     assert "npm install -g agent-browser && agent-browser install" in out
+
+
+def test_run_doctor_detects_globally_installed_agent_browser(monkeypatch, tmp_path):
+    """A global `npm install -g agent-browser` must be reported as OK.
+
+    Regression test: the doctor used to check only PROJECT_ROOT/node_modules,
+    contradicting the browser tool's own resolution (which checks the global
+    PATH first) — a working global install was misreported as missing.
+    """
+    home = tmp_path / ".wafi"
+    home.mkdir(parents=True, exist_ok=True)
+    (home / "config.yaml").write_text("memory: {}\n", encoding="utf-8")
+    project = tmp_path / "project"
+    project.mkdir(exist_ok=True)
+    # No local node_modules — only a "global" install, simulated via the
+    # canonical resolver mock.
+    monkeypatch.setattr(doctor_mod, "HERMES_HOME", home)
+    monkeypatch.setattr(doctor_mod, "PROJECT_ROOT", project)
+    monkeypatch.setattr(doctor_mod, "_DHH", str(home))
+    monkeypatch.setattr(doctor_mod.shutil, "which", lambda cmd: "/usr/bin/node" if cmd in {"node", "npm"} else None)
+
+    fake_model_tools = types.SimpleNamespace(
+        check_tool_availability=lambda *a, **kw: ([], []),
+        TOOLSET_REQUIREMENTS={},
+    )
+    monkeypatch.setitem(sys.modules, "model_tools", fake_model_tools)
+    try:
+        from wafi_cli import auth as _auth_mod
+        monkeypatch.setattr(_auth_mod, "get_nous_auth_status", lambda: {})
+        monkeypatch.setattr(_auth_mod, "get_codex_auth_status", lambda: {})
+    except Exception:
+        pass
+
+    import tools.browser_tool as _bt
+    monkeypatch.setattr(_bt, "_find_agent_browser", lambda: "/opt/homebrew/bin/agent-browser")
+
+    import io, contextlib
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        doctor_mod.run_doctor(Namespace(fix=False))
+    out = buf.getvalue()
+
+    assert "agent-browser not installed" not in out
+    assert "agent-browser" in out
 
 
 def test_run_doctor_kimi_cn_env_is_detected_and_probe_is_null_safe(monkeypatch, tmp_path):

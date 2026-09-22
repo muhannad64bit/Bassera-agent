@@ -5,6 +5,7 @@ import errno
 import json
 import logging
 import os
+import tempfile
 import threading
 from pathlib import Path
 from tools.binary_extensions import has_binary_extension
@@ -99,6 +100,29 @@ _SENSITIVE_PATH_PREFIXES = (
 _SENSITIVE_EXACT_PATHS = {"/var/run/docker.sock", "/run/docker.sock"}
 
 
+def _user_temp_roots() -> tuple[str, ...]:
+    """Realpath'd user scratch directories that are never "sensitive".
+
+    On macOS the per-user temp tree lives under /private/var/folders/, which
+    would otherwise be caught by the /private/var/ sensitive prefix (since
+    /var is a symlink to /private/var, realpath() of any TMPDIR path lands
+    there). The OS-designated user scratch space is exempt from the sensitive
+    path guard; writes there are governed by normal filesystem permissions
+    and the dangerous-command approval flow. On Linux this is a no-op — /tmp
+    is not in the sensitive prefix list.
+    """
+    roots: set[str] = set()
+    candidates = (tempfile.gettempdir(), os.environ.get("TMPDIR", ""))
+    for candidate in candidates:
+        if not candidate:
+            continue
+        try:
+            roots.add(os.path.realpath(candidate))
+        except (OSError, ValueError):
+            continue
+    return tuple(sorted(roots))
+
+
 def _check_sensitive_path(filepath: str) -> str | None:
     """Return an error message if the path targets a sensitive system location."""
     try:
@@ -110,6 +134,9 @@ def _check_sensitive_path(filepath: str) -> str | None:
         f"Refusing to write to sensitive system path: {filepath}\n"
         "Use the terminal tool with sudo if you need to modify system files."
     )
+    for temp_root in _user_temp_roots():
+        if temp_root and resolved.startswith(temp_root.rstrip(os.sep) + os.sep):
+            return None
     for prefix in _SENSITIVE_PATH_PREFIXES:
         if resolved.startswith(prefix) or normalized.startswith(prefix):
             return _err

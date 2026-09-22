@@ -705,19 +705,33 @@ def run_doctor(args):
     # Node.js + agent-browser (for browser automation tools)
     if shutil.which("node"):
         check_ok("Node.js")
-        # Check if agent-browser is installed
-        agent_browser_path = PROJECT_ROOT / "node_modules" / "agent-browser"
-        if agent_browser_path.exists():
-            check_ok("agent-browser (Node.js)", "(browser automation)")
+        # Check if agent-browser is installed — using the SAME resolution
+        # the browser tool itself uses (global PATH, Homebrew/versioned
+        # Node dirs, local node_modules/.bin, npx fallback). The previous
+        # local-node_modules-only check contradicted the tool on any
+        # standard global install (npm install -g agent-browser).
+        agent_browser_ok = False
+        try:
+            from tools.browser_tool import _find_agent_browser
+
+            _find_agent_browser()
+            agent_browser_ok = True
+        except Exception:
+            pass
+        if agent_browser_ok:
+            check_ok("agent-browser", "(browser automation)")
         else:
-            if _is_termux():
+            agent_browser_path = PROJECT_ROOT / "node_modules" / "agent-browser"
+            if agent_browser_path.exists():
+                check_ok("agent-browser (Node.js)", "(browser automation)")
+            elif _is_termux():
                 check_info("agent-browser is not installed (expected in the tested Termux path)")
                 check_info("Install it manually later with: npm install -g agent-browser && agent-browser install")
                 check_info("Termux browser setup:")
                 for step in _termux_browser_setup_steps(node_installed=True):
                     check_info(step)
             else:
-                check_warn("agent-browser not installed", "(run: npm install)")
+                check_warn("agent-browser not installed", "(run: npm install -g agent-browser && agent-browser install)")
     else:
         if _is_termux():
             check_info("Node.js not found (browser tools are optional in the tested Termux path)")

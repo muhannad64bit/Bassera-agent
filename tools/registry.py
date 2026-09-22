@@ -274,8 +274,16 @@ class ToolRegistry:
                         check_results[entry.check_fn] = bool(entry.check_fn())
                     except Exception:
                         check_results[entry.check_fn] = False
-                        if not quiet:
-                            logger.debug("Tool %s check raised; skipping", name)
+                        # Availability checks are expected to return False
+                        # for missing dependencies — an exception is a bug
+                        # or environmental fault (e.g. os.getcwd() failing
+                        # from a deleted CWD). Log loudly: silently treating
+                        # it as "unavailable" makes the tool disappear with
+                        # no trace.
+                        logger.warning(
+                            "Tool %s check_fn raised; treating as unavailable",
+                            name, exc_info=True,
+                        )
                 if not check_results[entry.check_fn]:
                     if not quiet:
                         logger.debug("Tool %s unavailable (check failed)", name)
