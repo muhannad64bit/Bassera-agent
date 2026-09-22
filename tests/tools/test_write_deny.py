@@ -81,3 +81,26 @@ class TestWriteAllowed:
     def test_wafi_config_not_env(self):
         path = os.path.join(str(Path.home()), ".wafi", "config.yaml")
         assert _is_write_denied(path) is False
+
+
+class TestCredentialEnvDeniedUnderAnyHome:
+    """The agent's credential .env must be denied under BOTH the currently
+    active home (resolved at check time) and the default home.
+
+    Regression for the import-time-frozen deny set: WRITE_DENIED_PATHS
+    captured get_wafi_home() at module import, so whenever HERMES_HOME
+    differed at check time (profiles, hermetic test fixture), neither the
+    active home's .env nor the default home's .env was protected.
+    """
+
+    def test_env_denied_under_active_home(self, monkeypatch, tmp_path):
+        import os
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        assert _is_write_denied(str(tmp_path / ".env")) is True
+
+    def test_default_home_env_denied_even_with_custom_home(self, monkeypatch, tmp_path):
+        from pathlib import Path
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        assert _is_write_denied(str(Path.home() / ".wafi" / ".env")) is True

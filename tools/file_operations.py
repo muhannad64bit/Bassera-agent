@@ -48,7 +48,6 @@ WRITE_DENIED_PATHS = {
         os.path.join(_HOME, ".ssh", "id_rsa"),
         os.path.join(_HOME, ".ssh", "id_ed25519"),
         os.path.join(_HOME, ".ssh", "config"),
-        str(get_wafi_home() / ".env"),
         os.path.join(_HOME, ".bashrc"),
         os.path.join(_HOME, ".zshrc"),
         os.path.join(_HOME, ".profile"),
@@ -106,6 +105,21 @@ def _is_write_denied(path: str) -> bool:
     for prefix in WRITE_DENIED_PREFIXES:
         if resolved.startswith(prefix):
             return True
+
+    # 1b) The agent's credential .env — resolved at CHECK time, not import
+    # time. get_wafi_home() reads HERMES_HOME, which can differ from the
+    # value at module import (profiles are selected before other imports,
+    # but the hermetic test fixture sets it per test). Freezing this at
+    # import would leave the credential file unprotected whenever the
+    # home changes after import. The DEFAULT home's .env is also protected
+    # even when a profile or custom HERMES_HOME is active, so a profile
+    # session can't clobber the user's main install.
+    wafi_env = os.path.realpath(str(get_wafi_home() / ".env"))
+    if resolved == wafi_env:
+        return True
+    default_env = os.path.realpath(os.path.join(_HOME, ".wafi", ".env"))
+    if resolved == default_env:
+        return True
 
     # 2) Optional safe-root sandbox
     safe_root = _get_safe_write_root()

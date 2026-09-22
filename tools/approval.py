@@ -57,10 +57,18 @@ def get_current_session_key(default: str = "default") -> str:
 # Sensitive write targets that should trigger approval even when referenced
 # via shell expansions like $HOME or $HERMES_HOME.
 _SSH_SENSITIVE_PATH = r'(?:~|\$home|\$\{home\})/\.ssh(?:/|$)'
+# Matches the agent's credential file (`.env`) under any of the home
+# spellings the runtime actually uses. The command text is lowercased
+# before matching (see detect_dangerous_command), so patterns use the
+# lowercase env-var names. HERMES_HOME is the canonical var read by
+# get_wafi_home(); WAFI_HOME is accepted as an alias; the literal
+# ~/.wafi and $HOME/.wafi paths cover unexpanded shells.
 _HERMES_ENV_PATH = (
-    r'(?:~\/\.wafi/|'
+    r'(?:~/\.wafi/|'
     r'(?:\$home|\$\{home\})/\.wafi/|'
-    r'(?:\$wafi_home|\$\{wafi_home\})/)'
+    r'(?:\$hermes_home|\$\{hermes_home\})/|'
+    r'(?:\$wafi_home|\$\{wafi_home\})/|'
+    r'(?:\$bassera_home|\$\{bassera_home\})/)'
     r'\.env\b'
 )
 _SENSITIVE_WRITE_TARGET = (
