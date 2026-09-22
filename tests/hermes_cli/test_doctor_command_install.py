@@ -253,6 +253,13 @@ class TestDoctorCommandInstallation:
         monkeypatch.setattr(doctor_mod, "PROJECT_ROOT", project)
         monkeypatch.setattr(doctor_mod, "_DHH", str(home))
         monkeypatch.setattr(sys, "platform", "win32")
+        # Faking sys.platform makes CPython's POSIX-built shutil.which take
+        # its Windows branch, where _winapi is None and any which() call
+        # crashes (doctor calls shutil.which("codex") unconditionally before
+        # the Command Installation gate). Mock which so the emulation is
+        # portable; the assertion still verifies the win32 gate itself.
+        import shutil as _shutil
+        monkeypatch.setattr(_shutil, "which", lambda name, **kw: None)
 
         fake_model_tools = types.SimpleNamespace(
             check_tool_availability=lambda *a, **kw: ([], []),

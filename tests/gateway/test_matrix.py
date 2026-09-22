@@ -1227,6 +1227,11 @@ class TestMatrixUploadAndSend:
     @pytest.mark.asyncio
     async def test_upload_encrypted_room_uses_file_payload(self):
         """Encrypted rooms should use 'file' key with crypto metadata."""
+        # Requires the real mautrix crypto attachment helpers
+        # (pip install "mautrix[encryption]" — needs libolm; unavailable on
+        # macOS per pyproject notes). Skip cleanly where it can't be
+        # installed; run fully on Linux/CI with the matrix extra.
+        pytest.importorskip("mautrix.crypto.attachments")
         adapter = _make_adapter()
         adapter._encryption = True
         mock_client = MagicMock()

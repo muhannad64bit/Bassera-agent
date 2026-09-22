@@ -124,6 +124,16 @@ class TestWslSystemdOperational:
 class TestSupportsSystemdServicesWSL:
     """Test that supports_systemd_services() handles WSL correctly."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_systemctl_binary(self, monkeypatch):
+        """supports_systemd_services() also checks for a real systemctl
+        binary via shutil.which. That check is environment-dependent (no
+        systemctl on macOS/dev machines), so mock it — the tests here
+        exercise the WSL/platform logic, not binary discovery."""
+        monkeypatch.setattr(
+            gateway.shutil, "which", lambda name, **kw: "/usr/bin/systemctl" if name == "systemctl" else None,
+        )
+
     def test_wsl_with_systemd(self, monkeypatch):
         """WSL + working systemd → True."""
         monkeypatch.setattr(gateway, "is_linux", lambda: True)

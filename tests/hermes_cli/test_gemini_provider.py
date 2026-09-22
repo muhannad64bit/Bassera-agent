@@ -128,8 +128,11 @@ class TestGeminiModelCatalog:
     def test_provider_models_exist(self):
         assert "gemini" in _PROVIDER_MODELS
         models = _PROVIDER_MODELS["gemini"]
-        assert "gemini-2.5-pro" in models
-        assert "gemini-2.5-flash" in models
+        assert models, "gemini provider catalog must not be empty"
+        # All entries are Gemini models (no gemma/other-family leakage).
+        # Version pins live in test_provider_models_has_3x so this test
+        # survives catalog refreshes to newer model generations.
+        assert all(m.startswith("gemini-") for m in models)
         assert "gemma-4-31b-it" not in models
 
     def test_provider_models_has_3x(self):
