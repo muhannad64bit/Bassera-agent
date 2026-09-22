@@ -5,16 +5,42 @@ without risk of circular imports.
 """
 
 import os
+import sys
 from pathlib import Path
 
 
-def get_wafi_home() -> Path:
-    """Return the Wafi home directory (default: ~/.wafi).
+def is_bassera_invocation() -> bool:
+    """True when the process was launched via a bassera* entry point.
 
-    Reads HERMES_HOME env var, falls back to ~/.wafi.
-    This is the single source of truth — all other copies should import this.
+    Determined from sys.argv[0] so the same installed codebase serves both
+    brand entry points (``bassera``/``bassera-agent``/``bassera-acp`` and the
+    ``wafi`` equivalents) with the matching identity.
+    """
+    return os.path.basename(sys.argv[0] if len(sys.argv) > 0 else "").startswith("bassera")
+
+
+def agent_display_name() -> str:
+    """Bassera when invoked as bassera, else Wafi."""
+    return "Bassera" if is_bassera_invocation() else "Wafi"
+
+
+def get_wafi_home() -> Path:
+    """Return the Bassera/Wafi home directory (default: ~/.wafi).
+
+    Resolution order for the home root:
+    1. ``HERMES_HOME`` env var (canonical, set internally for profiles/tests)
+    2. ``BASSERA_HOME`` env var (Bassera-brand alias for fresh deployments)
+    3. ``~/.wafi`` fallback
+
+    HERMES_HOME takes precedence so internal profile logic and the hermetic
+    test suite (which sets HERMES_HOME) always win; BASSERA_HOME only redirects
+    a deployment that has not set HERMES_HOME. Keeping the ``~/.wafi`` default
+    preserves compatibility with existing user installs and the 3000-test
+    suite.
     """
     val = os.environ.get("HERMES_HOME", "").strip()
+    if not val:
+        val = os.environ.get("BASSERA_HOME", "").strip()
     return Path(val) if val else Path.home() / ".wafi"
 
 

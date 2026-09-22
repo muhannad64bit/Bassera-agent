@@ -12,6 +12,7 @@ from pathlib import Path
 
 from wafi_cli.config import get_project_root, get_wafi_home, get_env_path
 from wafi_constants import display_wafi_home
+from wafi_constants import agent_display_name as _agent_display_name
 
 PROJECT_ROOT = get_project_root()
 HERMES_HOME = get_wafi_home()
@@ -175,7 +176,12 @@ def run_doctor(args):
     
     print()
     print(color("┌─────────────────────────────────────────────────────────┐", Colors.CYAN))
-    print(color("│                 🩺 Wafi Doctor                        │", Colors.CYAN))
+    # Hand-tuned padding: 🩺 renders as a double-width glyph, so plain
+    # str.center() misaligns the banner. Widths match the box above.
+    if _agent_display_name() == "Bassera":
+        print(color("│                 🩺 Bassera Doctor                     │", Colors.CYAN))
+    else:
+        print(color("│                 🩺 Wafi Doctor                        │", Colors.CYAN))
     print(color("└─────────────────────────────────────────────────────────┘", Colors.CYAN))
     
     # =========================================================================

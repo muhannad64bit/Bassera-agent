@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "wafi-agent"
+name = "bassera-agent"
 version = "0.10.0"
-description = "The self-improving AI agent — creates skills from experience, improves them during use, and runs anywhere"
+description = "Bassera Agent — the self-improving AI agent (fork of wafi-agent/hermes-agent), hardened for power, stability, and security"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Nous Research" }]
@@ -118,6 +118,9 @@ all = [
 wafi = "wafi_cli.main:main"
 wafi-agent = "run_agent:main"
 wafi-acp = "acp_adapter.entry:main"
+bassera = "wafi_cli.main:main"
+bassera-agent = "run_agent:main"
+bassera-acp = "acp_adapter.entry:main"
 
 [tool.setuptools]
 py-modules = ["run_agent", "model_tools", "toolsets", "batch_runner", "trajectory_compressor", "toolset_distributions", "cli", "wafi_constants", "wafi_state", "wafi_time", "wafi_logging", "rl_cli", "utils"]

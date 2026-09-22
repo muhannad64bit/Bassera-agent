@@ -4116,7 +4116,9 @@ def cmd_import(args):
 
 def cmd_version(args):
     """Show version."""
-    print(f"Wafi Agent v{__version__} ({__release_date__})")
+    from wafi_constants import agent_display_name
+
+    print(f"{agent_display_name()} Agent v{__version__} ({__release_date__})")
     print(f"Project: {PROJECT_ROOT}")
 
     # Show Python version
@@ -6278,10 +6280,13 @@ def cmd_logs(args):
 
 
 def main():
-    """Main entry point for wafi CLI."""
+    """Main entry point for wafi/bassera CLI."""
+    from wafi_constants import is_bassera_invocation
+
+    _prog = "bassera" if is_bassera_invocation() else "wafi"
     parser = argparse.ArgumentParser(
-        prog="wafi",
-        description="Wafi Agent - AI assistant with tool-calling capabilities",
+        prog=_prog,
+        description="Bassera Agent - AI assistant with tool-calling capabilities",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

@@ -1,96 +1,131 @@
 <p align="center">
-  <img src="assets/banner.png" alt="Wafi Agent" width="100%">
+  <img src="assets/banner.png" alt="Bassera Agent" width="100%">
 </p>
 
-# Wafi Agent ☤
+# Bassera Agent
 
-<p align="center">
-  <a href="https://wafi-agent.nousresearch.com/docs/"><img src="https://img.shields.io/badge/Docs-wafi--agent.nousresearch.com-FFD700?style=for-the-badge" alt="Documentation"></a>
-  <a href="https://discord.gg/NousResearch"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://github.com/NousResearch/wafi-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
-  <a href="https://nousresearch.com"><img src="https://img.shields.io/badge/Built%20by-Nous%20Research-blueviolet?style=for-the-badge" alt="Built by Nous Research"></a>
-</p>
+**A self-improving AI agent, hardened for power, stability, and security.**
 
-**The self-improving AI agent built by [Nous Research](https://nousresearch.com).** It's the only agent with a built-in learning loop — it creates skills from experience, improves them during use, nudges itself to persist knowledge, searches its own past conversations, and builds a deepening model of who you are across sessions. Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle. It's not tied to your laptop — talk to it from Telegram while it works on a cloud VM.
+Bassera-agent is a fork of [wafi-agent](https://github.com/NousResearch/wafi-agent)
+(which itself evolved from hermes-agent), carrying all of its features — the
+cognitive loop, persistent memory, skills, the messaging gateway, the cron
+scheduler, the terminal UI — plus a focused pass of correctness and security
+hardening (see **What Bassera fixes** below).
 
-Use any model you want — [Nous Portal](https://portal.nousresearch.com), [OpenRouter](https://openrouter.ai) (200+ models), [NVIDIA NIM](https://build.nvidia.com) (Nemotron), [Xiaomi MiMo](https://platform.xiaomimimo.com), [z.ai/GLM](https://z.ai), [Kimi/Moonshot](https://platform.moonshot.ai), [MiniMax](https://www.minimax.io), [Hugging Face](https://huggingface.co), OpenAI, or your own endpoint. Switch with `wafi model` — no code changes, no lock-in.
+It is the only agent family with a built-in learning loop: it creates skills
+from experience, improves them during use, nudges itself to persist knowledge,
+searches its own past conversations, and builds a deepening model of who you
+are across sessions. Run it on a $5 VPS, a GPU cluster, or serverless
+infrastructure. Talk to it from Telegram while it works on a cloud VM.
 
-<table>
-<tr><td><b>A real terminal interface</b></td><td>Full TUI with multiline editing, slash-command autocomplete, conversation history, interrupt-and-redirect, and streaming tool output.</td></tr>
-<tr><td><b>Lives where you do</b></td><td>Telegram, Discord, Slack, WhatsApp, Signal, and CLI — all from a single gateway process. Voice memo transcription, cross-platform conversation continuity.</td></tr>
-<tr><td><b>A closed learning loop</b></td><td>Agent-curated memory with periodic nudges. Autonomous skill creation after complex tasks. Skills self-improve during use. FTS5 session search with LLM summarization for cross-session recall. <a href="https://github.com/plastic-labs/honcho">Honcho</a> dialectic user modeling. Compatible with the <a href="https://agentskills.io">agentskills.io</a> open standard.</td></tr>
-<tr><td><b>Scheduled automations</b></td><td>Built-in cron scheduler with delivery to any platform. Daily reports, nightly backups, weekly audits — all in natural language, running unattended.</td></tr>
-<tr><td><b>Delegates and parallelizes</b></td><td>Spawn isolated subagents for parallel workstreams. Write Python scripts that call tools via RPC, collapsing multi-step pipelines into zero-context-cost turns.</td></tr>
-<tr><td><b>Runs anywhere, not just your laptop</b></td><td>Six terminal backends — local, Docker, SSH, Daytona, Singularity, and Modal. Daytona and Modal offer serverless persistence — your agent's environment hibernates when idle and wakes on demand, costing nearly nothing between sessions. Run it on a $5 VPS or a GPU cluster.</td></tr>
-<tr><td><b>Research-ready</b></td><td>Batch trajectory generation, Atropos RL environments, trajectory compression for training the next generation of tool-calling models.</td></tr>
-</table>
+Use any model you want — Nous Portal, OpenRouter (200+ models), NVIDIA NIM,
+z.ai/GLM, Kimi/Moonshot, MiniMax, Hugging Face, OpenAI, Anthropic, or your own
+endpoint. Switch with `bassera model` (the `wafi` entry point also works).
+
+| | |
+|---|---|
+| **Full browser control** | Default headless Chromium via `agent-browser` — navigate, view pages as an accessibility-tree snapshot, fill fields, click, and log in. Cloud backends (Browserbase, Browser Use) and Camofox stealth mode when configured. |
+| **A real terminal interface** | Full TUI with multiline editing, slash-command autocomplete, conversation history, interrupt-and-redirect, and streaming tool output. |
+| **Lives where you do** | Telegram, Discord, Slack, WhatsApp, Signal, Matrix, DingTalk, Feishu, Email — all from a single gateway process. Voice memo transcription, cross-platform conversation continuity. |
+| **A closed learning loop** | Agent-curated memory with periodic nudges. Autonomous skill creation after complex tasks. Skills self-improve during use. FTS5 session search with LLM summarization. |
+| **Scheduled automations** | Built-in cron scheduler with delivery to any platform. Daily reports, nightly backups, weekly audits — all in natural language, unattended. |
+| **Delegates and parallelizes** | Spawn isolated subagents for parallel workstreams. Write Python scripts that call tools via RPC. |
+| **Runs anywhere** | Six terminal backends — local, Docker, SSH, Daytona, Singularity, and Modal. Daytona and Modal offer serverless persistence. |
+| **Research-ready** | Batch trajectory generation, Atropos RL environments, trajectory compression for training the next generation of tool-calling models. |
 
 ---
 
-## Quick Install
+## Quick Start
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/NousResearch/wafi-agent/main/scripts/install.sh | bash
+uv venv venv --python 3.12
+source venv/bin/activate
+uv pip install -e ".[all,dev]"
+bassera setup        # interactive setup wizard
+bassera              # start chatting
 ```
 
-Works on Linux, macOS, WSL2, and Android via Termux. The installer handles the platform-specific setup for you.
-
-> **Android / Termux:** The tested manual path is documented in the [Termux guide](https://wafi-agent.nousresearch.com/docs/getting-started/termux). On Termux, Wafi installs a curated `.[termux]` extra because the full `.[all]` extra currently pulls Android-incompatible voice dependencies.
->
-> **Windows:** Native Windows is not supported. Please install [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) and run the command above.
-
-After installation:
+Both entry points are installed:
 
 ```bash
-source ~/.bashrc    # reload shell (or: source ~/.zshrc)
-wafi              # start chatting!
+bassera              # Bassera identity
+wafi                 # identical behavior, Wafi identity
+```
+
+`BASSERA_HOME` redirects this installation's home directory when `HERMES_HOME`
+is unset (e.g. `BASSERA_HOME=~/.bassera`). Otherwise the standard `~/.wafi`
+home is used.
+
+## Common Commands
+
+```bash
+bassera              # Interactive CLI
+bassera model        # Choose your LLM provider and model
+bassera gateway      # Start the messaging gateway
+bassera setup        # Full setup wizard
+bassera doctor       # Diagnose configuration and dependencies
+bassera status       # Show status of all components
+bassera profile      # Manage isolated multi-instance profiles
+```
+
+Once you're in a conversation: `/new`, `/model`, `/compress`, `/usage`,
+`/skills`, `/insights`, `/resume`, `/retry`, `/undo` — the shared
+slash-command surface works in the CLI, the TUI, and the gateway.
+
+### Browser automation (optional, one-time setup)
+
+The browser tool drives a default headless Chromium — view pages as text
+snapshots, fill fields, click, and log in. Enable it with:
+
+```bash
+npm install -g agent-browser
+agent-browser install          # downloads Chromium (~180 MB, one time)
+# Linux/Docker: agent-browser install --with-deps
 ```
 
 ---
 
-## Getting Started
+## What Bassera fixes over upstream
 
-```bash
-wafi              # Interactive CLI — start a conversation
-wafi model        # Choose your LLM provider and model
-wafi tools        # Configure which tools are enabled
-wafi config set   # Set individual config values
-wafi gateway      # Start the messaging gateway (Telegram, Discord, etc.)
-wafi setup        # Run the full setup wizard (configures everything at once)
-wafi claw migrate # Migrate from OpenClaw (if coming from OpenClaw)
-wafi update       # Update to the latest version
-wafi doctor       # Diagnose any issues
-```
+Each of these was a real defect found by running the full test suite
+(~13,500 tests) on a clean macOS/Linux checkout and tracing every failure:
 
-📖 **[Full documentation →](https://wafi-agent.nousresearch.com/docs/)**
+**Security**
+- Dangerous-command approval now catches writes to the agent's credential
+  file via the real `HERMES_HOME` env var (`echo x > $HERMES_HOME/.env`
+  previously bypassed approval entirely).
+- Tests can no longer leak pairing/rate-limit state into the real
+  `~/.wafi` home directory.
 
-## CLI vs Messaging Quick Reference
+**Stability**
+- File tools no longer refuse writes to the OS-designated user temp
+  directory on macOS (`/var/folders/...` realpath'd under `/private/var/`).
+- Interrupting a terminal command between subprocess spawn and the poll
+  loop no longer orphans the process group.
+- The reflective-learning loop no longer starves: structured memory
+  records (owner DNA/doctrine, skill candidates) get their own char
+  budget instead of competing with curated free-text notes.
+- "Avoid destructive" is no longer scored as a *contradiction* of safety
+  doctrine in the owner-DNA engine.
+- `import wafi_cli.main` no longer crashes when some other program's
+  `-p <value>` flag is in `sys.argv` (e.g. pytest plugins).
+- The `./wafi` launcher actually works (it imported a module that no
+  longer exists).
+- `scripts/run_tests.sh` runs on macOS (bash 3.2 empty-array crash),
+  uv-created venvs, and low fd limits.
 
-Wafi has two entry points: start the terminal UI with `wafi`, or run the gateway and talk to it from Telegram, Discord, Slack, WhatsApp, Signal, or Email. Once you're in a conversation, many slash commands are shared across both interfaces.
-
-| Action | CLI | Messaging platforms |
-|---------|-----|---------------------|
-| Start chatting | `wafi` | Run `wafi gateway setup` + `wafi gateway start`, then send the bot a message |
-| Start fresh conversation | `/new` or `/reset` | `/new` or `/reset` |
-| Change model | `/model [provider:model]` | `/model [provider:model]` |
-| Set a personality | `/personality [name]` | `/personality [name]` |
-| Retry or undo the last turn | `/retry`, `/undo` | `/retry`, `/undo` |
-| Compress context / check usage | `/compress`, `/usage`, `/insights [--days N]` | `/compress`, `/usage`, `/insights [days]` |
-| Browse skills | `/skills` or `/<skill-name>` | `/skills` or `/<skill-name>` |
-| Interrupt current work | `Ctrl+C` or send a new message | `/stop` or send a new message |
-| Platform-specific status | `/platforms` | `/status`, `/sethome` |
-
-For the full command lists, see the [CLI guide](https://wafi-agent.nousresearch.com/docs/user-guide/cli) and the [Messaging Gateway guide](https://wafi-agent.nousresearch.com/docs/user-guide/messaging).
+**Dependencies**
+- The ACP extra is pinned below `agent-client-protocol` 0.11, which removed
+  the `SessionModelState` API the adapter depends on.
 
 ---
 
 ## Documentation
 
-All documentation lives at **[wafi-agent.nousresearch.com/docs](https://wafi-agent.nousresearch.com/docs/)**:
+The upstream documentation remains the most complete reference:
 
 | Section | What's Covered |
 |---------|---------------|
-| [Quickstart](https://wafi-agent.nousresearch.com/docs/getting-started/quickstart) | Install → setup → first conversation in 2 minutes |
 | [CLI Usage](https://wafi-agent.nousresearch.com/docs/user-guide/cli) | Commands, keybindings, personalities, sessions |
 | [Configuration](https://wafi-agent.nousresearch.com/docs/user-guide/configuration) | Config file, providers, models, all options |
 | [Messaging Gateway](https://wafi-agent.nousresearch.com/docs/user-guide/messaging) | Telegram, Discord, Slack, WhatsApp, Signal, Home Assistant |
@@ -98,88 +133,29 @@ All documentation lives at **[wafi-agent.nousresearch.com/docs](https://wafi-age
 | [Tools & Toolsets](https://wafi-agent.nousresearch.com/docs/user-guide/features/tools) | 40+ tools, toolset system, terminal backends |
 | [Skills System](https://wafi-agent.nousresearch.com/docs/user-guide/features/skills) | Procedural memory, Skills Hub, creating skills |
 | [Memory](https://wafi-agent.nousresearch.com/docs/user-guide/features/memory) | Persistent memory, user profiles, best practices |
-| [MCP Integration](https://wafi-agent.nousresearch.com/docs/user-guide/features/mcp) | Connect any MCP server for extended capabilities |
 | [Cron Scheduling](https://wafi-agent.nousresearch.com/docs/user-guide/features/cron) | Scheduled tasks with platform delivery |
-| [Context Files](https://wafi-agent.nousresearch.com/docs/user-guide/features/context-files) | Project context that shapes every conversation |
-| [Architecture](https://wafi-agent.nousresearch.com/docs/developer-guide/architecture) | Project structure, agent loop, key classes |
-| [Contributing](https://wafi-agent.nousresearch.com/docs/developer-guide/contributing) | Development setup, PR process, code style |
-| [CLI Reference](https://wafi-agent.nousresearch.com/docs/reference/cli-commands) | All commands and flags |
-| [Environment Variables](https://wafi-agent.nousresearch.com/docs/reference/environment-variables) | Complete env var reference |
 
----
-
-## Migrating from OpenClaw
-
-If you're coming from OpenClaw, Wafi can automatically import your settings, memories, skills, and API keys.
-
-**During first-time setup:** The setup wizard (`wafi setup`) automatically detects `~/.openclaw` and offers to migrate before configuration begins.
-
-**Anytime after install:**
+## Development
 
 ```bash
-wafi claw migrate              # Interactive migration (full preset)
-wafi claw migrate --dry-run    # Preview what would be migrated
-wafi claw migrate --preset user-data   # Migrate without secrets
-wafi claw migrate --overwrite  # Overwrite existing conflicts
-```
-
-What gets imported:
-- **SOUL.md** — persona file
-- **Memories** — MEMORY.md and USER.md entries
-- **Skills** — user-created skills → `~/.wafi/skills/openclaw-imports/`
-- **Command allowlist** — approval patterns
-- **Messaging settings** — platform configs, allowed users, working directory
-- **API keys** — allowlisted secrets (Telegram, OpenRouter, OpenAI, Anthropic, ElevenLabs)
-- **TTS assets** — workspace audio files
-- **Workspace instructions** — AGENTS.md (with `--workspace-target`)
-
-See `wafi claw migrate --help` for all options, or use the `openclaw-migration` skill for an interactive agent-guided migration with dry-run previews.
-
----
-
-## Contributing
-
-We welcome contributions! See the [Contributing Guide](https://wafi-agent.nousresearch.com/docs/developer-guide/contributing) for development setup, code style, and PR process.
-
-Quick start for contributors — clone and go with `setup-wafi.sh`:
-
-```bash
-git clone https://github.com/NousResearch/wafi-agent.git
-cd wafi-agent
-./setup-wafi.sh     # installs uv, creates venv, installs .[all], symlinks ~/.local/bin/wafi
-./wafi              # auto-detects the venv, no need to `source` first
-```
-
-Manual path (equivalent to the above):
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-uv venv venv --python 3.11
 source venv/bin/activate
-uv pip install -e ".[all,dev]"
-python -m pytest tests/ -q
+scripts/run_tests.sh                    # full suite, CI-parity (always use this)
+scripts/run_tests.sh tests/tools/       # one directory
+scripts/run_tests.sh tests/agent/test_memory_tool.py   # one file
 ```
 
-> **RL Training (optional):** To work on the RL/Tinker-Atropos integration:
-> ```bash
-> git submodule update --init tinker-atropos
-> uv pip install -e "./tinker-atropos"
-> ```
+TUI (TypeScript/Ink):
 
----
+```bash
+cd ui-tui
+npm install
+npm run type-check
+npm test        # vitest
+npm run build
+```
 
-## Community
+## Credits & License
 
-- 💬 [Discord](https://discord.gg/NousResearch)
-- 📚 [Skills Hub](https://agentskills.io)
-- 🐛 [Issues](https://github.com/NousResearch/wafi-agent/issues)
-- 💡 [Discussions](https://github.com/NousResearch/wafi-agent/discussions)
-- 🔌 [WafiClaw](https://github.com/AaronWong1999/waficlaw) — Community WeChat bridge: Run Wafi Agent and OpenClaw on the same WeChat account.
-
----
-
-## License
-
-MIT — see [LICENSE](LICENSE).
-
-Built by [Nous Research](https://nousresearch.com).# Wafi-Agent
+Bassera-agent builds directly on the outstanding work of the
+[wafi-agent](https://github.com/NousResearch/wafi-agent) and
+hermes-agent communities. MIT — see [LICENSE](LICENSE).
