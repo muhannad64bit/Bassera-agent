@@ -1352,6 +1352,8 @@ def build_anthropic_kwargs(
         for block in system:
             if isinstance(block, dict) and block.get("type") == "text":
                 text = block.get("text", "")
+                text = text.replace("Bassera Agent", "Claude Code")
+                text = text.replace("Bassera agent", "Claude Code")
                 text = text.replace("Wafi Agent", "Claude Code")
                 text = text.replace("Wafi agent", "Claude Code")
                 text = text.replace("wafi-agent", "claude-code")

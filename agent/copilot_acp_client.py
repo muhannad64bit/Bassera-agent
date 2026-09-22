@@ -67,7 +67,7 @@ def _format_messages_as_prompt(
         "If no tool is needed, answer normally.",
     ]
     if model:
-        sections.append(f"Wafi requested model hint: {model}")
+        sections.append(f"Bassera requested model hint: {model}")
 
     if isinstance(tools, list) and tools:
         tool_specs: list[dict[str, Any]] = []
@@ -463,7 +463,7 @@ class CopilotACPClient:
                     },
                     "clientInfo": {
                         "name": "wafi-agent",
-                        "title": "Wafi Agent",
+                        "title": "Bassera Agent",
                         "version": "0.0.0",
                     },
                 },

@@ -540,7 +540,7 @@ def is_windows() -> bool:
 # =============================================================================
 
 _SERVICE_BASE = "wafi-gateway"
-SERVICE_DESCRIPTION = "Wafi Agent Gateway - Messaging Platform Integration"
+SERVICE_DESCRIPTION = "Bassera Agent Gateway - Messaging Platform Integration"
 
 
 def _profile_suffix() -> str:

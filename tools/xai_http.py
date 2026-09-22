@@ -9,4 +9,4 @@ def wafi_xai_user_agent() -> str:
         from wafi_cli import __version__
     except Exception:
         __version__ = "unknown"
-    return f"Wafi-Agent/{__version__}"
+    return f"Bassera-Agent/{__version__}"

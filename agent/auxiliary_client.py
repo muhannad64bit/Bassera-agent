@@ -203,7 +203,7 @@ _PROVIDER_VISION_MODELS: Dict[str, str] = {
 # OpenRouter app attribution headers
 _OR_HEADERS = {
     "HTTP-Referer": "https://wafi-agent.nousresearch.com",
-    "X-OpenRouter-Title": "Wafi Agent",
+    "X-OpenRouter-Title": "Bassera Agent",
     "X-OpenRouter-Categories": "productivity,cli-agent",
 }
 

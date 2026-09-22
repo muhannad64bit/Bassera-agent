@@ -1923,7 +1923,7 @@ def resolve_nous_access_token(
 
         if not state:
             raise AuthError(
-                "Wafi is not logged into Nous Portal.",
+                "Bassera is not logged into Nous Portal.",
                 provider="nous",
                 relogin_required=True,
             )
@@ -2190,7 +2190,7 @@ def resolve_nous_runtime_credentials(
         state = _load_provider_state(auth_store, "nous")
 
         if not state:
-            raise AuthError("Wafi is not logged into Nous Portal.",
+            raise AuthError("Bassera is not logged into Nous Portal.",
                             provider="nous", relogin_required=True)
 
         portal_base_url = (
@@ -3009,7 +3009,7 @@ def _login_openai_codex(args, pconfig: ProviderConfig) -> None:
     cli_tokens = _import_codex_cli_tokens()
     if cli_tokens:
         print("Found existing Codex CLI credentials at ~/.codex/auth.json")
-        print("Wafi will create its own session to avoid conflicts with Codex CLI / VS Code.")
+        print("Bassera will create its own session to avoid conflicts with Codex CLI / VS Code.")
         try:
             do_import = input("Import these credentials? (a separate login is recommended) [y/N]: ").strip().lower()
         except (EOFError, KeyboardInterrupt):
@@ -3020,7 +3020,7 @@ def _login_openai_codex(args, pconfig: ProviderConfig) -> None:
             config_path = _update_config_for_provider("openai-codex", base_url)
             print()
             print("Credentials imported. Note: if Codex CLI refreshes its token,")
-            print("Wafi will keep working independently with its own session.")
+            print("Bassera will keep working independently with its own session.")
             print(f"  Config updated: {config_path} (model.provider=openai-codex)")
             return
 
@@ -3468,7 +3468,7 @@ def logout_command(args) -> None:
         _reset_config_provider()
         print(f"Logged out of {provider_name}.")
         if os.getenv("OPENROUTER_API_KEY"):
-            print("Wafi will use OpenRouter for inference.")
+            print("Bassera will use OpenRouter for inference.")
         else:
             print("Run `wafi model` or configure an API key to use Wafi.")
     else:

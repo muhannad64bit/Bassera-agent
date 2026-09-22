@@ -1,4 +1,4 @@
-"""Shared constants for Wafi Agent.
+"""Shared constants for Bassera Agent.
 
 Import-safe module with no dependencies — can be imported from anywhere
 without risk of circular imports.
@@ -25,7 +25,7 @@ def agent_display_name() -> str:
 
 
 def get_wafi_home() -> Path:
-    """Return the Bassera/Wafi home directory (default: ~/.wafi).
+    """Return the Bassera home directory (default: ~/.wafi).
 
     Resolution order for the home root:
     1. ``HERMES_HOME`` env var (canonical, set internally for profiles/tests)
@@ -45,7 +45,7 @@ def get_wafi_home() -> Path:
 
 
 def get_default_wafi_root() -> Path:
-    """Return the root Wafi directory for profile-level operations.
+    """Return the root Bassera directory for profile-level operations.
 
     In standard deployments this is ``~/.wafi``.
 
@@ -98,7 +98,7 @@ def get_optional_skills_dir(default: Path | None = None) -> Path:
 
 
 def get_wafi_dir(new_subpath: str, old_name: str) -> Path:
-    """Resolve a Wafi subdirectory with backward compatibility.
+    """Resolve a Bassera subdirectory with backward compatibility.
 
     New installs get the consolidated layout (e.g. ``cache/images``).
     Existing installs that already have the old path (e.g. ``image_cache``)
@@ -125,7 +125,7 @@ def display_wafi_home() -> str:
 
         default:  ``~/.wafi``
         profile:  ``~/.wafi/profiles/coder``
-        custom:   ``/opt/wafi-custom``
+        custom:   ``/opt/bassera-custom``
 
     Use this in **user-facing** print/log messages instead of hardcoding
     ``~/.wafi``.  For code that needs a real ``Path``, use
@@ -143,7 +143,7 @@ def get_subprocess_home() -> str | None:
 
     When ``{HERMES_HOME}/home/`` exists on disk, subprocesses should use it
     as ``HOME`` so system tools (git, ssh, gh, npm …) write their configs
-    inside the Wafi data directory instead of the OS-level ``/root`` or
+    inside the Bassera data directory instead of the OS-level ``/root`` or
     ``~/``.  This provides:
 
     * **Docker persistence** — tool configs land inside the persistent volume.

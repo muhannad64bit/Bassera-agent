@@ -232,7 +232,7 @@ def _init_shadow_repo(shadow_repo: Path, working_dir: str) -> Optional[str]:
         return f"Shadow repo init failed: {err}"
 
     _run_git(["config", "user.email", "wafi@local"], shadow_repo, working_dir)
-    _run_git(["config", "user.name", "Wafi Checkpoint"], shadow_repo, working_dir)
+    _run_git(["config", "user.name", "Bassera Checkpoint"], shadow_repo, working_dir)
     # Explicitly disable commit/tag signing in the shadow repo.  _git_env
     # already isolates from the user's global config, but writing these into
     # the shadow's own config is belt-and-suspenders — it guarantees the

@@ -1,4 +1,4 @@
-"""Wafi CLI skin/theme engine.
+"""Bassera CLI skin/theme engine.
 
 A data-driven skin system that lets users customize the CLI's visual appearance.
 Skins are defined as YAML files in ~/.wafi/skins/ or as built-in presets.
@@ -56,10 +56,10 @@ All fields are optional. Missing values inherit from the ``default`` skin.
 
     # Branding: text strings used throughout the CLI
     branding:
-      agent_name: "Wafi Agent"          # Banner title, status display
+      agent_name: "Bassera Agent"       # Banner title, status display
       welcome: "Welcome message"          # Shown at CLI startup
       goodbye: "Goodbye! ⚕"              # Shown on exit
-      response_label: " ⚕ Wafi "       # Response box header label
+      response_label: " ⚕ Bassera "    # Response box header label
       prompt_symbol: "❯ "                # Input prompt symbol
       help_header: "(^_^)? Commands"      # /help header text
 
@@ -81,7 +81,7 @@ USAGE
 
     skin = get_active_skin()
     print(skin.colors["banner_title"])    # "#FFD700"
-    print(skin.get_branding("agent_name"))  # "Wafi Agent"
+    print(skin.get_branding("agent_name"))  # "Bassera Agent"
 
     set_active_skin("ares")               # Switch to built-in ares skin
     set_active_skin("mytheme")            # Switch to user skin from ~/.wafi/skins/
@@ -89,7 +89,7 @@ USAGE
 BUILT-IN SKINS
 ==============
 
-- ``default`` — Classic Wafi gold/kawaii (the current look)
+- ``default`` — Classic Bassera gold/kawaii (the current look)
 - ``ares``    — Crimson/bronze war-god theme with custom spinner wings
 - ``mono``    — Clean grayscale monochrome
 - ``slate``   — Cool blue developer-focused theme
@@ -155,7 +155,7 @@ class SkinConfig:
 _BUILTIN_SKINS: Dict[str, Dict[str, Any]] = {
     "default": {
         "name": "default",
-        "description": "Classic Wafi — gold and kawaii",
+        "description": "Classic Bassera — gold and kawaii",
         "colors": {
             "banner_border": "#CD7F32",
             "banner_title": "#FFD700",
@@ -177,10 +177,10 @@ _BUILTIN_SKINS: Dict[str, Dict[str, Any]] = {
             # Empty = use hardcoded defaults in display.py
         },
         "branding": {
-            "agent_name": "Wafi Agent",
-            "welcome": "Welcome to Wafi Agent! Type your message or /help for commands.",
+            "agent_name": "Bassera Agent",
+            "welcome": "Welcome to Bassera Agent! Type your message or /help for commands.",
             "goodbye": "Goodbye! ⚕",
-            "response_label": " ⚕ Wafi ",
+            "response_label": " ⚕ Bassera ",
             "prompt_symbol": "❯ ",
             "help_header": "(^_^)? Available Commands",
         },
@@ -272,10 +272,10 @@ _BUILTIN_SKINS: Dict[str, Dict[str, Any]] = {
         },
         "spinner": {},
         "branding": {
-            "agent_name": "Wafi Agent",
-            "welcome": "Welcome to Wafi Agent! Type your message or /help for commands.",
+            "agent_name": "Bassera Agent",
+            "welcome": "Welcome to Bassera Agent! Type your message or /help for commands.",
             "goodbye": "Goodbye! ⚕",
-            "response_label": " ⚕ Wafi ",
+            "response_label": " ⚕ Bassera ",
             "prompt_symbol": "❯ ",
             "help_header": "[?] Available Commands",
         },
@@ -303,10 +303,10 @@ _BUILTIN_SKINS: Dict[str, Dict[str, Any]] = {
         },
         "spinner": {},
         "branding": {
-            "agent_name": "Wafi Agent",
-            "welcome": "Welcome to Wafi Agent! Type your message or /help for commands.",
+            "agent_name": "Bassera Agent",
+            "welcome": "Welcome to Bassera Agent! Type your message or /help for commands.",
             "goodbye": "Goodbye! ⚕",
-            "response_label": " ⚕ Wafi ",
+            "response_label": " ⚕ Bassera ",
             "prompt_symbol": "❯ ",
             "help_header": "(^_^)? Available Commands",
         },
@@ -340,10 +340,10 @@ _BUILTIN_SKINS: Dict[str, Dict[str, Any]] = {
         },
         "spinner": {},
         "branding": {
-            "agent_name": "Wafi Agent",
-            "welcome": "Welcome to Wafi Agent! Type your message or /help for commands.",
+            "agent_name": "Bassera Agent",
+            "welcome": "Welcome to Bassera Agent! Type your message or /help for commands.",
             "goodbye": "Goodbye! ⚕",
-            "response_label": " ⚕ Wafi ",
+            "response_label": " ⚕ Bassera ",
             "prompt_symbol": "❯ ",
             "help_header": "[?] Available Commands",
         },
@@ -377,10 +377,10 @@ _BUILTIN_SKINS: Dict[str, Dict[str, Any]] = {
         },
         "spinner": {},
         "branding": {
-            "agent_name": "Wafi Agent",
-            "welcome": "Welcome to Wafi Agent! Type your message or /help for commands.",
+            "agent_name": "Bassera Agent",
+            "welcome": "Welcome to Bassera Agent! Type your message or /help for commands.",
             "goodbye": "Goodbye! \u2695",
-            "response_label": " \u2695 Wafi ",
+            "response_label": " \u2695 Bassera ",
             "prompt_symbol": "\u276f ",
             "help_header": "(^_^)? Available Commands",
         },

@@ -7589,7 +7589,7 @@ class GatewayRunner:
         if not wafi_cmd:
             return (
                 "✗ Could not locate the `wafi` command. "
-                "Wafi is running, but the update command could not find the "
+                "Bassera is running, but the update command could not find the "
                 "executable on PATH or via the current Python interpreter. "
                 "Try running `wafi update` manually in your terminal."
             )
@@ -10938,7 +10938,7 @@ def main():
     """CLI entry point for the gateway."""
     import argparse
     
-    parser = argparse.ArgumentParser(description="Wafi Gateway - Multi-platform messaging")
+    parser = argparse.ArgumentParser(description="Bassera Gateway - Multi-platform messaging")
     parser.add_argument("--config", "-c", help="Path to gateway config file")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     

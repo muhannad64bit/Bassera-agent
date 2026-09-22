@@ -79,7 +79,7 @@ def _discord_request(
         headers={
             "Authorization": f"Bot {token}",
             "Content-Type": "application/json",
-            "User-Agent": "Wafi-Agent (https://github.com/NousResearch/wafi-agent)",
+            "User-Agent": "Bassera-Agent (https://github.com/NousResearch/wafi-agent)",
         },
     )
 

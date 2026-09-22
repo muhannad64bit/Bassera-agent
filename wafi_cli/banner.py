@@ -1,6 +1,6 @@
 """Welcome banner, ASCII art, skills summary, and update check for the CLI.
 
-Pure display functions with no WafiCLI state dependency.
+Pure display functions with no CLI state dependency.
 """
 
 import json
@@ -66,12 +66,12 @@ def _skin_branding(key: str, fallback: str) -> str:
 
 from wafi_cli import __version__ as VERSION, __release_date__ as RELEASE_DATE
 
-HERMES_AGENT_LOGO = """[bold #FFD700]██╗  ██╗███████╗██████╗ ███╗   ███╗███████╗███████╗       █████╗  ██████╗ ███████╗███╗   ██╗████████╗[/]
-[bold #FFD700]██║  ██║██╔════╝██╔══██╗████╗ ████║██╔════╝██╔════╝      ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝[/]
-[#FFBF00]███████║█████╗  ██████╔╝██╔████╔██║█████╗  ███████╗█████╗███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║[/]
-[#FFBF00]██╔══██║██╔══╝  ██╔══██╗██║╚██╔╝██║██╔══╝  ╚════██║╚════╝██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║[/]
-[#CD7F32]██║  ██║███████╗██║  ██║██║ ╚═╝ ██║███████╗███████║      ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║[/]
-[#CD7F32]╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝      ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝[/]"""
+HERMES_AGENT_LOGO = """[bold #FFD700]██╗  ██╗ ██████╗  ███████╗███████╗███████╗██████╗  █████╗        █████╗  ██████╗ ███████╗███╗   ██╗████████╗[/]
+[bold #FFD700]██║  ██║ ██╔══██╗██╔════╝██╔════╝██╔════╝██╔══██╗██╔══██╗      ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝[/]
+[#FFBF00]███████║██████╔╝███████╗███████╗█████╗  ██████╔╝███████║█████╗███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║[/]
+[#FFBF00]██╔══██║██╔══██╗╚════██║╚════██║██╔══╝  ██╔══██╗██╔══██║╚════╝██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║[/]
+[#CD7F32]██║  ██║██████╔╝███████║███████║███████╗██║  ██║██║  ██║      ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║[/]
+[#CD7F32]╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝      ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝[/]"""
 
 HERMES_CADUCEUS = """[#CD7F32]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⡀⠀⣀⣀⠀⢀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
 [#CD7F32]⠀⠀⠀⠀⠀⠀⢀⣠⣴⣾⣿⣿⣇⠸⣿⣿⠇⣸⣿⣿⣷⣦⣄⡀⠀⠀⠀⠀⠀⠀[/]
@@ -123,6 +123,24 @@ def get_available_skills() -> Dict[str, List[str]]:
 _UPDATE_CHECK_CACHE_SECONDS = 6 * 3600
 
 
+def get_cached_update_result() -> Optional[int]:
+    """Return the cached behind-count if fresh, else None — never touches the network.
+
+    For fast paths (the ``--version`` flag, shell completions) where a
+    synchronous ``git fetch`` would be an unacceptable stall.
+    """
+    wafi_home = get_wafi_home()
+    cache_file = wafi_home / ".update_check"
+    try:
+        if cache_file.exists():
+            cached = json.loads(cache_file.read_text())
+            if time.time() - cached.get("ts", 0) < _UPDATE_CHECK_CACHE_SECONDS:
+                return cached.get("behind")
+    except Exception:
+        pass
+    return None
+
+
 def check_for_updates() -> Optional[int]:
     """Check how many commits behind origin/main the local repo is.
 
@@ -131,7 +149,7 @@ def check_for_updates() -> Optional[int]:
     or ``None`` if the check fails or isn't applicable.
     """
     wafi_home = get_wafi_home()
-    repo_dir = wafi_home / "wafi-agent"
+    repo_dir = wafi_home / "bassera-agent"
     cache_file = wafi_home / ".update_check"
 
     # Must be a git repo — fall back to project root for dev installs
@@ -150,11 +168,14 @@ def check_for_updates() -> Optional[int]:
     except Exception:
         pass
 
-    # Fetch latest refs (fast — only downloads ref metadata, no files)
+    # Fetch latest refs (fast — only downloads ref metadata, no files).
+    # Timeout is deliberately tight (3s): this runs synchronously from
+    # `wafi version` and in the background from the banner — a hung
+    # network must never stall the CLI for the previously-configured 10s.
     try:
         subprocess.run(
             ["git", "fetch", "origin", "--quiet"],
-            capture_output=True, timeout=10,
+            capture_output=True, timeout=3,
             cwd=str(repo_dir),
         )
     except Exception:
@@ -184,9 +205,9 @@ def check_for_updates() -> Optional[int]:
 
 
 def _resolve_repo_dir() -> Optional[Path]:
-    """Return the active Wafi git checkout, or None if this isn't a git install."""
+    """Return the active Bassera git checkout, or None if this isn't a git install."""
     wafi_home = get_wafi_home()
-    repo_dir = wafi_home / "wafi-agent"
+    repo_dir = wafi_home / "bassera-agent"
     if not (repo_dir / ".git").exists():
         repo_dir = Path(__file__).parent.parent.resolve()
     return repo_dir if (repo_dir / ".git").exists() else None
@@ -240,7 +261,7 @@ def get_git_banner_state(repo_dir: Optional[Path] = None) -> Optional[dict]:
 
 def format_banner_version_label() -> str:
     """Return the version label shown in the startup banner title."""
-    base = f"Wafi Agent v{VERSION} ({RELEASE_DATE})"
+    base = f"Bassera Agent v{VERSION} ({RELEASE_DATE})"
     state = get_git_banner_state()
     if not state:
         return base
@@ -516,7 +537,7 @@ def build_welcome_banner(console: Console, model: str, cwd: str,
     right_content = "\n".join(right_lines)
     layout_table.add_row(left_content, right_content)
 
-    agent_name = _skin_branding("agent_name", "Wafi Agent")
+    agent_name = _skin_branding("agent_name", "Bassera Agent")
     title_color = _skin_color("banner_title", "#FFD700")
     border_color = _skin_color("banner_border", "#CD7F32")
     outer_panel = Panel(

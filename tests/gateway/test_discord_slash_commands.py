@@ -441,7 +441,7 @@ async def test_auto_create_thread_strips_mention_syntax_from_name(adapter):
 @pytest.mark.asyncio
 async def test_auto_create_thread_falls_back_to_wafi_when_only_mentions(adapter):
     """If a message contains only mention syntax, the stripped content is
-    empty — fall back to the 'Wafi' default rather than ''."""
+    empty — fall back to the 'Bassera' default rather than ''."""
     thread = SimpleNamespace(id=999, name="Wafi")
     message = SimpleNamespace(
         content="<@&1490963422786093149>",
@@ -453,7 +453,7 @@ async def test_auto_create_thread_falls_back_to_wafi_when_only_mentions(adapter)
     await adapter._auto_create_thread(message)
 
     name = message.create_thread.await_args[1]["name"]
-    assert name == "Wafi"
+    assert name == "Bassera"
 
 
 @pytest.mark.asyncio

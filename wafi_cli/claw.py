@@ -132,7 +132,7 @@ def _warn_if_openclaw_running(auto_yes: bool) -> None:
     print_info(
         "Messaging platforms (Telegram, Discord, Slack) only allow one "
         "active session per bot token. If you continue, both OpenClaw and "
-        "Wafi may try to use the same token, causing disconnects."
+        "Bassera may try to use the same token, causing disconnects."
     )
     print_info("Recommendation: stop OpenClaw before migrating.")
     print()
@@ -167,7 +167,7 @@ def _warn_if_gateway_running(auto_yes: bool) -> None:
 
     print()
     print_error(
-        "Wafi gateway is running with active connections: "
+        "Bassera gateway is running with active connections: "
         + ", ".join(connected)
     )
     print_info(
