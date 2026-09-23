@@ -105,8 +105,8 @@ DANGEROUS_PATTERNS = [
     (r'\b(python[23]?|perl|ruby|node)\s+-[ec]\s+', "script execution via -e/-c flag"),
     (r'\b(curl|wget)\b.*\|\s*(ba)?sh\b', "pipe remote content to shell"),
     (r'\b(bash|sh|zsh|ksh)\s+<\s*<?\s*\(\s*(curl|wget)\b', "execute remote script via process substitution"),
-    (rf'\btee\b.*["\']?{_SENSITIVE_WRITE_TARGET}', "overwrite system file via tee"),
-    (rf'>>?\s*["\']?{_SENSITIVE_WRITE_TARGET}', "overwrite system file via redirection"),
+    (rf'\btee\b.*["\'`]?{_SENSITIVE_WRITE_TARGET}', "overwrite system file via tee"),
+    (rf'>>?\s*["\'`]?{_SENSITIVE_WRITE_TARGET}', "overwrite system file via redirection"),
     (r'\bxargs\s+.*\brm\b', "xargs with rm"),
     (r'\bfind\b.*-exec\s+(/\S*/)?rm\b', "find -exec rm"),
     (r'\bfind\b.*-delete\b', "find -delete"),
@@ -126,7 +126,17 @@ DANGEROUS_PATTERNS = [
     # to regex at detection time. Catch the structural pattern instead.
     (r'\bkill\b.*\$\(\s*pgrep\b', "kill process via pgrep expansion (self-termination)"),
     (r'\bkill\b.*`\s*pgrep\b', "kill process via backtick pgrep expansion (self-termination)"),
-    # File copy/move/edit into sensitive system paths
+    # File copy/move/edit into sensitive system paths.
+    # Generalized patterns (found by property-based fuzzing, tests/tools/
+    # test_approval_fuzz.py): cp/mv/install/rsync and in-place sed could
+    # write into ANY sensitive target — the credential .env (the direct
+    # sibling of the original $HERMES_HOME/.env hole), ~/.ssh/authorized_keys
+    # (silent SSH key injection), /etc/, and block devices — and bypass
+    # approval entirely. The /etc/-only patterns are kept unchanged below
+    # so existing command-allowlist entries keyed to them stay valid.
+    (rf'\b(cp|mv|install|rsync)\b[^\n;|&]*\s["\'`]?{_SENSITIVE_WRITE_TARGET}', "copy/move into sensitive path"),
+    (rf'\bsed\s+-[^\s]*i[^\n;|&]*\s["\'`]?{_SENSITIVE_WRITE_TARGET}', "in-place edit of sensitive path"),
+    (rf'\bsed\s+--in-place\b[^\n;|&]*\s["\'`]?{_SENSITIVE_WRITE_TARGET}', "in-place edit of sensitive path (long flag)"),
     (r'\b(cp|mv|install)\b.*\s/etc/', "copy/move file into /etc/"),
     (r'\bsed\s+-[^\s]*i.*\s/etc/', "in-place edit of system config"),
     (r'\bsed\s+--in-place\b.*\s/etc/', "in-place edit of system config (long flag)"),
