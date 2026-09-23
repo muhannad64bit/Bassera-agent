@@ -162,6 +162,8 @@ def _legacy_pattern_key(pattern: str) -> str:
     return pattern.split(r'\b')[1] if r'\b' in pattern else pattern[:20]
 
 
+_audit_lock = __import__("threading").Lock()
+
 _PATTERN_KEY_ALIASES: dict[str, set[str]] = {}
 for _pattern, _description in DANGEROUS_PATTERNS:
     _legacy_key = _legacy_pattern_key(_pattern)
@@ -730,6 +732,55 @@ def _format_tirith_description(tirith_result: dict) -> str:
     return "Security scan — " + "; ".join(parts)
 
 
+def _audit_approval_decision(command: str, result: dict, env_type: str) -> None:
+    """Append one structured JSON line per approval decision to the audit log.
+
+    Every dangerous-operation decision made by check_all_command_guards
+    (approved or denied, human/smart/cron/yolo) is recorded at
+    ``<home>/logs/audit.log`` with a REDACTED command — the audit trail
+    must never become a credential store itself. Benign commands (no
+    warning was raised, nothing was decided) are not recorded. Auditing
+    is best-effort: it must never break or delay the approval flow.
+    """
+    try:
+        if result.get("approved") is True and not (
+            result.get("description") or result.get("smart_approved")
+            or result.get("smart_denied")
+        ):
+            # No finding was raised by the implementation (an unattended
+            # context auto-allows without running detection). Dangerous
+            # commands still run there — the trail must show them.
+            is_dangerous, _pk, _desc = detect_dangerous_command(command)
+            if not is_dangerous:
+                return  # benign: nothing dangerous, nothing decided
+            result = {**result, "pattern_key": _pk, "description": _desc,
+                      "unchecked": True}
+
+        import json
+        import time
+
+        from agent.redact import redact_sensitive_text
+        from wafi_constants import get_wafi_home
+
+        entry = {
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
+            "decision": "approved" if result.get("approved") else "denied",
+            "session": get_current_session_key(),
+            "env_type": env_type,
+            "pattern_key": result.get("pattern_key"),
+            "description": result.get("description"),
+            "smart": bool(result.get("smart_approved") or result.get("smart_denied")),
+            "command": redact_sensitive_text(command)[:2000],
+        }
+        audit_dir = get_wafi_home() / "logs"
+        audit_dir.mkdir(parents=True, exist_ok=True)
+        with _audit_lock:
+            with open(audit_dir / "audit.log", "a", encoding="utf-8") as fh:
+                fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception as exc:
+        logger.debug("audit trail write failed: %s", exc)
+
+
 def check_all_command_guards(command: str, env_type: str,
                              approval_callback=None) -> dict:
     """Run all pre-exec security checks and return a single approval decision.
@@ -737,8 +788,17 @@ def check_all_command_guards(command: str, env_type: str,
     Gathers findings from tirith and dangerous-command detection, then
     presents them as a single combined approval request. This prevents
     a gateway force=True replay from bypassing one check when only the
-    other was shown to the user.
+    other was shown to the user. Every dangerous-operation decision is
+    audited (see _audit_approval_decision).
     """
+    result = _check_all_command_guards_impl(command, env_type, approval_callback)
+    _audit_approval_decision(command, result, env_type)
+    return result
+
+
+def _check_all_command_guards_impl(command: str, env_type: str,
+                             approval_callback=None) -> dict:
+    """Implementation body of check_all_command_guards (audit wrapper above)."""
     # Skip containers for both checks
     if env_type in ("docker", "singularity", "modal", "daytona"):
         return {"approved": True, "message": None}
