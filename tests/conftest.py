@@ -55,6 +55,21 @@ if str(PROJECT_ROOT) not in sys.path:
 # this block covers the import-time-frozen half of the codebase.
 _TEST_HOME_ROOT = tempfile.mkdtemp(prefix="wafi-import-isolated-")
 os.environ["HERMES_HOME"] = _TEST_HOME_ROOT
+
+# Machine-local gateway locks (gateway/status.py) deliberately live
+# OUTSIDE the agent home in production (~/.local/state/wafi/gateway-
+# locks): two HERMES_HOMEs on one machine must not drive the same bot
+# token. That also means the suite must isolate them explicitly —
+# otherwise xdist workers (which share one machine) collide on the
+# identical test identities: the whatsapp connect tests failed
+# "session already in use (PID <other worker>)" under -n 4, and the
+# runs left lock files in the developer's real state directory
+# (observed in practice). Per-process throwaway => per-worker
+# isolation; test_status.py's lock tests override it per-test anyway.
+os.environ["HERMES_GATEWAY_LOCK_DIR"] = os.path.join(
+    _TEST_HOME_ROOT, "gateway-locks"
+)
+
 for _sub in ("sessions", "cron", "memories", "skills", "logs", "plugins", "cache"):
     os.makedirs(os.path.join(_TEST_HOME_ROOT, _sub), exist_ok=True)
 
