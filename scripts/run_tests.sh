@@ -124,6 +124,8 @@ exec "$PYTHON" -m pytest \
   -o "addopts=" \
   -n "$WORKERS" \
   --ignore=tests/integration \
-  --ignore=tests/e2e \
   -m "not integration" \
   ${ARGS[@]+"${ARGS[@]}"}
+# NOTE: tests/e2e IS part of the canonical run (hermetic: scripted LLM client,
+# mocked platform adapters). tests/integration remains excluded — those tests
+# need live credentials and services (Modal, Daytona, provider APIs).
