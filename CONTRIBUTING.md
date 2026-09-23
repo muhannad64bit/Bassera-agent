@@ -1,4 +1,4 @@
-# Contributing to Hermes Agent
+# Contributing to Bassera Agent
 
 Thank you for contributing to Hermes Agent! This guide covers everything you need: setting up your dev environment, understanding the architecture, deciding what to build, and getting your PR merged.
 
@@ -105,9 +105,82 @@ hermes chat -q "Hello"
 
 ### Run tests
 
+Always use the canonical runner, not bare `pytest` — it pins the exact
+environment CI uses (4 xdist workers, `TZ=UTC`, deterministic hash
+seed, credential env vars blanked, fd headroom):
+
 ```bash
-pytest tests/ -v
+scripts/run_tests.sh                      # full suite (includes tests/e2e)
+scripts/run_tests.sh tests/tools/         # one directory
+scripts/run_tests.sh tests/tools/test_approval.py::TestX::test_y
 ```
+
+Bare `pytest` diverges from CI (different worker counts, ambient env
+vars, no fd headroom) and is the main source of "green locally, red in
+CI" confusion.
+
+---
+
+## Testing Conventions (this fork)
+
+### The suite must be hermetic
+
+The suite must never write to your real agent home. It broke real
+`~/.wafi` installs before; the entire leak (state.db, pairing state,
+feishu dedup, document caches) is closed, and a regression would
+silently corrupt a developer's credentials. **Verify hermeticity before
+submitting:**
+
+```bash
+touch /tmp/hermetic_marker
+scripts/run_tests.sh
+# Nothing in the real home may be newer than the marker:
+find ~/.wafi -type f -newer /tmp/hermetic_marker   # must print nothing
+```
+
+If it prints files, your change (or a new test) is writing outside the
+isolated home — fix it before the PR.
+
+### Fast checks: pre-commit hook (opt-in)
+
+```bash
+scripts/install-hooks.sh
+```
+
+Installs a pre-commit hook that byte-compiles staged `.py` files and
+runs the security test subset (~3 s). It is not a substitute for the
+full suite — run `scripts/run_tests.sh` before pushing.
+
+### Commit messages: what was broken, and what the fix does
+
+Every non-trivial commit explains **what was broken** (with evidence —
+a failing test, a measured number) and **what the fix does**. "fix
+bug" is not a message a reviewer can verify. See `git log` for the
+house style.
+
+### Security fixes need counterfactual tests
+
+A security fix must ship with a test that fails when the fix is
+reverted and passes with it — ideally *exactly* the new tests, nothing
+else. Fuzzing (`tests/tools/test_approval_fuzz.py` uses hypothesis) is
+the preferred method for finding siblings of a closed hole. See
+`wafi_architecture/threat_model.md` for the current posture, and update
+it in the same PR when you change a security-relevant surface.
+
+### Dangerous-operation decisions are audited
+
+Every approval/deny decision for a dangerous command is recorded in
+`<home>/logs/audit.log` (schema in `docs/LOGGING.md`). New decision
+points must extend that trail, not write parallel logs. Audit failures
+must never change an approval outcome.
+
+### Useful docs
+
+- `wafi_architecture/threat_model.md` — security posture and residual risks
+- `docs/SECURITY_FINDINGS.md` — secret-scan results and decisions
+- `docs/LOGGING.md` — log levels and the audit schema
+- `docs/COVERAGE_BASELINE.md` — security-code coverage baseline
+- `CHANGELOG.md` — user-visible changes, categorized
 
 ---
 
@@ -595,7 +668,7 @@ refactor/description   # Code restructuring
 
 ### Before submitting
 
-1. **Run tests**: `pytest tests/ -v`
+1. **Run tests**: `scripts/run_tests.sh` (the canonical runner — see [Testing Conventions](#testing-conventions-this-fork))
 2. **Test manually**: Run `hermes` and exercise the code path you changed
 3. **Check cross-platform impact**: If you touch file I/O, process management, or terminal handling, consider Windows and macOS
 4. **Keep PRs focused**: One logical change per PR. Don't mix a bug fix with a refactor with a new feature.
