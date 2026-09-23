@@ -19,7 +19,7 @@ REFERENCE_PATTERN = re.compile(
 )
 TRAILING_PUNCTUATION = ",.;!?"
 _SENSITIVE_HOME_DIRS = (".ssh", ".aws", ".gnupg", ".kube", ".docker", ".azure", ".config/gh")
-_SENSITIVE_HERMES_DIRS = (Path("skills") / ".hub",)
+_SENSITIVE_BASSERA_DIRS = (Path("skills") / ".hub",)
 _SENSITIVE_HOME_FILES = (
     Path(".ssh") / "authorized_keys",
     Path(".ssh") / "id_rsa",
@@ -340,14 +340,14 @@ def _resolve_path(cwd: Path, target: str, *, allowed_root: Path | None = None) -
 
 
 def _ensure_reference_path_allowed(path: Path) -> None:
-    from wafi_constants import get_wafi_home
+    from bassera_constants import get_bassera_home
     home = Path(os.path.expanduser("~")).resolve()
-    wafi_home = get_wafi_home().resolve()
+    bassera_home = get_bassera_home().resolve()
 
     blocked_exact = {home / rel for rel in _SENSITIVE_HOME_FILES}
-    blocked_exact.add(wafi_home / ".env")
+    blocked_exact.add(bassera_home / ".env")
     blocked_dirs = [home / rel for rel in _SENSITIVE_HOME_DIRS]
-    blocked_dirs.extend(wafi_home / rel for rel in _SENSITIVE_HERMES_DIRS)
+    blocked_dirs.extend(bassera_home / rel for rel in _SENSITIVE_BASSERA_DIRS)
 
     if path in blocked_exact:
         raise ValueError("path is a sensitive credential file and cannot be attached")
@@ -357,7 +357,7 @@ def _ensure_reference_path_allowed(path: Path) -> None:
             path.relative_to(blocked_dir)
         except ValueError:
             continue
-        raise ValueError("path is a sensitive credential or internal Wafi path and cannot be attached")
+        raise ValueError("path is a sensitive credential or internal Bassera path and cannot be attached")
 
 
 def _strip_trailing_punctuation(value: str) -> str:

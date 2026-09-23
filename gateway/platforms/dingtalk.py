@@ -904,7 +904,7 @@ class DingTalkAdapter(BasePlatformAdapter):
             if not token:
                 return None
 
-            out_track_id = f"wafi_{uuid.uuid4().hex[:12]}"
+            out_track_id = f"bassera_{uuid.uuid4().hex[:12]}"
 
             conversation_id = getattr(message, "conversation_id", "") or ""
             conversation_type = getattr(message, "conversation_type", "1")

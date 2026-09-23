@@ -41,7 +41,7 @@ def _get_max_read_chars() -> int:
     if _max_read_chars_cached is not None:
         return _max_read_chars_cached
     try:
-        from wafi_cli.config import load_config
+        from bassera_cli.config import load_config
         cfg = load_config()
         val = cfg.get("file_read_max_chars")
         if isinstance(val, (int, float)) and val > 0:
@@ -385,20 +385,20 @@ def read_file_tool(path: str, offset: int = 1, limit: int = 500, task_id: str = 
                 ),
             })
 
-        # ── Wafi internal path guard ────────────────────────────────
+        # ── Bassera internal path guard ────────────────────────────────
         # Prevent prompt injection via catalog or hub metadata files.
-        from wafi_constants import get_wafi_home as _get_hh
-        _wafi_home = _get_hh().resolve()
+        from bassera_constants import get_bassera_home as _get_hh
+        _bassera_home = _get_hh().resolve()
         _blocked_dirs = [
-            _wafi_home / "skills" / ".hub" / "index-cache",
-            _wafi_home / "skills" / ".hub",
+            _bassera_home / "skills" / ".hub" / "index-cache",
+            _bassera_home / "skills" / ".hub",
         ]
         for _blocked in _blocked_dirs:
             try:
                 _resolved.relative_to(_blocked)
                 return json.dumps({
                     "error": (
-                        f"Access denied: {path} is an internal Wafi cache file "
+                        f"Access denied: {path} is an internal Bassera cache file "
                         "and cannot be read directly to prevent prompt injection. "
                         "Use the skills_list or skill_view tools instead."
                     )

@@ -25,9 +25,9 @@ API_PATH = (
 
 @pytest.fixture
 def bridge_module(monkeypatch, tmp_path):
-    wafi_home = tmp_path / ".wafi"
-    wafi_home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
+    bassera_home = tmp_path / ".bassera"
+    bassera_home.mkdir()
+    monkeypatch.setenv("BASSERA_HOME", str(bassera_home))
 
     spec = importlib.util.spec_from_file_location("gws_bridge_test", BRIDGE_PATH)
     module = importlib.util.module_from_spec(spec)
@@ -38,9 +38,9 @@ def bridge_module(monkeypatch, tmp_path):
 
 @pytest.fixture
 def api_module(monkeypatch, tmp_path):
-    wafi_home = tmp_path / ".wafi"
-    wafi_home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
+    bassera_home = tmp_path / ".bassera"
+    bassera_home.mkdir()
+    monkeypatch.setenv("BASSERA_HOME", str(bassera_home))
 
     spec = importlib.util.spec_from_file_location("gws_api_test", API_PATH)
     module = importlib.util.module_from_spec(spec)

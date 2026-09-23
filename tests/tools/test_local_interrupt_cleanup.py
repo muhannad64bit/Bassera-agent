@@ -6,7 +6,7 @@ or explicit sys.exit from some caller), the child subprocess must be killed
 before the exception propagates — otherwise the local backend's use of
 os.setsid leaves an orphan with PPID=1.
 
-The live repro that motivated this: wafi chat -q ... 'sleep 300', SIGTERM
+The live repro that motivated this: bassera chat -q ... 'sleep 300', SIGTERM
 to the python process, sleep 300 survived with PPID=1 for the full 300 s
 because _wait_for_process never got to call _kill_process before python
 died.  See commit message for full context.
@@ -23,8 +23,8 @@ from tools.environments.local import LocalEnvironment
 
 
 @pytest.fixture(autouse=True)
-def _isolate_wafi_home(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+def _isolate_bassera_home(tmp_path, monkeypatch):
+    monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
     (tmp_path / "logs").mkdir(exist_ok=True)
 
 

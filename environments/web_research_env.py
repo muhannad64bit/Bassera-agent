@@ -31,8 +31,8 @@ Usage:
         --openai.model_name YourModel
 
 Built by: github.com/jackx707
-Inspired by: GroceryMind — production Wafi agent doing live web research
-             across German grocery stores (firecrawl + wafi-agent)
+Inspired by: GroceryMind — production Bassera agent doing live web research
+             across German grocery stores (firecrawl + bassera-agent)
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ from urllib.parse import urlparse
 
 from pydantic import Field
 
-# Ensure wafi-agent root is on path
+# Ensure bassera-agent root is on path
 _repo_root = Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
@@ -68,7 +68,7 @@ from atroposlib.envs.base import ScoredDataGroup
 from atroposlib.envs.server_handling.server_manager import APIServerConfig
 from atroposlib.type_definitions import Item
 
-from environments.wafi_base_env import WafiAgentBaseEnv, WafiAgentEnvConfig
+from environments.bassera_base_env import BasseraAgentBaseEnv, BasseraAgentEnvConfig
 from environments.agent_loop import AgentResult
 from environments.tool_context import ToolContext
 
@@ -146,7 +146,7 @@ SAMPLE_QUESTIONS = [
 # Configuration
 # ---------------------------------------------------------------------------
 
-class WebResearchEnvConfig(WafiAgentEnvConfig):
+class WebResearchEnvConfig(BasseraAgentEnvConfig):
     """Configuration for the web research RL environment."""
 
     # Reward weights
@@ -198,7 +198,7 @@ class WebResearchEnvConfig(WafiAgentEnvConfig):
 # Environment
 # ---------------------------------------------------------------------------
 
-class WebResearchEnv(WafiAgentBaseEnv):
+class WebResearchEnv(BasseraAgentBaseEnv):
     """
     RL environment for training multi-step web research skills.
 
@@ -433,7 +433,7 @@ class WebResearchEnv(WafiAgentBaseEnv):
         """
         import time
         import uuid
-        from environments.agent_loop import WafiAgentLoop
+        from environments.agent_loop import BasseraAgentLoop
         from environments.tool_context import ToolContext
 
         items = self._eval_items
@@ -463,7 +463,7 @@ class WebResearchEnv(WafiAgentBaseEnv):
                 messages.append({"role": "user", "content": self.format_prompt(item)})
 
                 # Run the full agent loop with tools
-                agent = WafiAgentLoop(
+                agent = BasseraAgentLoop(
                     server=self.server,
                     tool_schemas=tools,
                     valid_tool_names=valid_names,

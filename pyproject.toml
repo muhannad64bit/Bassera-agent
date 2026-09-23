@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "bassera-agent"
 version = "0.10.0"
-description = "Bassera Agent — the self-improving AI agent (fork of wafi-agent/hermes-agent), hardened for power, stability, and security"
+description = "Bassera Agent — the self-improving AI agent, hardened for power, stability, and security"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Nous Research" }]
@@ -69,12 +69,12 @@ termux = [
   # avoiding extras that currently depend on non-Android wheels (notably
   # faster-whisper -> ctranslate2 via the voice extra).
   "python-telegram-bot[webhooks]>=22.6,<23",
-  "wafi-agent[cron]",
-  "wafi-agent[cli]",
-  "wafi-agent[pty]",
-  "wafi-agent[mcp]",
-  "wafi-agent[honcho]",
-  "wafi-agent[acp]",
+  "bassera-agent[cron]",
+  "bassera-agent[cli]",
+  "bassera-agent[pty]",
+  "bassera-agent[mcp]",
+  "bassera-agent[honcho]",
+  "bassera-agent[acp]",
 ]
 dingtalk = ["dingtalk-stream>=0.20,<1", "alibabacloud-dingtalk>=2.0.0", "qrcode>=7.0,<8"]
 feishu = ["lark-oapi>=1.5.3,<2", "qrcode>=7.0,<8"]
@@ -88,48 +88,49 @@ rl = [
 ]
 yc-bench = ["yc-bench @ git+https://github.com/collinear-ai/yc-bench.git@bfb0c88062450f46341bd9a5298903fc2e952a5c ; python_version >= '3.12'"]
 all = [
-  "wafi-agent[modal]",
-  "wafi-agent[daytona]",
-  "wafi-agent[messaging]",
+  "bassera-agent[modal]",
+  "bassera-agent[daytona]",
+  "bassera-agent[messaging]",
   # matrix: python-olm (required by matrix-nio[e2e]) is upstream-broken on
   # modern macOS (archived libolm, C++ errors with Clang 21+).  On Linux the
   # [matrix] extra's own marker pulls in the [e2e] variant automatically.
-  "wafi-agent[matrix]; sys_platform == 'linux'",
-  "wafi-agent[cron]",
-  "wafi-agent[cli]",
-  "wafi-agent[dev]",
-  "wafi-agent[tts-premium]",
-  "wafi-agent[slack]",
-  "wafi-agent[pty]",
-  "wafi-agent[honcho]",
-  "wafi-agent[mcp]",
-  "wafi-agent[homeassistant]",
-  "wafi-agent[sms]",
-  "wafi-agent[acp]",
-  "wafi-agent[voice]",
-  "wafi-agent[dingtalk]",
-  "wafi-agent[feishu]",
-  "wafi-agent[mistral]",
-  "wafi-agent[bedrock]",
-  "wafi-agent[web]",
+  "bassera-agent[matrix]; sys_platform == 'linux'",
+  "bassera-agent[cron]",
+  "bassera-agent[cli]",
+  "bassera-agent[dev]",
+  "bassera-agent[tts-premium]",
+  "bassera-agent[slack]",
+  "bassera-agent[pty]",
+  "bassera-agent[honcho]",
+  "bassera-agent[mcp]",
+  "bassera-agent[homeassistant]",
+  "bassera-agent[sms]",
+  "bassera-agent[acp]",
+  "bassera-agent[voice]",
+  "bassera-agent[dingtalk]",
+  "bassera-agent[feishu]",
+  "bassera-agent[mistral]",
+  "bassera-agent[bedrock]",
+  "bassera-agent[web]",
 ]
 
 [project.scripts]
-wafi = "wafi_cli.main:main"
-wafi-agent = "run_agent:main"
-wafi-acp = "acp_adapter.entry:main"
-bassera = "wafi_cli.main:main"
+bassera = "bassera_cli.main:main"
 bassera-agent = "run_agent:main"
 bassera-acp = "acp_adapter.entry:main"
+# legacy aliases (kept so existing scripts do not break)
+wafi = "bassera_cli.main:main"
+wafi-agent = "run_agent:main"
+wafi-acp = "acp_adapter.entry:main"
 
 [tool.setuptools]
-py-modules = ["run_agent", "model_tools", "toolsets", "batch_runner", "trajectory_compressor", "toolset_distributions", "cli", "wafi_constants", "wafi_state", "wafi_time", "wafi_logging", "rl_cli", "utils"]
+py-modules = ["run_agent", "model_tools", "toolsets", "batch_runner", "trajectory_compressor", "toolset_distributions", "cli", "bassera_constants", "bassera_state", "bassera_time", "bassera_logging", "rl_cli", "utils"]
 
 [tool.setuptools.package-data]
-wafi_cli = ["web_dist/**/*"]
+bassera_cli = ["web_dist/**/*"]
 
 [tool.setuptools.packages.find]
-include = ["agent", "tools", "tools.*", "wafi_cli", "gateway", "gateway.*", "tui_gateway", "tui_gateway.*", "cron", "acp_adapter", "plugins", "plugins.*", "wafi_architecture", "wafi_architecture.*"]
+include = ["agent", "tools", "tools.*", "bassera_cli", "gateway", "gateway.*", "tui_gateway", "tui_gateway.*", "cron", "acp_adapter", "plugins", "plugins.*", "bassera_architecture", "bassera_architecture.*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

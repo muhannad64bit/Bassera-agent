@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import cli as cli_module
-from cli import WafiCLI
+from cli import BasseraCLI
 
 
 class _FakeBuffer:
@@ -19,7 +19,7 @@ class _FakeBuffer:
 
 
 def _make_cli_stub():
-    cli = WafiCLI.__new__(WafiCLI)
+    cli = BasseraCLI.__new__(BasseraCLI)
     cli._approval_state = None
     cli._approval_deadline = 0
     cli._approval_lock = threading.Lock()

@@ -1,4 +1,4 @@
-# nix/web.nix — Hermes Web Dashboard (Vite/React) frontend build
+# nix/web.nix — Bassera Web Dashboard (Vite/React) frontend build
 { pkgs, npm-lockfile-fix, ... }:
 let
   src = ../web;
@@ -10,7 +10,7 @@ let
   npmLockHash = builtins.hashString "sha256" (builtins.readFile ../web/package-lock.json);
 in
 pkgs.buildNpmPackage {
-  pname = "hermes-web";
+  pname = "bassera-web";
   version = "0.0.0";
   inherit src npmDeps;
 
@@ -51,10 +51,10 @@ pkgs.buildNpmPackage {
   ];
 
   passthru.devShellHook = ''
-    STAMP=".nix-stamps/hermes-web"
+    STAMP=".nix-stamps/bassera-web"
     STAMP_VALUE="${npmLockHash}"
     if [ ! -f "$STAMP" ] || [ "$(cat "$STAMP")" != "$STAMP_VALUE" ]; then
-      echo "hermes-web: installing npm dependencies..."
+      echo "bassera-web: installing npm dependencies..."
       cd web && CI=true npm install --silent --no-fund --no-audit 2>/dev/null && cd ..
       mkdir -p .nix-stamps
       echo "$STAMP_VALUE" > "$STAMP"

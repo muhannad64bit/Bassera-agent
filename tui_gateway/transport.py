@@ -24,7 +24,7 @@ _PEER_GONE_ERRNOS = frozenset(
 
 logger = logging.getLogger(__name__)
 
-_DISABLE_FLUSH = (os.environ.get("HERMES_TUI_GATEWAY_NO_FLUSH", "") or "").strip().lower() in {
+_DISABLE_FLUSH = (os.environ.get("BASSERA_TUI_GATEWAY_NO_FLUSH", "") or "").strip().lower() in {
     "1",
     "true",
     "yes",
@@ -42,7 +42,7 @@ class Transport(Protocol):
 
 
 _current_transport: contextvars.ContextVar[Optional[Transport]] = contextvars.ContextVar(
-    "wafi_gateway_transport",
+    "bassera_gateway_transport",
     default=None,
 )
 

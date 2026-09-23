@@ -6,12 +6,12 @@ description: "Complete reference for interactive CLI and messaging slash command
 
 # Slash Commands Reference
 
-Hermes has two slash-command surfaces, both driven by a central `COMMAND_REGISTRY` in `hermes_cli/commands.py`:
+Bassera has two slash-command surfaces, both driven by a central `COMMAND_REGISTRY` in `bassera_cli/commands.py`:
 
 - **Interactive CLI slash commands** — dispatched by `cli.py`, with autocomplete from the registry
 - **Messaging slash commands** — dispatched by `gateway/run.py`, with help text and platform menus generated from the registry
 
-Installed skills are also exposed as dynamic slash commands on both surfaces. That includes bundled skills like `/plan`, which opens plan mode and saves markdown plans under `.hermes/plans/` relative to the active workspace/backend working directory.
+Installed skills are also exposed as dynamic slash commands on both surfaces. That includes bundled skills like `/plan`, which opens plan mode and saves markdown plans under `.bassera/plans/` relative to the active workspace/backend working directory.
 
 ## Interactive CLI slash commands
 
@@ -30,7 +30,7 @@ Type `/` in the CLI to open the autocomplete menu. Built-in commands are case-in
 | `/title` | Set a title for the current session (usage: /title My Session Name) |
 | `/compress [focus topic]` | Manually compress conversation context (flush memories + summarize). Optional focus topic narrows what the summary preserves. |
 | `/rollback` | List or restore filesystem checkpoints (usage: /rollback [number]) |
-| `/snapshot [create\|restore <id>\|prune]` (alias: `/snap`) | Create or restore state snapshots of Hermes config/state. `create [label]` saves a snapshot, `restore <id>` reverts to it, `prune [N]` removes old snapshots, or list all with no args. |
+| `/snapshot [create\|restore <id>\|prune]` (alias: `/snap`) | Create or restore state snapshots of Bassera config/state. `create [label]` saves a snapshot, `restore <id>` reverts to it, `prune [N]` removes old snapshots, or list all with no args. |
 | `/stop` | Kill all running background processes |
 | `/queue <prompt>` (alias: `/q`) | Queue a prompt for the next turn (doesn't interrupt the current agent response). **Note:** `/q` is claimed by both `/queue` and `/quit`; the last registration wins, so `/q` resolves to `/quit` in practice. Use `/queue` explicitly. |
 | `/resume [name]` | Resume a previously-named session |
@@ -38,7 +38,7 @@ Type `/` in the CLI to open the autocomplete menu. Built-in commands are case-in
 | `/agents` (alias: `/tasks`) | Show active agents and running tasks across the current session. |
 | `/background <prompt>` (alias: `/bg`) | Run a prompt in a separate background session. The agent processes your prompt independently — your current session stays free for other work. Results appear as a panel when the task finishes. See [CLI Background Sessions](/docs/user-guide/cli#background-sessions). |
 | `/btw <question>` | Ephemeral side question using session context (no tools, not persisted). Useful for quick clarifications without affecting the conversation history. |
-| `/plan [request]` | Load the bundled `plan` skill to write a markdown plan instead of executing the work. Plans are saved under `.hermes/plans/` relative to the active workspace/backend working directory. |
+| `/plan [request]` | Load the bundled `plan` skill to write a markdown plan instead of executing the work. Plans are saved under `.bassera/plans/` relative to the active workspace/backend working directory. |
 | `/branch [name]` (alias: `/fork`) | Branch the current session (explore a different path) |
 
 ### Configuration
@@ -46,7 +46,7 @@ Type `/` in the CLI to open the autocomplete menu. Built-in commands are case-in
 | Command | Description |
 |---------|-------------|
 | `/config` | Show current configuration |
-| `/model [model-name]` | Show or change the current model. Supports: `/model claude-sonnet-4`, `/model provider:model` (switch providers), `/model custom:model` (custom endpoint), `/model custom:name:model` (named custom provider), `/model custom` (auto-detect from endpoint). Use `--global` to persist the change to config.yaml. **Note:** `/model` can only switch between already-configured providers. To add a new provider, exit the session and run `hermes model` from your terminal. |
+| `/model [model-name]` | Show or change the current model. Supports: `/model claude-sonnet-4`, `/model provider:model` (switch providers), `/model custom:model` (custom endpoint), `/model custom:name:model` (named custom provider), `/model custom` (auto-detect from endpoint). Use `--global` to persist the change to config.yaml. **Note:** `/model` can only switch between already-configured providers. To add a new provider, exit the session and run `bassera model` from your terminal. |
 | `/provider` | Show available providers and current provider |
 | `/personality` | Set a predefined personality |
 | `/verbose` | Cycle tool progress display: off → new → all → verbose. Can be [enabled for messaging](#notes) via config. |
@@ -100,7 +100,7 @@ Type `/` in the CLI to open the autocomplete menu. Built-in commands are case-in
 
 ### Quick Commands
 
-User-defined quick commands map a short alias to a longer prompt. Configure them in `~/.hermes/config.yaml`:
+User-defined quick commands map a short alias to a longer prompt. Configure them in `~/.bassera/config.yaml`:
 
 ```yaml
 quick_commands:
@@ -125,7 +125,7 @@ The messaging gateway supports the following built-in commands inside Telegram, 
 | `/reset` | Reset conversation history. |
 | `/status` | Show session info. |
 | `/stop` | Kill all running background processes and interrupt the running agent. |
-| `/model [provider:model]` | Show or change the model. Supports provider switches (`/model zai:glm-5`), custom endpoints (`/model custom:model`), named custom providers (`/model custom:local:qwen`), and auto-detect (`/model custom`). Use `--global` to persist the change to config.yaml. **Note:** `/model` can only switch between already-configured providers. To add a new provider or set up API keys, use `hermes model` from your terminal (outside the chat session). |
+| `/model [provider:model]` | Show or change the model. Supports provider switches (`/model zai:glm-5`), custom endpoints (`/model custom:model`), named custom providers (`/model custom:local:qwen`), and auto-detect (`/model custom`). Use `--global` to persist the change to config.yaml. **Note:** `/model` can only switch between already-configured providers. To add a new provider or set up API keys, use `bassera model` from your terminal (outside the chat session). |
 | `/provider` | Show provider availability and auth status. |
 | `/personality [name]` | Set a personality overlay for the session. |
 | `/fast [normal\|fast\|status]` | Toggle fast mode — OpenAI Priority Processing / Anthropic Fast Mode. |
@@ -140,16 +140,16 @@ The messaging gateway supports the following built-in commands inside Telegram, 
 | `/reasoning [level\|show\|hide]` | Change reasoning effort or toggle reasoning display. |
 | `/voice [on\|off\|tts\|join\|channel\|leave\|status]` | Control spoken replies in chat. `join`/`channel`/`leave` manage Discord voice-channel mode. |
 | `/rollback [number]` | List or restore filesystem checkpoints. |
-| `/snapshot [create\|restore <id>\|prune]` (alias: `/snap`) | Create or restore state snapshots of Hermes config/state. |
+| `/snapshot [create\|restore <id>\|prune]` (alias: `/snap`) | Create or restore state snapshots of Bassera config/state. |
 | `/background <prompt>` | Run a prompt in a separate background session. Results are delivered back to the same chat when the task finishes. See [Messaging Background Sessions](/docs/user-guide/messaging/#background-sessions). |
-| `/plan [request]` | Load the bundled `plan` skill to write a markdown plan instead of executing the work. Plans are saved under `.hermes/plans/` relative to the active workspace/backend working directory. |
+| `/plan [request]` | Load the bundled `plan` skill to write a markdown plan instead of executing the work. Plans are saved under `.bassera/plans/` relative to the active workspace/backend working directory. |
 | `/reload-mcp` (alias: `/reload_mcp`) | Reload MCP servers from config. |
 | `/reload` | Reload `.env` variables into the running session. |
 | `/yolo` | Toggle YOLO mode — skip all dangerous command approval prompts. |
 | `/commands [page]` | Browse all commands and skills (paginated). |
 | `/approve [session\|always]` | Approve and execute a pending dangerous command. `session` approves for this session only; `always` adds to permanent allowlist. |
 | `/deny` | Reject a pending dangerous command. |
-| `/update` | Update Hermes Agent to the latest version. |
+| `/update` | Update Bassera Agent to the latest version. |
 | `/restart` | Gracefully restart the gateway after draining active runs. When the gateway comes back online, it sends a confirmation to the requester's chat/thread. |
 | `/debug` | Upload debug report (system info + logs) and get shareable links. |
 | `/help` | Show messaging help. |

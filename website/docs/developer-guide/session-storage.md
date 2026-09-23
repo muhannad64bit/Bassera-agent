@@ -1,16 +1,16 @@
 # Session Storage
 
-Hermes Agent uses a SQLite database (`~/.hermes/state.db`) to persist session
+Bassera Agent uses a SQLite database (`~/.bassera/state.db`) to persist session
 metadata, full message history, and model configuration across CLI and gateway
 sessions. This replaces the earlier per-session JSONL file approach.
 
-Source file: `hermes_state.py`
+Source file: `bassera_state.py`
 
 
 ## Architecture Overview
 
 ```
-~/.hermes/state.db (SQLite, WAL mode)
+~/.bassera/state.db (SQLite, WAL mode)
 ├── sessions          — Session metadata, token counts, billing
 ├── messages          — Full message history per session
 ├── messages_fts      — FTS5 virtual table for full-text search
@@ -149,7 +149,7 @@ each successful migration block.
 
 ## Write Contention Handling
 
-Multiple hermes processes (gateway + CLI sessions + worktree agents) share one
+Multiple bassera processes (gateway + CLI sessions + worktree agents) share one
 `state.db`. The `SessionDB` class handles write contention with:
 
 - **Short SQLite timeout** (1 second) instead of the default 30s
@@ -173,9 +173,9 @@ _CHECKPOINT_EVERY_N_WRITES = 50
 ### Initialize
 
 ```python
-from hermes_state import SessionDB
+from bassera_state import SessionDB
 
-db = SessionDB()                           # Default: ~/.hermes/state.db
+db = SessionDB()                           # Default: ~/.bassera/state.db
 db = SessionDB(db_path=Path("/tmp/test.db"))  # Custom path
 ```
 
@@ -379,10 +379,10 @@ db.delete_session("sess_abc123")
 
 ## Database Location
 
-Default path: `~/.hermes/state.db`
+Default path: `~/.bassera/state.db`
 
-This is derived from `hermes_constants.get_hermes_home()` which resolves to
-`~/.hermes/` by default, or the value of `HERMES_HOME` environment variable.
+This is derived from `bassera_constants.get_bassera_home()` which resolves to
+`~/.bassera/` by default, or the value of `BASSERA_HOME` environment variable.
 
 The database file, WAL file (`state.db-wal`), and shared-memory file
 (`state.db-shm`) are all created in the same directory.

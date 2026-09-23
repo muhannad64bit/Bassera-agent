@@ -1,12 +1,12 @@
 #!/bin/bash
 # ============================================================================
-# Wafi Agent Installer
+# Bassera Agent Installer
 # ============================================================================
 # Installation script for Linux, macOS, and Android/Termux.
 # Uses uv for desktop/server installs and Python's stdlib venv + pip on Termux.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/NousResearch/wafi-agent/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/NousResearch/bassera-agent/main/scripts/install.sh | bash
 #
 # Or with options:
 #   curl -fsSL ... | bash -s -- --no-venv --skip-setup
@@ -26,10 +26,10 @@ NC='\033[0m' # No Color
 BOLD='\033[1m'
 
 # Configuration
-REPO_URL_SSH="git@github.com:NousResearch/wafi-agent.git"
-REPO_URL_HTTPS="https://github.com/NousResearch/wafi-agent.git"
-HERMES_HOME="${HERMES_HOME:-$HOME/.wafi}"
-INSTALL_DIR="${HERMES_INSTALL_DIR:-$HERMES_HOME/wafi-agent}"
+REPO_URL_SSH="git@github.com:NousResearch/bassera-agent.git"
+REPO_URL_HTTPS="https://github.com/NousResearch/bassera-agent.git"
+BASSERA_HOME="${BASSERA_HOME:-$HOME/.bassera}"
+INSTALL_DIR="${BASSERA_INSTALL_DIR:-$BASSERA_HOME/bassera-agent}"
 PYTHON_VERSION="3.11"
 NODE_VERSION="22"
 
@@ -66,12 +66,12 @@ while [[ $# -gt 0 ]]; do
             INSTALL_DIR="$2"
             shift 2
             ;;
-        --wafi-home)
-            HERMES_HOME="$2"
+        --bassera-home)
+            BASSERA_HOME="$2"
             shift 2
             ;;
         -h|--help)
-            echo "Wafi Agent Installer"
+            echo "Bassera Agent Installer"
             echo ""
             echo "Usage: install.sh [OPTIONS]"
             echo ""
@@ -79,8 +79,8 @@ while [[ $# -gt 0 ]]; do
             echo "  --no-venv      Don't create virtual environment"
             echo "  --skip-setup   Skip interactive setup wizard"
             echo "  --branch NAME  Git branch to install (default: main)"
-            echo "  --dir PATH     Installation directory (default: ~/.wafi/wafi-agent)"
-            echo "  --wafi-home PATH  Data directory (default: ~/.wafi, or \$HERMES_HOME)"
+            echo "  --dir PATH     Installation directory (default: ~/.bassera/bassera-agent)"
+            echo "  --bassera-home PATH  Data directory (default: ~/.bassera, or \$BASSERA_HOME)"
             echo "  -h, --help     Show this help"
             exit 0
             ;;
@@ -99,7 +99,7 @@ print_banner() {
     echo ""
     echo -e "${MAGENTA}${BOLD}"
     echo "┌─────────────────────────────────────────────────────────┐"
-    echo "│             ⚕ Wafi Agent Installer                    │"
+    echo "│             ⚕ Bassera Agent Installer                    │"
     echo "├─────────────────────────────────────────────────────────┤"
     echo "│  An open source AI agent by Nous Research.              │"
     echo "└─────────────────────────────────────────────────────────┘"
@@ -179,13 +179,13 @@ get_command_link_display_dir() {
     fi
 }
 
-get_wafi_command_path() {
+get_bassera_command_path() {
     local link_dir
     link_dir="$(get_command_link_dir)"
-    if [ -x "$link_dir/wafi" ]; then
-        echo "$link_dir/wafi"
+    if [ -x "$link_dir/bassera" ]; then
+        echo "$link_dir/bassera"
     else
-        echo "wafi"
+        echo "bassera"
     fi
 }
 
@@ -217,7 +217,7 @@ detect_os() {
             OS="windows"
             DISTRO="windows"
             log_error "Windows detected. Please use the PowerShell installer:"
-            log_info "  irm https://raw.githubusercontent.com/NousResearch/wafi-agent/main/scripts/install.ps1 | iex"
+            log_info "  irm https://raw.githubusercontent.com/NousResearch/bassera-agent/main/scripts/install.ps1 | iex"
             exit 1
             ;;
         *)
@@ -398,10 +398,10 @@ check_node() {
     fi
 
     # Check our own managed install from a previous run
-    if [ -x "$HERMES_HOME/node/bin/node" ]; then
-        export PATH="$HERMES_HOME/node/bin:$PATH"
-        local found_ver=$("$HERMES_HOME/node/bin/node" --version)
-        log_success "Node.js $found_ver found (Wafi-managed)"
+    if [ -x "$BASSERA_HOME/node/bin/node" ]; then
+        export PATH="$BASSERA_HOME/node/bin:$PATH"
+        local found_ver=$("$BASSERA_HOME/node/bin/node" --version)
+        log_success "Node.js $found_ver found (Bassera-managed)"
         HAS_NODE=true
         return 0
     fi
@@ -487,7 +487,7 @@ install_node() {
         return 0
     fi
 
-    log_info "Extracting to ~/.wafi/node/..."
+    log_info "Extracting to ~/.bassera/node/..."
     if [[ "$tarball_name" == *.tar.xz ]]; then
         tar xf "$tmp_dir/$tarball_name" -C "$tmp_dir"
     else
@@ -504,22 +504,22 @@ install_node() {
         return 0
     fi
 
-    # Place into ~/.wafi/node/ and symlink binaries to ~/.local/bin/
-    rm -rf "$HERMES_HOME/node"
-    mkdir -p "$HERMES_HOME"
-    mv "$extracted_dir" "$HERMES_HOME/node"
+    # Place into ~/.bassera/node/ and symlink binaries to ~/.local/bin/
+    rm -rf "$BASSERA_HOME/node"
+    mkdir -p "$BASSERA_HOME"
+    mv "$extracted_dir" "$BASSERA_HOME/node"
     rm -rf "$tmp_dir"
 
     mkdir -p "$HOME/.local/bin"
-    ln -sf "$HERMES_HOME/node/bin/node" "$HOME/.local/bin/node"
-    ln -sf "$HERMES_HOME/node/bin/npm"  "$HOME/.local/bin/npm"
-    ln -sf "$HERMES_HOME/node/bin/npx"  "$HOME/.local/bin/npx"
+    ln -sf "$BASSERA_HOME/node/bin/node" "$HOME/.local/bin/node"
+    ln -sf "$BASSERA_HOME/node/bin/npm"  "$HOME/.local/bin/npm"
+    ln -sf "$BASSERA_HOME/node/bin/npx"  "$HOME/.local/bin/npx"
 
-    export PATH="$HERMES_HOME/node/bin:$PATH"
+    export PATH="$BASSERA_HOME/node/bin:$PATH"
 
     local installed_ver
-    installed_ver=$("$HERMES_HOME/node/bin/node" --version 2>/dev/null)
-    log_success "Node.js $installed_ver installed to ~/.wafi/node/"
+    installed_ver=$("$BASSERA_HOME/node/bin/node" --version 2>/dev/null)
+    log_success "Node.js $installed_ver installed to ~/.bassera/node/"
     HAS_NODE=true
 }
 
@@ -642,7 +642,7 @@ install_system_packages() {
             if [ "$IS_INTERACTIVE" = true ]; then
                 echo ""
                 log_info "sudo is needed ONLY to install optional system packages (${pkgs[*]}) via your package manager."
-                log_info "Wafi Agent itself does not require or retain root access."
+                log_info "Bassera Agent itself does not require or retain root access."
                 if prompt_yes_no "Install ${description}? (requires sudo)" "no"; then
                     if sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a $install_cmd; then
                         [ "$need_ripgrep" = true ] && HAS_RIPGREP=true && log_success "ripgrep installed"
@@ -655,7 +655,7 @@ install_system_packages() {
                 # Read the prompt from /dev/tty (same approach the setup wizard uses).
                 echo ""
                 log_info "sudo is needed ONLY to install optional system packages (${pkgs[*]}) via your package manager."
-                log_info "Wafi Agent itself does not require or retain root access."
+                log_info "Bassera Agent itself does not require or retain root access."
                 if prompt_yes_no "Install ${description}?" "yes"; then
                     if sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a $install_cmd < /dev/tty; then
                         [ "$need_ripgrep" = true ] && HAS_RIPGREP=true && log_success "ripgrep installed"
@@ -726,7 +726,7 @@ clone_repo() {
             local autostash_ref=""
             if [ -n "$(git status --porcelain)" ]; then
                 local stash_name
-                stash_name="wafi-install-autostash-$(date -u +%Y%m%d-%H%M%S)"
+                stash_name="bassera-install-autostash-$(date -u +%Y%m%d-%H%M%S)"
                 log_info "Local changes detected, stashing before update..."
                 git stash push --include-untracked -m "$stash_name"
                 autostash_ref="$(git rev-parse --verify refs/stash)"
@@ -755,7 +755,7 @@ clone_repo() {
                     if git stash apply "$autostash_ref"; then
                         git stash drop "$autostash_ref" >/dev/null
                         log_warn "Local changes were restored on top of the updated codebase."
-                        log_warn "Review git diff / git status if Wafi behaves unexpectedly."
+                        log_warn "Review git diff / git status if Bassera behaves unexpectedly."
                     else
                         log_error "Update succeeded, but restoring local changes failed. Your changes are still preserved in git stash."
                         log_info "Resolve manually with: git stash apply $autostash_ref"
@@ -895,7 +895,7 @@ install_deps() {
                     log_success "Build tools installed"
                 else
                     log_info "sudo is needed ONLY to install build tools (build-essential, python3-dev, libffi-dev) via apt."
-                    log_info "Wafi Agent itself does not require or retain root access."
+                    log_info "Bassera Agent itself does not require or retain root access."
                     if prompt_yes_no "Install build tools?" "yes"; then
                         sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y -qq build-essential python3-dev libffi-dev >/dev/null 2>&1 || true
                         log_success "Build tools installed"
@@ -935,21 +935,21 @@ install_deps() {
 }
 
 setup_path() {
-    log_info "Setting up wafi command..."
+    log_info "Setting up bassera command..."
 
     if [ "$USE_VENV" = true ]; then
-        HERMES_BIN="$INSTALL_DIR/venv/bin/wafi"
+        BASSERA_BIN="$INSTALL_DIR/venv/bin/bassera"
     else
-        HERMES_BIN="$(which wafi 2>/dev/null || echo "")"
-        if [ -z "$HERMES_BIN" ]; then
-            log_warn "wafi not found on PATH after install"
+        BASSERA_BIN="$(which bassera 2>/dev/null || echo "")"
+        if [ -z "$BASSERA_BIN" ]; then
+            log_warn "bassera not found on PATH after install"
             return 0
         fi
     fi
 
     # Verify the entry point script was actually generated
-    if [ ! -x "$HERMES_BIN" ]; then
-        log_warn "wafi entry point not found at $HERMES_BIN"
+    if [ ! -x "$BASSERA_BIN" ]; then
+        log_warn "bassera entry point not found at $BASSERA_BIN"
         log_info "This usually means the pip install didn't complete successfully."
         if [ "$DISTRO" = "termux" ]; then
             log_info "Try: cd $INSTALL_DIR && python -m pip install -e '.[termux]' -c constraints-termux.txt"
@@ -964,15 +964,15 @@ setup_path() {
     command_link_dir="$(get_command_link_dir)"
     command_link_display_dir="$(get_command_link_display_dir)"
 
-    # Create a user-facing shim for the wafi command.
+    # Create a user-facing shim for the bassera command.
     mkdir -p "$command_link_dir"
-    ln -sf "$HERMES_BIN" "$command_link_dir/wafi"
-    log_success "Symlinked wafi → $command_link_display_dir/wafi"
+    ln -sf "$BASSERA_BIN" "$command_link_dir/bassera"
+    log_success "Symlinked bassera → $command_link_display_dir/bassera"
 
     if [ "$DISTRO" = "termux" ]; then
         export PATH="$command_link_dir:$PATH"
         log_info "$command_link_display_dir is the native Termux command path"
-        log_success "wafi command ready"
+        log_success "bassera command ready"
         return 0
     fi
 
@@ -1018,7 +1018,7 @@ setup_path() {
         for SHELL_CONFIG in "${SHELL_CONFIGS[@]}"; do
             if ! grep -v '^[[:space:]]*#' "$SHELL_CONFIG" 2>/dev/null | grep -qE 'PATH=.*\.local/bin'; then
                 echo "" >> "$SHELL_CONFIG"
-                echo "# Wafi Agent — ensure ~/.local/bin is on PATH" >> "$SHELL_CONFIG"
+                echo "# Bassera Agent — ensure ~/.local/bin is on PATH" >> "$SHELL_CONFIG"
                 echo "$PATH_LINE" >> "$SHELL_CONFIG"
                 log_success "Added ~/.local/bin to PATH in $SHELL_CONFIG"
             fi
@@ -1028,7 +1028,7 @@ setup_path() {
         if [ "$IS_FISH" = "true" ]; then
             if ! grep -q 'fish_add_path.*\.local/bin' "$FISH_CONFIG" 2>/dev/null; then
                 echo "" >> "$FISH_CONFIG"
-                echo "# Wafi Agent — ensure ~/.local/bin is on PATH" >> "$FISH_CONFIG"
+                echo "# Bassera Agent — ensure ~/.local/bin is on PATH" >> "$FISH_CONFIG"
                 echo 'fish_add_path "$HOME/.local/bin"' >> "$FISH_CONFIG"
                 log_success "Added ~/.local/bin to PATH in $FISH_CONFIG"
             fi
@@ -1042,50 +1042,50 @@ setup_path() {
         log_info "~/.local/bin already on PATH"
     fi
 
-    # Export for current session so wafi works immediately
+    # Export for current session so bassera works immediately
     export PATH="$command_link_dir:$PATH"
 
-    log_success "wafi command ready"
+    log_success "bassera command ready"
 }
 
 copy_config_templates() {
     log_info "Setting up configuration files..."
 
-    # Create ~/.wafi directory structure (config at top level, code in subdir)
-    mkdir -p "$HERMES_HOME"/{cron,sessions,logs,pairing,hooks,image_cache,audio_cache,memories,skills,whatsapp/session}
+    # Create ~/.bassera directory structure (config at top level, code in subdir)
+    mkdir -p "$BASSERA_HOME"/{cron,sessions,logs,pairing,hooks,image_cache,audio_cache,memories,skills,whatsapp/session}
 
-    # Create .env at ~/.wafi/.env (top level, easy to find)
-    if [ ! -f "$HERMES_HOME/.env" ]; then
+    # Create .env at ~/.bassera/.env (top level, easy to find)
+    if [ ! -f "$BASSERA_HOME/.env" ]; then
         if [ -f "$INSTALL_DIR/.env.example" ]; then
-            cp "$INSTALL_DIR/.env.example" "$HERMES_HOME/.env"
-            log_success "Created ~/.wafi/.env from template"
+            cp "$INSTALL_DIR/.env.example" "$BASSERA_HOME/.env"
+            log_success "Created ~/.bassera/.env from template"
         else
-            touch "$HERMES_HOME/.env"
-            log_success "Created ~/.wafi/.env"
+            touch "$BASSERA_HOME/.env"
+            log_success "Created ~/.bassera/.env"
         fi
     else
-        log_info "~/.wafi/.env already exists, keeping it"
+        log_info "~/.bassera/.env already exists, keeping it"
     fi
 
-    # Create config.yaml at ~/.wafi/config.yaml (top level, easy to find)
-    if [ ! -f "$HERMES_HOME/config.yaml" ]; then
+    # Create config.yaml at ~/.bassera/config.yaml (top level, easy to find)
+    if [ ! -f "$BASSERA_HOME/config.yaml" ]; then
         if [ -f "$INSTALL_DIR/cli-config.yaml.example" ]; then
-            cp "$INSTALL_DIR/cli-config.yaml.example" "$HERMES_HOME/config.yaml"
-            log_success "Created ~/.wafi/config.yaml from template"
+            cp "$INSTALL_DIR/cli-config.yaml.example" "$BASSERA_HOME/config.yaml"
+            log_success "Created ~/.bassera/config.yaml from template"
         fi
     else
-        log_info "~/.wafi/config.yaml already exists, keeping it"
+        log_info "~/.bassera/config.yaml already exists, keeping it"
     fi
 
     # Create SOUL.md if it doesn't exist (global persona file)
-    if [ ! -f "$HERMES_HOME/SOUL.md" ]; then
-        cat > "$HERMES_HOME/SOUL.md" << 'SOUL_EOF'
-# Wafi Agent Persona
+    if [ ! -f "$BASSERA_HOME/SOUL.md" ]; then
+        cat > "$BASSERA_HOME/SOUL.md" << 'SOUL_EOF'
+# Bassera Agent Persona
 
 <!--
 This file defines the agent's personality and tone.
 The agent will embody whatever you write here.
-Edit this to customize how Wafi communicates with you.
+Edit this to customize how Bassera communicates with you.
 
 Examples:
   - "You are a warm, playful assistant who uses kaomoji occasionally."
@@ -1096,20 +1096,20 @@ This file is loaded fresh each message -- no restart needed.
 Delete the contents (or this file) to use the default personality.
 -->
 SOUL_EOF
-        log_success "Created ~/.wafi/SOUL.md (edit to customize personality)"
+        log_success "Created ~/.bassera/SOUL.md (edit to customize personality)"
     fi
 
-    log_success "Configuration directory ready: ~/.wafi/"
+    log_success "Configuration directory ready: ~/.bassera/"
 
-    # Seed bundled skills into ~/.wafi/skills/ (manifest-based, one-time per skill)
-    log_info "Syncing bundled skills to ~/.wafi/skills/ ..."
+    # Seed bundled skills into ~/.bassera/skills/ (manifest-based, one-time per skill)
+    log_info "Syncing bundled skills to ~/.bassera/skills/ ..."
     if "$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/tools/skills_sync.py" 2>/dev/null; then
-        log_success "Skills synced to ~/.wafi/skills/"
+        log_success "Skills synced to ~/.bassera/skills/"
     else
         # Fallback: simple directory copy if Python sync fails
-        if [ -d "$INSTALL_DIR/skills" ] && [ ! "$(ls -A "$HERMES_HOME/skills/" 2>/dev/null | grep -v '.bundled_manifest')" ]; then
-            cp -r "$INSTALL_DIR/skills/"* "$HERMES_HOME/skills/" 2>/dev/null || true
-            log_success "Skills copied to ~/.wafi/skills/"
+        if [ -d "$INSTALL_DIR/skills" ] && [ ! "$(ls -A "$BASSERA_HOME/skills/" 2>/dev/null | grep -v '.bundled_manifest')" ]; then
+            cp -r "$INSTALL_DIR/skills/"* "$BASSERA_HOME/skills/" 2>/dev/null || true
+            log_success "Skills copied to ~/.bassera/skills/"
         fi
     fi
 }
@@ -1143,7 +1143,7 @@ install_node_deps() {
         case "$DISTRO" in
             ubuntu|debian|raspbian|pop|linuxmint|elementary|zorin|kali|parrot)
                 log_info "Playwright may request sudo to install browser system dependencies (shared libraries)."
-                log_info "This is standard Playwright setup — Wafi itself does not require root access."
+                log_info "This is standard Playwright setup — Bassera itself does not require root access."
                 cd "$INSTALL_DIR" && npx playwright install --with-deps chromium 2>/dev/null || {
                     log_warn "Playwright browser installation failed — browser tools will not work."
                     log_warn "Try running manually: cd $INSTALL_DIR && npx playwright install --with-deps chromium"
@@ -1199,7 +1199,7 @@ install_node_deps() {
         log_info "Installing TUI dependencies..."
         cd "$INSTALL_DIR/ui-tui"
         npm install --silent 2>/dev/null || {
-            log_warn "TUI npm install failed (wafi --tui may not work)"
+            log_warn "TUI npm install failed (bassera --tui may not work)"
         }
         log_success "TUI dependencies installed"
     fi
@@ -1225,7 +1225,7 @@ run_setup_wizard() {
     # install script itself is piped (curl | bash). Only skip if no
     # terminal is available at all (e.g. Docker build, CI).
     if ! [ -e /dev/tty ]; then
-        log_info "Setup wizard skipped (no terminal available). Run 'wafi setup' after install."
+        log_info "Setup wizard skipped (no terminal available). Run 'bassera setup' after install."
         return 0
     fi
 
@@ -1235,18 +1235,18 @@ run_setup_wizard() {
 
     cd "$INSTALL_DIR"
 
-    # Run wafi setup using the venv Python directly (no activation needed).
+    # Run bassera setup using the venv Python directly (no activation needed).
     # Redirect stdin from /dev/tty so interactive prompts work when piped from curl.
     if [ "$USE_VENV" = true ]; then
-        "$INSTALL_DIR/venv/bin/python" -m wafi_cli.main setup < /dev/tty
+        "$INSTALL_DIR/venv/bin/python" -m bassera_cli.main setup < /dev/tty
     else
-        python -m wafi_cli.main setup < /dev/tty
+        python -m bassera_cli.main setup < /dev/tty
     fi
 }
 
 maybe_start_gateway() {
     # Check if any messaging platform tokens were configured
-    ENV_FILE="$HERMES_HOME/.env"
+    ENV_FILE="$BASSERA_HOME/.env"
     if [ ! -f "$ENV_FILE" ]; then
         return 0
     fi
@@ -1266,28 +1266,28 @@ maybe_start_gateway() {
 
     echo ""
     log_info "Messaging platform token detected!"
-    log_info "The gateway needs to be running for Wafi to send/receive messages."
+    log_info "The gateway needs to be running for Bassera to send/receive messages."
 
     # If WhatsApp is enabled and no session exists yet, run foreground first for QR scan
     WHATSAPP_VAL=$(grep "^WHATSAPP_ENABLED=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2-)
-    WHATSAPP_SESSION="$HERMES_HOME/whatsapp/session/creds.json"
+    WHATSAPP_SESSION="$BASSERA_HOME/whatsapp/session/creds.json"
     if [ "$WHATSAPP_VAL" = "true" ] && [ ! -f "$WHATSAPP_SESSION" ]; then
         if [ "$IS_INTERACTIVE" = true ]; then
             echo ""
             log_info "WhatsApp is enabled but not yet paired."
-            log_info "Running 'wafi whatsapp' to pair via QR code..."
+            log_info "Running 'bassera whatsapp' to pair via QR code..."
             echo ""
             if prompt_yes_no "Pair WhatsApp now?" "yes"; then
-                HERMES_CMD="$(get_wafi_command_path)"
-                $HERMES_CMD whatsapp || true
+                BASSERA_CMD="$(get_bassera_command_path)"
+                $BASSERA_CMD whatsapp || true
             fi
         else
-            log_info "WhatsApp pairing skipped (non-interactive). Run 'wafi whatsapp' to pair."
+            log_info "WhatsApp pairing skipped (non-interactive). Run 'bassera whatsapp' to pair."
         fi
     fi
 
     if ! [ -e /dev/tty ]; then
-        log_info "Gateway setup skipped (no terminal available). Run 'wafi gateway install' later."
+        log_info "Gateway setup skipped (no terminal available). Run 'bassera gateway install' later."
         return 0
     fi
 
@@ -1304,19 +1304,19 @@ maybe_start_gateway() {
     fi
 
     if [ "$should_install_gateway" = true ]; then
-        HERMES_CMD="$(get_wafi_command_path)"
+        BASSERA_CMD="$(get_bassera_command_path)"
 
         if [ "$DISTRO" != "termux" ] && command -v systemctl &> /dev/null; then
             log_info "Installing systemd service..."
-            if $HERMES_CMD gateway install 2>/dev/null; then
+            if $BASSERA_CMD gateway install 2>/dev/null; then
                 log_success "Gateway service installed"
-                if $HERMES_CMD gateway start 2>/dev/null; then
+                if $BASSERA_CMD gateway start 2>/dev/null; then
                     log_success "Gateway started! Your bot is now online."
                 else
-                    log_warn "Service installed but failed to start. Try: wafi gateway start"
+                    log_warn "Service installed but failed to start. Try: bassera gateway start"
                 fi
             else
-                log_warn "Systemd install failed. You can start manually: wafi gateway"
+                log_warn "Systemd install failed. You can start manually: bassera gateway"
             fi
         else
             if [ "$DISTRO" = "termux" ]; then
@@ -1324,17 +1324,17 @@ maybe_start_gateway() {
             else
                 log_info "systemd not available — starting gateway in background..."
             fi
-            nohup $HERMES_CMD gateway > "$HERMES_HOME/logs/gateway.log" 2>&1 &
+            nohup $BASSERA_CMD gateway > "$BASSERA_HOME/logs/gateway.log" 2>&1 &
             GATEWAY_PID=$!
-            log_success "Gateway started (PID $GATEWAY_PID). Logs: ~/.wafi/logs/gateway.log"
+            log_success "Gateway started (PID $GATEWAY_PID). Logs: ~/.bassera/logs/gateway.log"
             log_info "To stop: kill $GATEWAY_PID"
-            log_info "To restart later: wafi gateway"
+            log_info "To restart later: bassera gateway"
             if [ "$DISTRO" = "termux" ]; then
                 log_warn "Android may stop background processes when Termux is suspended or the system reclaims resources."
             fi
         fi
     else
-        log_info "Skipped. Start the gateway later with: wafi gateway"
+        log_info "Skipped. Start the gateway later with: bassera gateway"
     fi
 }
 
@@ -1348,33 +1348,33 @@ print_success() {
     echo ""
 
     # Show file locations
-    echo -e "${CYAN}${BOLD}📁 Your files (all in ~/.wafi/):${NC}"
+    echo -e "${CYAN}${BOLD}📁 Your files (all in ~/.bassera/):${NC}"
     echo ""
-    echo -e "   ${YELLOW}Config:${NC}    ~/.wafi/config.yaml"
-    echo -e "   ${YELLOW}API Keys:${NC}  ~/.wafi/.env"
-    echo -e "   ${YELLOW}Data:${NC}      ~/.wafi/cron/, sessions/, logs/"
-    echo -e "   ${YELLOW}Code:${NC}      ~/.wafi/wafi-agent/"
+    echo -e "   ${YELLOW}Config:${NC}    ~/.bassera/config.yaml"
+    echo -e "   ${YELLOW}API Keys:${NC}  ~/.bassera/.env"
+    echo -e "   ${YELLOW}Data:${NC}      ~/.bassera/cron/, sessions/, logs/"
+    echo -e "   ${YELLOW}Code:${NC}      ~/.bassera/bassera-agent/"
     echo ""
 
     echo -e "${CYAN}─────────────────────────────────────────────────────────${NC}"
     echo ""
     echo -e "${CYAN}${BOLD}🚀 Commands:${NC}"
     echo ""
-    echo -e "   ${GREEN}wafi${NC}              Start chatting"
-    echo -e "   ${GREEN}wafi setup${NC}        Configure API keys & settings"
-    echo -e "   ${GREEN}wafi config${NC}       View/edit configuration"
-    echo -e "   ${GREEN}wafi config edit${NC}  Open config in editor"
-    echo -e "   ${GREEN}wafi gateway install${NC} Install gateway service (messaging + cron)"
-    echo -e "   ${GREEN}wafi update${NC}       Update to latest version"
+    echo -e "   ${GREEN}bassera${NC}              Start chatting"
+    echo -e "   ${GREEN}bassera setup${NC}        Configure API keys & settings"
+    echo -e "   ${GREEN}bassera config${NC}       View/edit configuration"
+    echo -e "   ${GREEN}bassera config edit${NC}  Open config in editor"
+    echo -e "   ${GREEN}bassera gateway install${NC} Install gateway service (messaging + cron)"
+    echo -e "   ${GREEN}bassera update${NC}       Update to latest version"
     echo ""
 
     echo -e "${CYAN}─────────────────────────────────────────────────────────${NC}"
     echo ""
     if [ "$DISTRO" = "termux" ]; then
-        echo -e "${YELLOW}⚡ 'wafi' was linked into $(get_command_link_display_dir), which is already on PATH in Termux.${NC}"
+        echo -e "${YELLOW}⚡ 'bassera' was linked into $(get_command_link_display_dir), which is already on PATH in Termux.${NC}"
         echo ""
     else
-        echo -e "${YELLOW}⚡ Reload your shell to use 'wafi' command:${NC}"
+        echo -e "${YELLOW}⚡ Reload your shell to use 'bassera' command:${NC}"
         echo ""
         LOGIN_SHELL="$(basename "${SHELL:-/bin/bash}")"
         if [ "$LOGIN_SHELL" = "zsh" ]; then

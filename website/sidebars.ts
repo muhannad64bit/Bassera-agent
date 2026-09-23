@@ -17,7 +17,7 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'Using Hermes',
+      label: 'Using Bassera',
       collapsed: true,
       items: [
         'user-guide/cli',
@@ -153,10 +153,10 @@ const sidebars: SidebarsConfig = {
         'guides/daily-briefing-bot',
         'guides/team-telegram-assistant',
         'guides/python-library',
-        'guides/use-mcp-with-hermes',
-        'guides/use-soul-with-hermes',
-        'guides/use-voice-mode-with-hermes',
-        'guides/build-a-hermes-plugin',
+        'guides/use-mcp-with-bassera',
+        'guides/use-soul-with-bassera',
+        'guides/use-voice-mode-with-bassera',
+        'guides/build-a-bassera-plugin',
         'guides/automate-with-cron',
         'guides/automation-templates',
         'guides/cron-troubleshooting',

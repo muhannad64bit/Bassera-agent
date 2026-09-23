@@ -7,10 +7,10 @@ import pytest
 
 
 def _make_cli_stub():
-    """Create a minimal WafiCLI-like object with stream state."""
-    from cli import WafiCLI
+    """Create a minimal BasseraCLI-like object with stream state."""
+    from cli import BasseraCLI
 
-    cli = WafiCLI.__new__(WafiCLI)
+    cli = BasseraCLI.__new__(BasseraCLI)
     cli.show_reasoning = False
     cli._stream_buf = ""
     cli._stream_started = False

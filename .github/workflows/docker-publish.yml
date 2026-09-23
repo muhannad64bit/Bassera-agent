@@ -48,24 +48,24 @@ jobs:
           file: Dockerfile
           load: true
           platforms: linux/amd64
-          tags: nousresearch/hermes-agent:test
+          tags: nousresearch/bassera-agent:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Test image starts
         run: |
-          # The image runs as the hermes user (UID 10000).  GitHub Actions
-          # creates /tmp/hermes-test root-owned by default, which hermes
+          # The image runs as the bassera user (UID 10000).  GitHub Actions
+          # creates /tmp/bassera-test root-owned by default, which bassera
           # can't write to — chown it to match the in-container UID before
-          # bind-mounting.  Real users doing `docker run -v ~/.hermes:...`
+          # bind-mounting.  Real users doing `docker run -v ~/.bassera:...`
           # with their own UID hit the same issue and have their own
-          # remediations (HERMES_UID env var, or chown locally).
-          mkdir -p /tmp/hermes-test
-          sudo chown -R 10000:10000 /tmp/hermes-test
+          # remediations (BASSERA_UID env var, or chown locally).
+          mkdir -p /tmp/bassera-test
+          sudo chown -R 10000:10000 /tmp/bassera-test
           docker run --rm \
-            -v /tmp/hermes-test:/opt/data \
-            --entrypoint /opt/hermes/docker/entrypoint.sh \
-            nousresearch/hermes-agent:test --help
+            -v /tmp/bassera-test:/opt/data \
+            --entrypoint /opt/bassera/docker/entrypoint.sh \
+            nousresearch/bassera-agent:test --help
 
       - name: Log in to Docker Hub
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'release'
@@ -82,7 +82,7 @@ jobs:
           file: Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: nousresearch/hermes-agent:latest
+          tags: nousresearch/bassera-agent:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -94,6 +94,6 @@ jobs:
           file: Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: nousresearch/hermes-agent:${{ github.event.release.tag_name }}
+          tags: nousresearch/bassera-agent:${{ github.event.release.tag_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -87,9 +87,9 @@ class TestConfigFilePermissions(unittest.TestCase):
 
     def test_save_config_sets_0600(self):
         config_path = Path(self.tmpdir) / "config.yaml"
-        with patch("wafi_cli.config.get_config_path", return_value=config_path), \
-             patch("wafi_cli.config.ensure_wafi_home"):
-            from wafi_cli.config import save_config
+        with patch("bassera_cli.config.get_config_path", return_value=config_path), \
+             patch("bassera_cli.config.ensure_bassera_home"):
+            from bassera_cli.config import save_config
             save_config({"model": "test/model"})
 
             file_mode = stat.S_IMODE(os.stat(config_path).st_mode)
@@ -97,19 +97,19 @@ class TestConfigFilePermissions(unittest.TestCase):
 
     def test_save_env_value_sets_0600(self):
         env_path = Path(self.tmpdir) / ".env"
-        with patch("wafi_cli.config.get_env_path", return_value=env_path), \
-             patch("wafi_cli.config.ensure_wafi_home"):
-            from wafi_cli.config import save_env_value
+        with patch("bassera_cli.config.get_env_path", return_value=env_path), \
+             patch("bassera_cli.config.ensure_bassera_home"):
+            from bassera_cli.config import save_env_value
             save_env_value("TEST_KEY", "test_value")
 
             file_mode = stat.S_IMODE(os.stat(env_path).st_mode)
             self.assertEqual(file_mode, 0o600)
 
-    def test_ensure_wafi_home_sets_0700(self):
-        home = Path(self.tmpdir) / ".wafi"
-        with patch("wafi_cli.config.get_wafi_home", return_value=home):
-            from wafi_cli.config import ensure_wafi_home
-            ensure_wafi_home()
+    def test_ensure_bassera_home_sets_0700(self):
+        home = Path(self.tmpdir) / ".bassera"
+        with patch("bassera_cli.config.get_bassera_home", return_value=home):
+            from bassera_cli.config import ensure_bassera_home
+            ensure_bassera_home()
 
             home_mode = stat.S_IMODE(os.stat(home).st_mode)
             self.assertEqual(home_mode, 0o700)

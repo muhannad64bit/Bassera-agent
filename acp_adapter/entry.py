@@ -1,6 +1,6 @@
-"""CLI entry point for the wafi-agent ACP adapter.
+"""CLI entry point for the bassera-agent ACP adapter.
 
-Loads environment variables from ``~/.wafi/.env``, configures logging
+Loads environment variables from ``~/.bassera/.env``, configures logging
 to write to stderr (so stdout is reserved for ACP JSON-RPC transport),
 and starts the ACP agent server.
 
@@ -8,16 +8,16 @@ Usage::
 
     python -m acp_adapter.entry
     # or
-    wafi acp
+    bassera acp
     # or
-    wafi-acp
+    bassera-acp
 """
 
 import asyncio
 import logging
 import sys
 from pathlib import Path
-from wafi_constants import get_wafi_home
+from bassera_constants import get_bassera_home
 
 
 # Methods clients send as periodic liveness probes. They are not part of the
@@ -82,17 +82,17 @@ def _setup_logging() -> None:
 
 
 def _load_env() -> None:
-    """Load .env from HERMES_HOME (default ``~/.wafi``)."""
-    from wafi_cli.env_loader import load_wafi_dotenv
+    """Load .env from BASSERA_HOME (default ``~/.bassera``)."""
+    from bassera_cli.env_loader import load_bassera_dotenv
 
-    wafi_home = get_wafi_home()
-    loaded = load_wafi_dotenv(wafi_home=wafi_home)
+    bassera_home = get_bassera_home()
+    loaded = load_bassera_dotenv(bassera_home=bassera_home)
     if loaded:
         for env_file in loaded:
             logging.getLogger(__name__).info("Loaded env from %s", env_file)
     else:
         logging.getLogger(__name__).info(
-            "No .env found at %s, using system env", wafi_home / ".env"
+            "No .env found at %s, using system env", bassera_home / ".env"
         )
 
 
@@ -102,7 +102,7 @@ def main() -> None:
     _load_env()
 
     logger = logging.getLogger(__name__)
-    logger.info("Starting wafi-agent ACP adapter")
+    logger.info("Starting bassera-agent ACP adapter")
 
     # Ensure the project root is on sys.path so ``from run_agent import AIAgent`` works
     project_root = str(Path(__file__).resolve().parent.parent)
@@ -110,9 +110,9 @@ def main() -> None:
         sys.path.insert(0, project_root)
 
     import acp
-    from .server import WafiACPAgent
+    from .server import BasseraACPAgent
 
-    agent = WafiACPAgent()
+    agent = BasseraACPAgent()
     try:
         asyncio.run(acp.run_agent(agent, use_unstable_protocol=True))
     except KeyboardInterrupt:

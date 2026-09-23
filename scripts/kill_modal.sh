@@ -2,7 +2,7 @@
 # Kill all running Modal apps (sandboxes, deployments, etc.)
 #
 # Usage:
-#   bash scripts/kill_modal.sh          # Stop wafi-agent sandboxes
+#   bash scripts/kill_modal.sh          # Stop bassera-agent sandboxes
 #   bash scripts/kill_modal.sh --all    # Stop ALL Modal apps
 
 set -uo pipefail
@@ -17,10 +17,10 @@ if [[ "${1:-}" == "--all" ]]; then
         modal app stop "$app_id" 2>/dev/null || true
     done
 else
-    echo "Stopping wafi-agent sandboxes..."
-    APPS=$(echo "$APP_LIST" | grep 'wafi-agent' | grep -oE 'ap-[A-Za-z0-9]+' || true)
+    echo "Stopping bassera-agent sandboxes..."
+    APPS=$(echo "$APP_LIST" | grep 'bassera-agent' | grep -oE 'ap-[A-Za-z0-9]+' || true)
     if [[ -z "$APPS" ]]; then
-        echo "  No wafi-agent apps found."
+        echo "  No bassera-agent apps found."
     else
         echo "$APPS" | while read app_id; do
             echo "  Stopping $app_id"
@@ -30,5 +30,5 @@ else
 fi
 
 echo ""
-echo "Current wafi-agent status:"
-modal app list 2>/dev/null | grep -E 'State|wafi-agent' || echo "  (none)"
+echo "Current bassera-agent status:"
+modal app list 2>/dev/null | grep -E 'State|bassera-agent' || echo "  (none)"

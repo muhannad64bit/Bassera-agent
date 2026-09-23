@@ -4,7 +4,7 @@ const BASE = "";
 // Injected into index.html by the server — never fetched via API.
 declare global {
   interface Window {
-    __HERMES_SESSION_TOKEN__?: string;
+    __BASSERA_SESSION_TOKEN__?: string;
   }
 }
 let _sessionToken: string | null = null;
@@ -12,7 +12,7 @@ let _sessionToken: string | null = null;
 export async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
   // Inject the session token into all /api/ requests.
   const headers = new Headers(init?.headers);
-  const token = window.__HERMES_SESSION_TOKEN__;
+  const token = window.__BASSERA_SESSION_TOKEN__;
   if (token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
   }
@@ -26,12 +26,12 @@ export async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> 
 
 async function getSessionToken(): Promise<string> {
   if (_sessionToken) return _sessionToken;
-  const injected = window.__HERMES_SESSION_TOKEN__;
+  const injected = window.__BASSERA_SESSION_TOKEN__;
   if (injected) {
     _sessionToken = injected;
     return _sessionToken;
   }
-  throw new Error("Session token not available — page must be served by the Hermes dashboard server");
+  throw new Error("Session token not available — page must be served by the Bassera dashboard server");
 }
 
 export const api = {
@@ -219,7 +219,7 @@ export interface StatusResponse {
   gateway_running: boolean;
   gateway_state: string | null;
   gateway_updated_at: string | null;
-  hermes_home: string;
+  bassera_home: string;
   latest_config_version: number;
   release_date: string;
   version: string;

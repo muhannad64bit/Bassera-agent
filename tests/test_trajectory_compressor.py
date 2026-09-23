@@ -17,18 +17,18 @@ from trajectory_compressor import (
 )
 
 
-def test_import_loads_env_from_wafi_home(tmp_path, monkeypatch):
-    home = tmp_path / ".wafi"
+def test_import_loads_env_from_bassera_home(tmp_path, monkeypatch):
+    home = tmp_path / ".bassera"
     home.mkdir()
-    (home / ".env").write_text("OPENROUTER_API_KEY=from-wafi-home\n", encoding="utf-8")
+    (home / ".env").write_text("OPENROUTER_API_KEY=from-bassera-home\n", encoding="utf-8")
 
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("BASSERA_HOME", str(home))
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
 
     sys.modules.pop("trajectory_compressor", None)
     importlib.import_module("trajectory_compressor")
 
-    assert os.getenv("OPENROUTER_API_KEY") == "from-wafi-home"
+    assert os.getenv("OPENROUTER_API_KEY") == "from-bassera-home"
 
 
 def test_generate_summary_custom_client_forces_kimi_temperature():

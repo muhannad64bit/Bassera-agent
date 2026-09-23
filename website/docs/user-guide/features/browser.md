@@ -7,7 +7,7 @@ sidebar_position: 5
 
 # Browser Automation
 
-Hermes Agent includes a full browser automation toolset with multiple backend options:
+Bassera Agent includes a full browser automation toolset with multiple backend options:
 
 - **Browserbase cloud mode** via [Browserbase](https://browserbase.com) for managed cloud browsers and anti-bot tooling
 - **Browser Use cloud mode** via [Browser Use](https://browser-use.com) as an alternative cloud browser provider
@@ -34,7 +34,7 @@ Key capabilities:
 ## Setup
 
 :::tip Nous Subscribers
-If you have a paid [Nous Portal](https://portal.nousresearch.com) subscription, you can use browser automation through the **[Tool Gateway](tool-gateway.md)** without any separate API keys. Run `hermes model` or `hermes tools` to enable it.
+If you have a paid [Nous Portal](https://portal.nousresearch.com) subscription, you can use browser automation through the **[Tool Gateway](tool-gateway.md)** without any separate API keys. Run `bassera model` or `bassera tools` to enable it.
 :::
 
 ### Browserbase cloud mode
@@ -42,7 +42,7 @@ If you have a paid [Nous Portal](https://portal.nousresearch.com) subscription, 
 To use Browserbase-managed cloud browsers, add:
 
 ```bash
-# Add to ~/.hermes/.env
+# Add to ~/.bassera/.env
 BROWSERBASE_API_KEY=***
 BROWSERBASE_PROJECT_ID=your-project-id-here
 ```
@@ -54,7 +54,7 @@ Get your credentials at [browserbase.com](https://browserbase.com).
 To use Browser Use as your cloud browser provider, add:
 
 ```bash
-# Add to ~/.hermes/.env
+# Add to ~/.bassera/.env
 BROWSER_USE_API_KEY=***
 ```
 
@@ -65,14 +65,14 @@ Get your API key at [browser-use.com](https://browser-use.com). Browser Use prov
 To use Firecrawl as your cloud browser provider, add:
 
 ```bash
-# Add to ~/.hermes/.env
+# Add to ~/.bassera/.env
 FIRECRAWL_API_KEY=fc-***
 ```
 
 Get your API key at [firecrawl.dev](https://firecrawl.dev). Then select Firecrawl as your browser provider:
 
 ```bash
-hermes setup tools
+bassera setup tools
 # → Browser Automation → Firecrawl
 ```
 
@@ -99,19 +99,19 @@ npm install && npm start   # downloads Camoufox (~300MB) on first run
 docker run -d --network host -e CAMOFOX_PORT=9377 jo-inc/camofox-browser
 ```
 
-Then set in `~/.hermes/.env`:
+Then set in `~/.bassera/.env`:
 
 ```bash
 CAMOFOX_URL=http://localhost:9377
 ```
 
-Or configure via `hermes tools` → Browser Automation → Camofox.
+Or configure via `bassera tools` → Browser Automation → Camofox.
 
 When `CAMOFOX_URL` is set, all browser tools automatically route through Camofox instead of Browserbase or agent-browser.
 
 #### Persistent browser sessions
 
-By default, each Camofox session gets a random identity — cookies and logins don't survive across agent restarts. To enable persistent browser sessions, add the following to `~/.hermes/config.yaml`:
+By default, each Camofox session gets a random identity — cookies and logins don't survive across agent restarts. To enable persistent browser sessions, add the following to `~/.bassera/config.yaml`:
 
 ```yaml
 browser:
@@ -119,52 +119,52 @@ browser:
     managed_persistence: true
 ```
 
-Then fully restart Hermes so the new config is picked up.
+Then fully restart Bassera so the new config is picked up.
 
 :::warning Nested path matters
-Hermes reads `browser.camofox.managed_persistence`, **not** a top-level `managed_persistence`. A common mistake is writing:
+Bassera reads `browser.camofox.managed_persistence`, **not** a top-level `managed_persistence`. A common mistake is writing:
 
 ```yaml
-# ❌ Wrong — Hermes ignores this
+# ❌ Wrong — Bassera ignores this
 managed_persistence: true
 ```
 
-If the flag is placed at the wrong path, Hermes silently falls back to a random ephemeral `userId` and your login state will be lost on every session.
+If the flag is placed at the wrong path, Bassera silently falls back to a random ephemeral `userId` and your login state will be lost on every session.
 :::
 
-##### What Hermes does
+##### What Bassera does
 - Sends a deterministic profile-scoped `userId` to Camofox so the server can reuse the same Firefox profile across sessions.
 - Skips server-side context destruction on cleanup, so cookies and logins survive between agent tasks.
-- Scopes the `userId` to the active Hermes profile, so different Hermes profiles get different browser profiles (profile isolation).
+- Scopes the `userId` to the active Bassera profile, so different Bassera profiles get different browser profiles (profile isolation).
 
-##### What Hermes does not do
-- It does not force persistence on the Camofox server. Hermes only sends a stable `userId`; the server must honor it by mapping that `userId` to a persistent Firefox profile directory.
-- If your Camofox server build treats every request as ephemeral (e.g. always calls `browser.newContext()` without loading a stored profile), Hermes cannot make those sessions persist. Make sure you are running a Camofox build that implements userId-based profile persistence.
+##### What Bassera does not do
+- It does not force persistence on the Camofox server. Bassera only sends a stable `userId`; the server must honor it by mapping that `userId` to a persistent Firefox profile directory.
+- If your Camofox server build treats every request as ephemeral (e.g. always calls `browser.newContext()` without loading a stored profile), Bassera cannot make those sessions persist. Make sure you are running a Camofox build that implements userId-based profile persistence.
 
 ##### Verify it's working
 
-1. Start Hermes and your Camofox server.
+1. Start Bassera and your Camofox server.
 2. Open Google (or any login site) in a browser task and sign in manually.
 3. End the browser task normally.
 4. Start a new browser task.
 5. Open the same site again — you should still be signed in.
 
-If step 5 logs you out, the Camofox server isn't honoring the stable `userId`. Double-check your config path, confirm you fully restarted Hermes after editing `config.yaml`, and verify your Camofox server version supports persistent per-user profiles.
+If step 5 logs you out, the Camofox server isn't honoring the stable `userId`. Double-check your config path, confirm you fully restarted Bassera after editing `config.yaml`, and verify your Camofox server version supports persistent per-user profiles.
 
 ##### Where state lives
 
-Hermes derives the stable `userId` from the profile-scoped directory `~/.hermes/browser_auth/camofox/` (or the equivalent under `$HERMES_HOME` for non-default profiles). The actual browser profile data lives on the Camofox server side, keyed by that `userId`. To fully reset a persistent profile, clear it on the Camofox server and remove the corresponding Hermes profile's state directory.
+Bassera derives the stable `userId` from the profile-scoped directory `~/.bassera/browser_auth/camofox/` (or the equivalent under `$BASSERA_HOME` for non-default profiles). The actual browser profile data lives on the Camofox server side, keyed by that `userId`. To fully reset a persistent profile, clear it on the Camofox server and remove the corresponding Bassera profile's state directory.
 
 #### VNC live view
 
-When Camofox runs in headed mode (with a visible browser window), it exposes a VNC port in its health check response. Hermes automatically discovers this and includes the VNC URL in navigation responses, so the agent can share a link for you to watch the browser live.
+When Camofox runs in headed mode (with a visible browser window), it exposes a VNC port in its health check response. Bassera automatically discovers this and includes the VNC URL in navigation responses, so the agent can share a link for you to watch the browser live.
 
 ### Local Chrome via CDP (`/browser connect`)
 
-Instead of a cloud provider, you can attach Hermes browser tools to your own running Chrome instance via the Chrome DevTools Protocol (CDP). This is useful when you want to see what the agent is doing in real-time, interact with pages that require your own cookies/sessions, or avoid cloud browser costs.
+Instead of a cloud provider, you can attach Bassera browser tools to your own running Chrome instance via the Chrome DevTools Protocol (CDP). This is useful when you want to see what the agent is doing in real-time, interact with pages that require your own cookies/sessions, or avoid cloud browser costs.
 
 :::note
-`/browser connect` is an **interactive-CLI slash command** — it is not dispatched by the gateway. If you try to run it inside a WebUI, Telegram, Discord, or other gateway chat, the message will be sent to the agent as plain text and the command will not execute. Start Hermes from the terminal (`hermes` or `hermes chat`) and issue `/browser connect` there.
+`/browser connect` is an **interactive-CLI slash command** — it is not dispatched by the gateway. If you try to run it inside a WebUI, Telegram, Discord, or other gateway chat, the message will be sent to the agent as plain text and the command will not execute. Start Bassera from the terminal (`bassera` or `bassera chat`) and issue `/browser connect` there.
 :::
 
 In the CLI, use:
@@ -176,7 +176,7 @@ In the CLI, use:
 /browser disconnect            # Detach and return to cloud/local mode
 ```
 
-If Chrome isn't already running with remote debugging, Hermes will attempt to auto-launch it with `--remote-debugging-port=9222`.
+If Chrome isn't already running with remote debugging, Bassera will attempt to auto-launch it with `--remote-debugging-port=9222`.
 
 :::tip
 To start Chrome manually with CDP enabled, use a dedicated user-data-dir so the debug port actually comes up even if Chrome is already running with your normal profile:
@@ -185,19 +185,19 @@ To start Chrome manually with CDP enabled, use a dedicated user-data-dir so the 
 # Linux
 google-chrome \
   --remote-debugging-port=9222 \
-  --user-data-dir=$HOME/.hermes/chrome-debug \
+  --user-data-dir=$HOME/.bassera/chrome-debug \
   --no-first-run \
   --no-default-browser-check &
 
 # macOS
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --remote-debugging-port=9222 \
-  --user-data-dir="$HOME/.hermes/chrome-debug" \
+  --user-data-dir="$HOME/.bassera/chrome-debug" \
   --no-first-run \
   --no-default-browser-check &
 ```
 
-Then launch the Hermes CLI and run `/browser connect`.
+Then launch the Bassera CLI and run `/browser connect`.
 
 **Why `--user-data-dir`?** Without it, launching Chrome while a regular Chrome instance is already running typically opens a new window on the existing process — and that existing process was not started with `--remote-debugging-port`, so port 9222 never opens. A dedicated user-data-dir forces a fresh Chrome process where the debug port actually listens. `--no-first-run --no-default-browser-check` skips the first-launch wizard for the fresh profile.
 :::
@@ -206,7 +206,7 @@ When connected via CDP, all browser tools (`browser_navigate`, `browser_click`, 
 
 ### Local browser mode
 
-If you do **not** set any cloud credentials and don't use `/browser connect`, Hermes can still use the browser tools through a local Chromium install driven by `agent-browser`.
+If you do **not** set any cloud credentials and don't use `/browser connect`, Bassera can still use the browser tools through a local Chromium install driven by `agent-browser`.
 
 ### Optional Environment Variables
 
@@ -237,7 +237,7 @@ npm install
 ```
 
 :::info
-The `browser` toolset must be included in your config's `toolsets` list or enabled via `hermes config set toolsets '["hermes-cli", "browser"]'`.
+The `browser` toolset must be included in your config's `toolsets` list or enabled via `bassera config set toolsets '["bassera-cli", "browser"]'`.
 :::
 
 ## Available Tools
@@ -276,7 +276,7 @@ Click @e5 to press the "Sign In" button
 Type text into an input field. Clears the field first, then types the new text.
 
 ```
-Type "hermes agent" into the search field @e3
+Type "bassera agent" into the search field @e3
 ```
 
 ### `browser_scroll`
@@ -315,7 +315,7 @@ The screenshot is saved persistently and the file path is returned alongside the
 What does the chart on this page show?
 ```
 
-Screenshots are stored in `~/.hermes/cache/screenshots/` and automatically cleaned up after 24 hours.
+Screenshots are stored in `~/.bassera/cache/screenshots/` and automatically cleaned up after 24 hours.
 
 ### `browser_console`
 
@@ -393,7 +393,7 @@ browser:
   record_sessions: true  # default: false
 ```
 
-When enabled, recording starts automatically on the first `browser_navigate` and saves to `~/.hermes/browser_recordings/` when the session closes. Works in both local and cloud (Browserbase) modes. Recordings older than 72 hours are automatically cleaned up.
+When enabled, recording starts automatically on the first `browser_navigate` and saves to `~/.bassera/browser_recordings/` when the session closes. Works in both local and cloud (Browserbase) modes. Recordings older than 72 hours are automatically cleaned up.
 
 ## Stealth Features
 
@@ -407,7 +407,7 @@ Browserbase provides automatic stealth capabilities:
 | Keep Alive | On | Session reconnection after network hiccups |
 
 :::note
-If paid features aren't available on your plan, Hermes automatically falls back — first disabling `keepAlive`, then proxies — so browsing still works on free plans.
+If paid features aren't available on your plan, Bassera automatically falls back — first disabling `keepAlive`, then proxies — so browsing still works on free plans.
 :::
 
 ## Session Management

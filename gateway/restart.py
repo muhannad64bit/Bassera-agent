@@ -1,6 +1,6 @@
 """Shared gateway restart constants and parsing helpers."""
 
-from wafi_cli.config import DEFAULT_CONFIG
+from bassera_cli.config import DEFAULT_CONFIG
 
 # EX_TEMPFAIL from sysexits.h — used to ask the service manager to restart
 # the gateway after a graceful drain/reload path completes.

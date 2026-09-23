@@ -234,9 +234,9 @@ def _handle_send(args):
                     },
                 )
             else:
-                return tool_error(f"Platform '{platform_name}' is not configured. Set up credentials in ~/.wafi/config.yaml or environment variables.")
+                return tool_error(f"Platform '{platform_name}' is not configured. Set up credentials in ~/.bassera/config.yaml or environment variables.")
         else:
-            return tool_error(f"Platform '{platform_name}' is not configured. Set up credentials in ~/.wafi/config.yaml or environment variables.")
+            return tool_error(f"Platform '{platform_name}' is not configured. Set up credentials in ~/.bassera/config.yaml or environment variables.")
 
     from gateway.platforms.base import BasePlatformAdapter
 
@@ -259,7 +259,7 @@ def _handle_send(args):
             return json.dumps({
                 "error": f"No home channel set for {platform_name} to determine where to send the message. "
                 f"Either specify a channel directly with '{platform_name}:CHANNEL_NAME', "
-                f"or set a home channel via: wafi config set {platform_name.upper()}_HOME_CHANNEL <channel_id>"
+                f"or set a home channel via: bassera config set {platform_name.upper()}_HOME_CHANNEL <channel_id>"
             })
 
     duplicate_skip = _maybe_skip_cron_duplicate_send(platform_name, chat_id, thread_id)
@@ -286,7 +286,7 @@ def _handle_send(args):
             try:
                 from gateway.mirror import mirror_to_session
                 from gateway.session_context import get_session_env
-                source_label = get_session_env("HERMES_SESSION_PLATFORM", "cli")
+                source_label = get_session_env("BASSERA_SESSION_PLATFORM", "cli")
                 if mirror_to_session(platform_name, chat_id, mirror_text, source_label=source_label, thread_id=thread_id):
                     result["mirrored"] = True
             except Exception:
@@ -346,11 +346,11 @@ def _describe_media_for_mirror(media_files):
 
 def _get_cron_auto_delivery_target():
     """Return the cron scheduler's auto-delivery target for the current run, if any."""
-    platform = os.getenv("HERMES_CRON_AUTO_DELIVER_PLATFORM", "").strip().lower()
-    chat_id = os.getenv("HERMES_CRON_AUTO_DELIVER_CHAT_ID", "").strip()
+    platform = os.getenv("BASSERA_CRON_AUTO_DELIVER_PLATFORM", "").strip().lower()
+    chat_id = os.getenv("BASSERA_CRON_AUTO_DELIVER_CHAT_ID", "").strip()
     if not platform or not chat_id:
         return None
-    thread_id = os.getenv("HERMES_CRON_AUTO_DELIVER_THREAD_ID", "").strip() or None
+    thread_id = os.getenv("BASSERA_CRON_AUTO_DELIVER_THREAD_ID", "").strip() or None
     return {
         "platform": platform,
         "chat_id": chat_id,
@@ -1121,7 +1121,7 @@ async def _send_matrix(token, extra, chat_id, message):
         token = token or os.getenv("MATRIX_ACCESS_TOKEN", "")
         if not homeserver or not token:
             return {"error": "Matrix not configured (MATRIX_HOMESERVER, MATRIX_ACCESS_TOKEN required)"}
-        txn_id = f"wafi_{int(time.time() * 1000)}_{os.urandom(4).hex()}"
+        txn_id = f"bassera_{int(time.time() * 1000)}_{os.urandom(4).hex()}"
         from urllib.parse import quote
         encoded_room = quote(chat_id, safe="")
         url = f"{homeserver}/_matrix/client/v3/rooms/{encoded_room}/send/m.room.message/{txn_id}"
@@ -1344,10 +1344,10 @@ async def _send_feishu(pconfig, chat_id, message, media_files=None, thread_id=No
     try:
         from gateway.platforms.feishu import FeishuAdapter, FEISHU_AVAILABLE
         if not FEISHU_AVAILABLE:
-            return {"error": "Feishu dependencies not installed. Run: pip install 'wafi-agent[feishu]'"}
+            return {"error": "Feishu dependencies not installed. Run: pip install 'bassera-agent[feishu]'"}
         from gateway.platforms.feishu import FEISHU_DOMAIN, LARK_DOMAIN
     except ImportError:
-        return {"error": "Feishu dependencies not installed. Run: pip install 'wafi-agent[feishu]'"}
+        return {"error": "Feishu dependencies not installed. Run: pip install 'bassera-agent[feishu]'"}
 
     media_files = media_files or []
 
@@ -1399,7 +1399,7 @@ async def _send_feishu(pconfig, chat_id, message, media_files=None, thread_id=No
 def _check_send_message():
     """Gate send_message on gateway running (always available on messaging platforms)."""
     from gateway.session_context import get_session_env
-    platform = get_session_env("HERMES_SESSION_PLATFORM", "")
+    platform = get_session_env("BASSERA_SESSION_PLATFORM", "")
     if platform and platform != "local":
         return True
     try:

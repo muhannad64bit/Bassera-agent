@@ -619,7 +619,7 @@ export function useMainApp(gw: GatewayClient) {
     [turn, showProgressArea]
   )
 
-  const cwd = ui.info?.cwd || process.env.HERMES_CWD || process.cwd()
+  const cwd = ui.info?.cwd || process.env.BASSERA_CWD || process.cwd()
   const gitBranch = useGitBranch(cwd)
 
   const appStatus = useMemo(

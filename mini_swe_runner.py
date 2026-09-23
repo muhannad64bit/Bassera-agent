@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-SWE Runner with Wafi Trajectory Format
+SWE Runner with Bassera Trajectory Format
 
-A runner that uses Wafi-Agent's built-in execution environments
-(local, docker, modal) and outputs trajectories in the Wafi-Agent format
+A runner that uses Bassera-Agent's built-in execution environments
+(local, docker, modal) and outputs trajectories in the Bassera-Agent format
 compatible with batch_runner.py and trajectory_compressor.py.
 
 Features:
-- Uses Wafi-Agent's Docker, Modal, or Local environments for command execution
-- Outputs trajectories in Wafi format (from/value pairs with <tool_call>/<tool_response> XML)
+- Uses Bassera-Agent's Docker, Modal, or Local environments for command execution
+- Outputs trajectories in Bassera format (from/value pairs with <tool_call>/<tool_response> XML)
 - Compatible with the trajectory compression pipeline
 - Supports batch processing from JSONL prompt files
 
@@ -58,7 +58,7 @@ def _effective_temperature_for_model(
 
 
 # ============================================================================
-# Terminal Tool Definition (matches Wafi-Agent format)
+# Terminal Tool Definition (matches Bassera-Agent format)
 # ============================================================================
 
 TERMINAL_TOOL_DEFINITION = {
@@ -118,7 +118,7 @@ def create_environment(
     **kwargs
 ):
     """
-    Create an execution environment using Wafi-Agent's built-in backends.
+    Create an execution environment using Bassera-Agent's built-in backends.
     
     Args:
         env_type: One of "local", "docker", "modal"
@@ -147,13 +147,13 @@ def create_environment(
 
 
 # ============================================================================
-# Mini-SWE Runner with Wafi Trajectory Format
+# Mini-SWE Runner with Bassera Trajectory Format
 # ============================================================================
 
 class MiniSWERunner:
     """
-    Agent runner that uses Wafi-Agent's built-in execution environments
-    and outputs trajectories in Wafi-Agent format.
+    Agent runner that uses Bassera-Agent's built-in execution environments
+    and outputs trajectories in Bassera-Agent format.
     """
     
     def __init__(
@@ -297,14 +297,14 @@ class MiniSWERunner:
             })
         return json.dumps(formatted_tools, ensure_ascii=False)
     
-    def _convert_to_wafi_format(
+    def _convert_to_bassera_format(
         self,
         messages: List[Dict[str, Any]],
         user_query: str,
         completed: bool
     ) -> List[Dict[str, Any]]:
         """
-        Convert internal message format to Wafi trajectory format.
+        Convert internal message format to Bassera trajectory format.
         
         This produces the exact format used by batch_runner.py.
         """
@@ -560,8 +560,8 @@ Complete the user's task step by step."""
             # Cleanup environment
             self._cleanup_env()
         
-        # Convert to Wafi trajectory format
-        trajectory = self._convert_to_wafi_format(messages, task, completed)
+        # Convert to Bassera trajectory format
+        trajectory = self._convert_to_bassera_format(messages, task, completed)
         
         return {
             "conversations": trajectory,
@@ -646,7 +646,7 @@ def main(
     verbose: bool = False,
 ):
     """
-    Run SWE tasks with Wafi trajectory format output.
+    Run SWE tasks with Bassera trajectory format output.
     
     Args:
         task: Single task to run (use this OR prompts_file)
@@ -672,7 +672,7 @@ def main(
         # Batch from file
         python mini_swe_runner.py --prompts_file tasks.jsonl --output_file results.jsonl
     """
-    print("🚀 Mini-SWE Runner with Wafi Trajectory Format")
+    print("🚀 Mini-SWE Runner with Bassera Trajectory Format")
     print("=" * 60)
     
     # Initialize runner

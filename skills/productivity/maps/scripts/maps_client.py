@@ -29,7 +29,7 @@ import urllib.request
 # Constants
 # ---------------------------------------------------------------------------
 
-USER_AGENT = "WafiAgent/1.0 (contact: wafi@agent.ai)"
+USER_AGENT = "BasseraAgent/1.0 (contact: bassera@agent.ai)"
 DATA_SOURCE = "OpenStreetMap/Nominatim"
 
 NOMINATIM_SEARCH  = "https://nominatim.openstreetmap.org/search"

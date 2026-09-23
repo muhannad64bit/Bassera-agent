@@ -375,13 +375,13 @@ class MemoryManager:
     def initialize_all(self, session_id: str, **kwargs) -> None:
         """Initialize all providers.
 
-        Automatically injects ``wafi_home`` into *kwargs* so that every
+        Automatically injects ``bassera_home`` into *kwargs* so that every
         provider can resolve profile-scoped storage paths without importing
-        ``get_wafi_home()`` themselves.
+        ``get_bassera_home()`` themselves.
         """
-        if "wafi_home" not in kwargs:
-            from wafi_constants import get_wafi_home
-            kwargs["wafi_home"] = str(get_wafi_home())
+        if "bassera_home" not in kwargs:
+            from bassera_constants import get_bassera_home
+            kwargs["bassera_home"] = str(get_bassera_home())
         for provider in self._providers:
             try:
                 provider.initialize(session_id=session_id, **kwargs)

@@ -66,8 +66,8 @@ def _setup_worktree(repo_root):
     """Test version of _setup_worktree — creates a worktree."""
     import uuid
     short_id = uuid.uuid4().hex[:8]
-    wt_name = f"wafi-{short_id}"
-    branch_name = f"wafi/{wt_name}"
+    wt_name = f"bassera-{short_id}"
+    branch_name = f"bassera/{wt_name}"
 
     worktrees_dir = Path(repo_root) / ".worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
@@ -155,7 +155,7 @@ class TestWorktreeCreation:
         info = _setup_worktree(str(git_repo))
         assert info is not None
         assert Path(info["path"]).exists()
-        assert info["branch"].startswith("wafi/wafi-")
+        assert info["branch"].startswith("bassera/bassera-")
         assert info["repo_root"] == str(git_repo)
 
         # Verify it's a valid git worktree
@@ -272,7 +272,7 @@ class TestWorktreeCleanup:
         """Cleanup should handle already-removed worktrees gracefully."""
         info = {
             "path": str(git_repo / ".worktrees" / "nonexistent"),
-            "branch": "wafi/nonexistent",
+            "branch": "bassera/nonexistent",
             "repo_root": str(git_repo),
         }
         # Should not raise
@@ -472,7 +472,7 @@ class TestStaleWorktreePruning:
         cutoff = time.time() - (24 * 3600)
 
         for entry in worktrees_dir.iterdir():
-            if not entry.is_dir() or not entry.name.startswith("wafi-"):
+            if not entry.is_dir() or not entry.name.startswith("bassera-"):
                 continue
             try:
                 mtime = entry.stat().st_mtime
@@ -518,7 +518,7 @@ class TestStaleWorktreePruning:
 
         pruned = False
         for entry in worktrees_dir.iterdir():
-            if not entry.is_dir() or not entry.name.startswith("wafi-"):
+            if not entry.is_dir() or not entry.name.startswith("bassera-"):
                 continue
             mtime = entry.stat().st_mtime
             if mtime > cutoff:
@@ -692,22 +692,22 @@ class TestTerminalCWDIntegration:
 
 
 class TestOrphanedBranchPruning:
-    """Test cleanup of orphaned wafi/* and pr-* branches."""
+    """Test cleanup of orphaned bassera/* and pr-* branches."""
 
-    def test_prunes_orphaned_wafi_branch(self, git_repo):
-        """wafi/wafi-* branches with no worktree should be deleted."""
+    def test_prunes_orphaned_bassera_branch(self, git_repo):
+        """bassera/bassera-* branches with no worktree should be deleted."""
         # Create a branch that looks like a worktree branch but has no worktree
         subprocess.run(
-            ["git", "branch", "wafi/wafi-deadbeef", "HEAD"],
+            ["git", "branch", "bassera/bassera-deadbeef", "HEAD"],
             cwd=str(git_repo), capture_output=True,
         )
 
         # Verify it exists
         result = subprocess.run(
-            ["git", "branch", "--list", "wafi/wafi-deadbeef"],
+            ["git", "branch", "--list", "bassera/bassera-deadbeef"],
             capture_output=True, text=True, cwd=str(git_repo),
         )
-        assert "wafi/wafi-deadbeef" in result.stdout
+        assert "bassera/bassera-deadbeef" in result.stdout
 
         # Simulate _prune_orphaned_branches logic
         result = subprocess.run(
@@ -728,9 +728,9 @@ class TestOrphanedBranchPruning:
         orphaned = [
             b for b in all_branches
             if b not in active_branches
-            and (b.startswith("wafi/wafi-") or b.startswith("pr-"))
+            and (b.startswith("bassera/bassera-") or b.startswith("pr-"))
         ]
-        assert "wafi/wafi-deadbeef" in orphaned
+        assert "bassera/bassera-deadbeef" in orphaned
 
         # Delete them
         if orphaned:
@@ -741,10 +741,10 @@ class TestOrphanedBranchPruning:
 
         # Verify gone
         result = subprocess.run(
-            ["git", "branch", "--list", "wafi/wafi-deadbeef"],
+            ["git", "branch", "--list", "bassera/bassera-deadbeef"],
             capture_output=True, text=True, cwd=str(git_repo),
         )
-        assert "wafi/wafi-deadbeef" not in result.stdout
+        assert "bassera/bassera-deadbeef" not in result.stdout
 
     def test_prunes_orphaned_pr_branch(self, git_repo):
         """pr-* branches should be deleted during pruning."""
@@ -813,7 +813,7 @@ class TestOrphanedBranchPruning:
         orphaned = [
             b for b in all_branches
             if b not in active_branches
-            and (b.startswith("wafi/wafi-") or b.startswith("pr-"))
+            and (b.startswith("bassera/bassera-") or b.startswith("pr-"))
         ]
         assert "main" not in orphaned
 

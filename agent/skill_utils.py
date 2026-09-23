@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from wafi_constants import get_config_path, get_skills_dir
+from bassera_constants import get_config_path, get_skills_dir
 
 logger = logging.getLogger(__name__)
 
@@ -123,8 +123,8 @@ def get_disabled_skill_names(platform: str | None = None) -> Set[str]:
 
     Args:
         platform: Explicit platform name (e.g. ``"telegram"``).  When
-            *None*, resolves from ``HERMES_PLATFORM`` or
-            ``HERMES_SESSION_PLATFORM`` env vars.  Falls back to the
+            *None*, resolves from ``BASSERA_PLATFORM`` or
+            ``BASSERA_SESSION_PLATFORM`` env vars.  Falls back to the
             global disabled list when no platform is determined.
 
     Reads the config file directly (no CLI config imports) to stay
@@ -148,8 +148,8 @@ def get_disabled_skill_names(platform: str | None = None) -> Set[str]:
     from gateway.session_context import get_session_env
     resolved_platform = (
         platform
-        or os.getenv("HERMES_PLATFORM")
-        or get_session_env("HERMES_SESSION_PLATFORM")
+        or os.getenv("BASSERA_PLATFORM")
+        or get_session_env("BASSERA_SESSION_PLATFORM")
     )
     if resolved_platform:
         platform_disabled = (skills_cfg.get("platform_disabled") or {}).get(
@@ -176,7 +176,7 @@ def get_external_skills_dirs() -> List[Path]:
 
     Each entry is expanded (``~`` and ``${VAR}``) and resolved to an absolute
     path.  Only directories that actually exist are returned.  Duplicates and
-    paths that resolve to the local ``~/.wafi/skills/`` are silently skipped.
+    paths that resolve to the local ``~/.bassera/skills/`` are silently skipped.
     """
     config_path = get_config_path()
     if not config_path.exists():
@@ -225,7 +225,7 @@ def get_external_skills_dirs() -> List[Path]:
 
 
 def get_all_skills_dirs() -> List[Path]:
-    """Return all skill directories: local ``~/.wafi/skills/`` first, then external.
+    """Return all skill directories: local ``~/.bassera/skills/`` first, then external.
 
     The local dir is always first (and always included even if it doesn't exist
     yet — callers handle that).  External dirs follow in config order.
@@ -244,14 +244,14 @@ def extract_skill_conditions(frontmatter: Dict[str, Any]) -> Dict[str, List]:
     # Handle cases where metadata is not a dict (e.g., a string from malformed YAML)
     if not isinstance(metadata, dict):
         metadata = {}
-    wafi = metadata.get("wafi") or {}
-    if not isinstance(wafi, dict):
-        wafi = {}
+    bassera = metadata.get("bassera") or {}
+    if not isinstance(bassera, dict):
+        bassera = {}
     return {
-        "fallback_for_toolsets": wafi.get("fallback_for_toolsets", []),
-        "requires_toolsets": wafi.get("requires_toolsets", []),
-        "fallback_for_tools": wafi.get("fallback_for_tools", []),
-        "requires_tools": wafi.get("requires_tools", []),
+        "fallback_for_toolsets": bassera.get("fallback_for_toolsets", []),
+        "requires_toolsets": bassera.get("requires_toolsets", []),
+        "fallback_for_tools": bassera.get("fallback_for_tools", []),
+        "requires_tools": bassera.get("requires_tools", []),
     }
 
 
@@ -264,7 +264,7 @@ def extract_skill_config_vars(frontmatter: Dict[str, Any]) -> List[Dict[str, Any
     Skills declare config.yaml settings they need via::
 
         metadata:
-          wafi:
+          bassera:
             config:
               - key: wiki.path
                 description: Path to the LLM Wiki knowledge base directory
@@ -277,10 +277,10 @@ def extract_skill_config_vars(frontmatter: Dict[str, Any]) -> List[Dict[str, Any
     metadata = frontmatter.get("metadata")
     if not isinstance(metadata, dict):
         return []
-    wafi = metadata.get("wafi")
-    if not isinstance(wafi, dict):
+    bassera = metadata.get("bassera")
+    if not isinstance(bassera, dict):
         return []
-    raw = wafi.get("config")
+    raw = bassera.get("config")
     if not raw:
         return []
     if isinstance(raw, dict):

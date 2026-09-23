@@ -14,11 +14,11 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from wafi_cli.config import get_wafi_home
+from bassera_cli.config import get_bassera_home
 
 logger = logging.getLogger(__name__)
 
-_SESSIONS_DIR = get_wafi_home() / "sessions"
+_SESSIONS_DIR = get_bassera_home() / "sessions"
 _SESSIONS_INDEX = _SESSIONS_DIR / "sessions.json"
 
 
@@ -118,7 +118,7 @@ def _append_to_sqlite(session_id: str, message: dict) -> None:
     """Append a message to the SQLite session database."""
     db = None
     try:
-        from wafi_state import SessionDB
+        from bassera_state import SessionDB
         db = SessionDB()
         db.append_message(
             session_id=session_id,

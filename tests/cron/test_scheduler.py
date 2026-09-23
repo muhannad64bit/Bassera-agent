@@ -638,12 +638,12 @@ class TestRunJobSessionPersistence:
         }
         fake_db = MagicMock()
 
-        with patch("cron.scheduler._wafi_home", tmp_path), \
+        with patch("cron.scheduler._bassera_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
-             patch("wafi_state.SessionDB", return_value=fake_db), \
+             patch("bassera_state.SessionDB", return_value=fake_db), \
              patch(
-                 "wafi_cli.runtime_provider.resolve_runtime_provider",
+                 "bassera_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "test-key",
                      "base_url": "https://example.invalid/v1",
@@ -686,12 +686,12 @@ class TestRunJobSessionPersistence:
         }
         fake_db = MagicMock()
 
-        with patch("cron.scheduler._wafi_home", tmp_path), \
+        with patch("cron.scheduler._bassera_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
-             patch("wafi_state.SessionDB", return_value=fake_db), \
+             patch("bassera_state.SessionDB", return_value=fake_db), \
              patch(
-                 "wafi_cli.runtime_provider.resolve_runtime_provider",
+                 "bassera_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "***",
                      "base_url": "https://example.invalid/v1",
@@ -735,7 +735,7 @@ class TestRunJobSessionPersistence:
 
         fake_db = MagicMock()
 
-        with patch("cron.scheduler._wafi_home", tmp_path), \
+        with patch("cron.scheduler._bassera_home", tmp_path), \
              patch("cron.scheduler.get_due_jobs", return_value=[job]), \
              patch("cron.scheduler.advance_next_run"), \
              patch("cron.scheduler.mark_job_run") as mock_mark, \
@@ -763,24 +763,24 @@ class TestRunJobSessionPersistence:
 
         (tmp_path / ".env").write_text("TELEGRAM_HOME_CHANNEL=-2002\n")
         monkeypatch.delenv("TELEGRAM_HOME_CHANNEL", raising=False)
-        monkeypatch.delenv("HERMES_CRON_AUTO_DELIVER_PLATFORM", raising=False)
-        monkeypatch.delenv("HERMES_CRON_AUTO_DELIVER_CHAT_ID", raising=False)
-        monkeypatch.delenv("HERMES_CRON_AUTO_DELIVER_THREAD_ID", raising=False)
+        monkeypatch.delenv("BASSERA_CRON_AUTO_DELIVER_PLATFORM", raising=False)
+        monkeypatch.delenv("BASSERA_CRON_AUTO_DELIVER_CHAT_ID", raising=False)
+        monkeypatch.delenv("BASSERA_CRON_AUTO_DELIVER_THREAD_ID", raising=False)
 
         class FakeAgent:
             def __init__(self, *args, **kwargs):
                 pass
 
             def run_conversation(self, *args, **kwargs):
-                seen["platform"] = os.getenv("HERMES_CRON_AUTO_DELIVER_PLATFORM")
-                seen["chat_id"] = os.getenv("HERMES_CRON_AUTO_DELIVER_CHAT_ID")
-                seen["thread_id"] = os.getenv("HERMES_CRON_AUTO_DELIVER_THREAD_ID")
+                seen["platform"] = os.getenv("BASSERA_CRON_AUTO_DELIVER_PLATFORM")
+                seen["chat_id"] = os.getenv("BASSERA_CRON_AUTO_DELIVER_CHAT_ID")
+                seen["thread_id"] = os.getenv("BASSERA_CRON_AUTO_DELIVER_THREAD_ID")
                 return {"final_response": "ok"}
 
-        with patch("cron.scheduler._wafi_home", tmp_path), \
-             patch("wafi_state.SessionDB", return_value=fake_db), \
+        with patch("cron.scheduler._bassera_home", tmp_path), \
+             patch("bassera_state.SessionDB", return_value=fake_db), \
              patch(
-                 "wafi_cli.runtime_provider.resolve_runtime_provider",
+                 "bassera_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "***",
                      "base_url": "https://example.invalid/v1",
@@ -800,9 +800,9 @@ class TestRunJobSessionPersistence:
             "chat_id": "-2002",
             "thread_id": None,
         }
-        assert os.getenv("HERMES_CRON_AUTO_DELIVER_PLATFORM") is None
-        assert os.getenv("HERMES_CRON_AUTO_DELIVER_CHAT_ID") is None
-        assert os.getenv("HERMES_CRON_AUTO_DELIVER_THREAD_ID") is None
+        assert os.getenv("BASSERA_CRON_AUTO_DELIVER_PLATFORM") is None
+        assert os.getenv("BASSERA_CRON_AUTO_DELIVER_CHAT_ID") is None
+        assert os.getenv("BASSERA_CRON_AUTO_DELIVER_THREAD_ID") is None
         fake_db.close.assert_called_once()
 
 
@@ -820,7 +820,7 @@ class TestRunJobConfigLogging:
             "prompt": "hello",
         }
 
-        with patch("cron.scheduler._wafi_home", tmp_path), \
+        with patch("cron.scheduler._bassera_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
              patch("run_agent.AIAgent") as mock_agent_cls:
@@ -849,7 +849,7 @@ class TestRunJobConfigLogging:
             "prompt": "hello",
         }
 
-        with patch("cron.scheduler._wafi_home", tmp_path), \
+        with patch("cron.scheduler._bassera_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
              patch("run_agent.AIAgent") as mock_agent_cls:
@@ -888,12 +888,12 @@ class TestRunJobSkillBacked:
             assert "NOTION_API_KEY" in get_all_passthrough()
             return {"final_response": "ok"}
 
-        with patch("cron.scheduler._wafi_home", tmp_path), \
+        with patch("cron.scheduler._bassera_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
-             patch("wafi_state.SessionDB", return_value=fake_db), \
+             patch("bassera_state.SessionDB", return_value=fake_db), \
              patch(
-                 "wafi_cli.runtime_provider.resolve_runtime_provider",
+                 "bassera_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "***",
                      "base_url": "https://example.invalid/v1",
@@ -947,13 +947,13 @@ class TestRunJobSkillBacked:
             assert any("google_token.json" in v for v in registered.values())
             return {"final_response": "ok"}
 
-        with patch("cron.scheduler._wafi_home", tmp_path), \
+        with patch("cron.scheduler._bassera_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
-             patch("tools.credential_files._resolve_wafi_home", return_value=tmp_path), \
+             patch("tools.credential_files._resolve_bassera_home", return_value=tmp_path), \
              patch("dotenv.load_dotenv"), \
-             patch("wafi_state.SessionDB", return_value=fake_db), \
+             patch("bassera_state.SessionDB", return_value=fake_db), \
              patch(
-                 "wafi_cli.runtime_provider.resolve_runtime_provider",
+                 "bassera_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "***",
                      "base_url": "https://example.invalid/v1",
@@ -986,12 +986,12 @@ class TestRunJobSkillBacked:
 
         fake_db = MagicMock()
 
-        with patch("cron.scheduler._wafi_home", tmp_path), \
+        with patch("cron.scheduler._bassera_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
-             patch("wafi_state.SessionDB", return_value=fake_db), \
+             patch("bassera_state.SessionDB", return_value=fake_db), \
              patch(
-                 "wafi_cli.runtime_provider.resolve_runtime_provider",
+                 "bassera_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "***",
                      "base_url": "https://example.invalid/v1",
@@ -1032,12 +1032,12 @@ class TestRunJobSkillBacked:
         def _skill_view(name):
             return json.dumps({"success": True, "content": f"# {name}\nInstructions for {name}."})
 
-        with patch("cron.scheduler._wafi_home", tmp_path), \
+        with patch("cron.scheduler._bassera_home", tmp_path), \
              patch("cron.scheduler._resolve_origin", return_value=None), \
              patch("dotenv.load_dotenv"), \
-             patch("wafi_state.SessionDB", return_value=fake_db), \
+             patch("bassera_state.SessionDB", return_value=fake_db), \
              patch(
-                 "wafi_cli.runtime_provider.resolve_runtime_provider",
+                 "bassera_cli.runtime_provider.resolve_runtime_provider",
                  return_value={
                      "api_key": "***",
                      "base_url": "https://example.invalid/v1",
@@ -1258,7 +1258,7 @@ class TestRunJobWakeGate:
             "requested_provider": None,
         }
         with patch(
-            "wafi_cli.runtime_provider.resolve_runtime_provider",
+            "bassera_cli.runtime_provider.resolve_runtime_provider",
             return_value=fake_runtime,
         ):
             yield

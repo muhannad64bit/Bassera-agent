@@ -28,7 +28,7 @@ from typing import List, Dict, Any, Set, Optional
 
 # Shared tool list for CLI and all messaging platform toolsets.
 # Edit this once to update all platforms simultaneously.
-_HERMES_CORE_TOOLS = [
+_BASSERA_CORE_TOOLS = [
     # Web
     "web_search", "web_extract",
     # Terminal + process management
@@ -232,13 +232,13 @@ TOOLSETS = {
     },
     
     # ==========================================================================
-    # Full Wafi toolsets (CLI + messaging platforms)
+    # Full Bassera toolsets (CLI + messaging platforms)
     #
     # All platforms share the same core tools (including send_message,
     # which is gated on gateway running via its check_fn).
     # ==========================================================================
 
-    "wafi-acp": {
+    "bassera-acp": {
         "description": "Editor integration (VS Code, Zed, JetBrains) — coding-focused tools without messaging, audio, or clarify UI",
         "tools": [
             "web_search", "web_extract",
@@ -257,7 +257,7 @@ TOOLSETS = {
         "includes": []
     },
 
-    "wafi-api-server": {
+    "bassera-api-server": {
         "description": "OpenAI-compatible API server — full agent tools accessible via HTTP (no interactive UI tools like clarify or send_message)",
         "tools": [
             # Web
@@ -290,127 +290,127 @@ TOOLSETS = {
         "includes": []
     },
     
-    "wafi-cli": {
+    "bassera-cli": {
         "description": "Full interactive CLI toolset - all default tools plus cronjob management",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
     
-    "wafi-telegram": {
+    "bassera-telegram": {
         "description": "Telegram bot toolset - full access for personal use (terminal has safety checks)",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
     
-    "wafi-discord": {
+    "bassera-discord": {
         "description": "Discord bot toolset - full access (terminal has safety checks via dangerous command approval)",
-        "tools": _HERMES_CORE_TOOLS + [
+        "tools": _BASSERA_CORE_TOOLS + [
             # Discord server introspection & management (gated on DISCORD_BOT_TOKEN via check_fn)
             "discord_server",
         ],
         "includes": []
     },
     
-    "wafi-whatsapp": {
+    "bassera-whatsapp": {
         "description": "WhatsApp bot toolset - similar to Telegram (personal messaging, more trusted)",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
     
-    "wafi-slack": {
+    "bassera-slack": {
         "description": "Slack bot toolset - full access for workspace use (terminal has safety checks)",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
     
-    "wafi-signal": {
+    "bassera-signal": {
         "description": "Signal bot toolset - encrypted messaging platform (full access)",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-bluebubbles": {
+    "bassera-bluebubbles": {
         "description": "BlueBubbles iMessage bot toolset - Apple iMessage via local BlueBubbles server",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-homeassistant": {
+    "bassera-homeassistant": {
         "description": "Home Assistant bot toolset - smart home event monitoring and control",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-email": {
-        "description": "Email bot toolset - interact with Wafi via email (IMAP/SMTP)",
-        "tools": _HERMES_CORE_TOOLS,
+    "bassera-email": {
+        "description": "Email bot toolset - interact with Bassera via email (IMAP/SMTP)",
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-mattermost": {
+    "bassera-mattermost": {
         "description": "Mattermost bot toolset - self-hosted team messaging (full access)",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-matrix": {
+    "bassera-matrix": {
         "description": "Matrix bot toolset - decentralized encrypted messaging (full access)",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-dingtalk": {
+    "bassera-dingtalk": {
         "description": "DingTalk bot toolset - enterprise messaging platform (full access)",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-feishu": {
+    "bassera-feishu": {
         "description": "Feishu/Lark bot toolset - enterprise messaging via Feishu/Lark (full access)",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-weixin": {
+    "bassera-weixin": {
         "description": "Weixin bot toolset - personal WeChat messaging via iLink (full access)",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-qqbot": {
+    "bassera-qqbot": {
         "description": "QQBot toolset - QQ messaging via Official Bot API v2 (full access)",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-wecom": {
+    "bassera-wecom": {
         "description": "WeCom bot toolset - enterprise WeChat messaging (full access)",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-wecom-callback": {
+    "bassera-wecom-callback": {
         "description": "WeCom callback toolset - enterprise self-built app messaging (full access)",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-sms": {
-        "description": "SMS bot toolset - interact with Wafi via SMS (Twilio)",
-        "tools": _HERMES_CORE_TOOLS,
+    "bassera-sms": {
+        "description": "SMS bot toolset - interact with Bassera via SMS (Twilio)",
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-webhook": {
+    "bassera-webhook": {
         "description": "Webhook toolset - receive and process external webhook events",
-        "tools": _HERMES_CORE_TOOLS,
+        "tools": _BASSERA_CORE_TOOLS,
         "includes": []
     },
 
-    "wafi-gateway": {
+    "bassera-gateway": {
         "description": "Gateway toolset - union of all messaging platform tools",
         "tools": [],
-        "includes": ["wafi-telegram", "wafi-discord", "wafi-whatsapp", "wafi-slack", "wafi-signal", "wafi-bluebubbles", "wafi-homeassistant", "wafi-email", "wafi-sms", "wafi-mattermost", "wafi-matrix", "wafi-dingtalk", "wafi-feishu", "wafi-wecom", "wafi-wecom-callback", "wafi-weixin", "wafi-qqbot", "wafi-webhook"]
+        "includes": ["bassera-telegram", "bassera-discord", "bassera-whatsapp", "bassera-slack", "bassera-signal", "bassera-bluebubbles", "bassera-homeassistant", "bassera-email", "bassera-sms", "bassera-mattermost", "bassera-matrix", "bassera-dingtalk", "bassera-feishu", "bassera-wecom", "bassera-wecom-callback", "bassera-weixin", "bassera-qqbot", "bassera-webhook"]
     }
 }
 

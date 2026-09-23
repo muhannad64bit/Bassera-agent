@@ -1,8 +1,8 @@
 # Terminal Test Environment -- Default Configuration
 #
-# Simple file-creation tasks for validating the full Atropos + wafi-agent stack.
+# Simple file-creation tasks for validating the full Atropos + bassera-agent stack.
 # Uses Modal terminal backend and OpenRouter (Claude) for inference.
-# API keys loaded from ~/wafi-agent/.env
+# API keys loaded from ~/bassera-agent/.env
 #
 # Usage:
 #   run-api
@@ -17,8 +17,8 @@ env:
   total_steps: 3
   steps_per_eval: 3
   terminal_backend: "modal"
-  tool_call_parser: "wafi"
-  tokenizer_name: "NousResearch/DeepWafi-3-Llama-3-3B-Preview"
+  tool_call_parser: "bassera"
+  tokenizer_name: "NousResearch/DeepBassera-3-Llama-3-3B-Preview"
   ensure_scores_are_not_same: false
   use_wandb: false
   system_prompt: >

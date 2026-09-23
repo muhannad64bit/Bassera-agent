@@ -9,7 +9,7 @@ from unittest.mock import patch, MagicMock, AsyncMock
 import pytest
 
 from tools.mcp_oauth import (
-    WafiTokenStorage,
+    BasseraTokenStorage,
     OAuthNonInteractiveError,
     build_oauth_auth,
     remove_oauth_tokens,
@@ -22,13 +22,13 @@ from tools.mcp_oauth import (
 
 
 # ---------------------------------------------------------------------------
-# WafiTokenStorage
+# BasseraTokenStorage
 # ---------------------------------------------------------------------------
 
-class TestWafiTokenStorage:
+class TestBasseraTokenStorage:
     def test_roundtrip_tokens(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        storage = WafiTokenStorage("test-server")
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
+        storage = BasseraTokenStorage("test-server")
 
         import asyncio
 
@@ -51,15 +51,15 @@ class TestWafiTokenStorage:
         assert data["access_token"] == "abc123"
 
     def test_roundtrip_client_info(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        storage = WafiTokenStorage("test-server")
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
+        storage = BasseraTokenStorage("test-server")
         import asyncio
 
         assert asyncio.run(storage.get_client_info()) is None
 
         mock_client = MagicMock()
         mock_client.model_dump.return_value = {
-            "client_id": "wafi-123",
+            "client_id": "bassera-123",
             "client_secret": "secret",
         }
         asyncio.run(storage.set_client_info(mock_client))
@@ -68,8 +68,8 @@ class TestWafiTokenStorage:
         assert client_path.exists()
 
     def test_remove_cleans_up(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        storage = WafiTokenStorage("test-server")
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
+        storage = BasseraTokenStorage("test-server")
 
         # Create files
         d = tmp_path / "mcp-tokens"
@@ -82,8 +82,8 @@ class TestWafiTokenStorage:
         assert not (d / "test-server.client.json").exists()
 
     def test_has_cached_tokens(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        storage = WafiTokenStorage("my-server")
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
+        storage = BasseraTokenStorage("my-server")
 
         assert not storage.has_cached_tokens()
 
@@ -94,8 +94,8 @@ class TestWafiTokenStorage:
         assert storage.has_cached_tokens()
 
     def test_corrupt_tokens_returns_none(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        storage = WafiTokenStorage("bad-server")
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
+        storage = BasseraTokenStorage("bad-server")
 
         d = tmp_path / "mcp-tokens"
         d.mkdir(parents=True)
@@ -105,8 +105,8 @@ class TestWafiTokenStorage:
         assert asyncio.run(storage.get_tokens()) is None
 
     def test_corrupt_client_info_returns_none(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        storage = WafiTokenStorage("bad-server")
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
+        storage = BasseraTokenStorage("bad-server")
 
         d = tmp_path / "mcp-tokens"
         d.mkdir(parents=True)
@@ -127,7 +127,7 @@ class TestBuildOAuthAuth:
         except ImportError:
             pytest.skip("MCP SDK auth not available")
 
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         auth = build_oauth_auth("test", "https://example.com/mcp")
         assert isinstance(auth, OAuthClientProvider)
 
@@ -143,7 +143,7 @@ class TestBuildOAuthAuth:
         except ImportError:
             pytest.skip("MCP SDK auth not available")
 
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         build_oauth_auth("slack", "https://slack.example.com/mcp", {
             "client_id": "my-app-id",
             "client_secret": "my-secret",
@@ -162,7 +162,7 @@ class TestBuildOAuthAuth:
         except ImportError:
             pytest.skip("MCP SDK auth not available")
 
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         provider = build_oauth_auth("scoped", "https://example.com/mcp", {
             "scope": "read write admin",
         })
@@ -216,28 +216,28 @@ class TestPathTraversal:
     """Verify server_name is sanitized to prevent path traversal."""
 
     def test_path_traversal_blocked(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        storage = WafiTokenStorage("../../.ssh/config")
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
+        storage = BasseraTokenStorage("../../.ssh/config")
         path = storage._tokens_path()
         # Should stay within mcp-tokens directory
         assert "mcp-tokens" in str(path)
         assert ".ssh" not in str(path.resolve())
 
     def test_dots_and_slashes_sanitized(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        storage = WafiTokenStorage("../../../etc/passwd")
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
+        storage = BasseraTokenStorage("../../../etc/passwd")
         path = storage._tokens_path()
         resolved = path.resolve()
         assert resolved.is_relative_to((tmp_path / "mcp-tokens").resolve())
 
     def test_normal_name_unchanged(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        storage = WafiTokenStorage("my-mcp-server")
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
+        storage = BasseraTokenStorage("my-mcp-server")
         assert "my-mcp-server.json" in str(storage._tokens_path())
 
     def test_special_chars_sanitized(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        storage = WafiTokenStorage("server@host:8080/path")
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
+        storage = BasseraTokenStorage("server@host:8080/path")
         path = storage._tokens_path()
         assert "@" not in path.name
         assert ":" not in path.name
@@ -308,7 +308,7 @@ class TestOAuthPortSharing:
         except ImportError:
             pytest.skip("MCP SDK auth not available")
 
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         build_oauth_auth("test-port", "https://example.com/mcp")
         assert mod._oauth_port is not None
         assert isinstance(mod._oauth_port, int)
@@ -321,7 +321,7 @@ class TestOAuthPortSharing:
 
 class TestRemoveOAuthTokens:
     def test_removes_files(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         d = tmp_path / "mcp-tokens"
         d.mkdir()
         (d / "myserver.json").write_text("{}")
@@ -333,7 +333,7 @@ class TestRemoveOAuthTokens:
         assert not (d / "myserver.client.json").exists()
 
     def test_no_error_when_files_missing(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         remove_oauth_tokens("nonexistent")  # should not raise
 
 
@@ -392,7 +392,7 @@ class TestBuildOAuthAuthNonInteractive:
         except ImportError:
             pytest.skip("MCP SDK auth not available")
 
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         mock_stdin = MagicMock()
         mock_stdin.isatty.return_value = False
         monkeypatch.setattr("tools.mcp_oauth.sys.stdin", mock_stdin)
@@ -412,7 +412,7 @@ class TestBuildOAuthAuthNonInteractive:
         except ImportError:
             pytest.skip("MCP SDK auth not available")
 
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         mock_stdin = MagicMock()
         mock_stdin.isatty.return_value = False
         monkeypatch.setattr("tools.mcp_oauth.sys.stdin", mock_stdin)

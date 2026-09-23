@@ -6,8 +6,8 @@
 
 **A self-improving AI agent, hardened for power, stability, and security.**
 
-Bassera-agent is a fork of [wafi-agent](https://github.com/NousResearch/wafi-agent)
-(which itself evolved from hermes-agent), carrying all of its features — the
+Bassera-agent is a fork of [bassera-agent](https://github.com/NousResearch/bassera-agent)
+(which itself evolved from bassera-agent), carrying all of its features — the
 cognitive loop, persistent memory, skills, the messaging gateway, the cron
 scheduler, the terminal UI — plus a focused pass of correctness and security
 hardening (see **What Bassera fixes** below).
@@ -20,7 +20,7 @@ infrastructure. Talk to it from Telegram while it works on a cloud VM.
 
 Use any model you want — Nous Portal, OpenRouter (200+ models), NVIDIA NIM,
 z.ai/GLM, Kimi/Moonshot, MiniMax, Hugging Face, OpenAI, Anthropic, or your own
-endpoint. Switch with `bassera model` (the `wafi` entry point also works).
+endpoint. Switch with `bassera model` (the `bassera` entry point also works).
 
 | | |
 |---|---|
@@ -49,11 +49,11 @@ Both entry points are installed:
 
 ```bash
 bassera              # Bassera identity
-wafi                 # identical behavior, Wafi identity
+bassera                 # identical behavior, Bassera identity
 ```
 
-`BASSERA_HOME` redirects this installation's home directory when `HERMES_HOME`
-is unset (e.g. `BASSERA_HOME=~/.bassera`). Otherwise the standard `~/.wafi`
+`BASSERA_HOME` redirects this installation's home directory when `BASSERA_HOME`
+is unset (e.g. `BASSERA_HOME=~/.bassera`). Otherwise the standard `~/.bassera`
 home is used.
 
 ## Common Commands
@@ -92,10 +92,10 @@ Each of these was a real defect found by running the full test suite
 
 **Security**
 - Dangerous-command approval now catches writes to the agent's credential
-  file via the real `HERMES_HOME` env var (`echo x > $HERMES_HOME/.env`
+  file via the real `BASSERA_HOME` env var (`echo x > $BASSERA_HOME/.env`
   previously bypassed approval entirely).
 - Tests can no longer leak pairing/rate-limit state into the real
-  `~/.wafi` home directory.
+  `~/.bassera` home directory.
 
 **Stability**
 - File tools no longer refuse writes to the OS-designated user temp
@@ -107,9 +107,9 @@ Each of these was a real defect found by running the full test suite
   budget instead of competing with curated free-text notes.
 - "Avoid destructive" is no longer scored as a *contradiction* of safety
   doctrine in the owner-DNA engine.
-- `import wafi_cli.main` no longer crashes when some other program's
+- `import bassera_cli.main` no longer crashes when some other program's
   `-p <value>` flag is in `sys.argv` (e.g. pytest plugins).
-- The `./wafi` launcher actually works (it imported a module that no
+- The `./bassera` launcher actually works (it imported a module that no
   longer exists).
 - `scripts/run_tests.sh` runs on macOS (bash 3.2 empty-array crash),
   uv-created venvs, and low fd limits.
@@ -126,14 +126,14 @@ The upstream documentation remains the most complete reference:
 
 | Section | What's Covered |
 |---------|---------------|
-| [CLI Usage](https://wafi-agent.nousresearch.com/docs/user-guide/cli) | Commands, keybindings, personalities, sessions |
-| [Configuration](https://wafi-agent.nousresearch.com/docs/user-guide/configuration) | Config file, providers, models, all options |
-| [Messaging Gateway](https://wafi-agent.nousresearch.com/docs/user-guide/messaging) | Telegram, Discord, Slack, WhatsApp, Signal, Home Assistant |
-| [Security](https://wafi-agent.nousresearch.com/docs/user-guide/security) | Command approval, DM pairing, container isolation |
-| [Tools & Toolsets](https://wafi-agent.nousresearch.com/docs/user-guide/features/tools) | 40+ tools, toolset system, terminal backends |
-| [Skills System](https://wafi-agent.nousresearch.com/docs/user-guide/features/skills) | Procedural memory, Skills Hub, creating skills |
-| [Memory](https://wafi-agent.nousresearch.com/docs/user-guide/features/memory) | Persistent memory, user profiles, best practices |
-| [Cron Scheduling](https://wafi-agent.nousresearch.com/docs/user-guide/features/cron) | Scheduled tasks with platform delivery |
+| [CLI Usage](https://bassera-agent.nousresearch.com/docs/user-guide/cli) | Commands, keybindings, personalities, sessions |
+| [Configuration](https://bassera-agent.nousresearch.com/docs/user-guide/configuration) | Config file, providers, models, all options |
+| [Messaging Gateway](https://bassera-agent.nousresearch.com/docs/user-guide/messaging) | Telegram, Discord, Slack, WhatsApp, Signal, Home Assistant |
+| [Security](https://bassera-agent.nousresearch.com/docs/user-guide/security) | Command approval, DM pairing, container isolation |
+| [Tools & Toolsets](https://bassera-agent.nousresearch.com/docs/user-guide/features/tools) | 40+ tools, toolset system, terminal backends |
+| [Skills System](https://bassera-agent.nousresearch.com/docs/user-guide/features/skills) | Procedural memory, Skills Hub, creating skills |
+| [Memory](https://bassera-agent.nousresearch.com/docs/user-guide/features/memory) | Persistent memory, user profiles, best practices |
+| [Cron Scheduling](https://bassera-agent.nousresearch.com/docs/user-guide/features/cron) | Scheduled tasks with platform delivery |
 
 ## Development
 
@@ -157,5 +157,5 @@ npm run build
 ## Credits & License
 
 Bassera-agent builds directly on the outstanding work of the
-[wafi-agent](https://github.com/NousResearch/wafi-agent) and
-hermes-agent communities. MIT — see [LICENSE](LICENSE).
+[bassera-agent](https://github.com/NousResearch/bassera-agent) and
+bassera-agent communities. MIT — see [LICENSE](LICENSE).

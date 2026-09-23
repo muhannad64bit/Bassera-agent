@@ -5,17 +5,17 @@ When users send stickers, we describe them via the vision tool and cache
 the descriptions keyed by file_unique_id so we don't re-analyze the same
 sticker image on every send. Descriptions are concise (1-2 sentences).
 
-Cache location: ~/.wafi/sticker_cache.json
+Cache location: ~/.bassera/sticker_cache.json
 """
 
 import json
 import time
 from typing import Optional
 
-from wafi_cli.config import get_wafi_home
+from bassera_cli.config import get_bassera_home
 
 
-CACHE_PATH = get_wafi_home() / "sticker_cache.json"
+CACHE_PATH = get_bassera_home() / "sticker_cache.json"
 
 # Vision prompt for describing stickers -- kept concise to save tokens
 STICKER_VISION_PROMPT = (

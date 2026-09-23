@@ -32,7 +32,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
 from pathlib import Path
-from wafi_constants import get_wafi_home
+from bassera_constants import get_bassera_home
 from tools.binary_extensions import BINARY_EXTENSIONS
 
 
@@ -79,14 +79,14 @@ WRITE_DENIED_PREFIXES = [
 
 
 def _get_safe_write_root() -> Optional[str]:
-    """Return the resolved HERMES_WRITE_SAFE_ROOT path, or None if unset.
+    """Return the resolved BASSERA_WRITE_SAFE_ROOT path, or None if unset.
 
     When set, all write_file/patch operations are constrained to this
     directory tree.  Writes outside it are denied even if the target is
     not on the static deny list.  Opt-in hardening for gateway/messaging
     deployments that should only touch a workspace checkout.
     """
-    root = os.getenv("HERMES_WRITE_SAFE_ROOT", "")
+    root = os.getenv("BASSERA_WRITE_SAFE_ROOT", "")
     if not root:
         return None
     try:
@@ -107,19 +107,27 @@ def _is_write_denied(path: str) -> bool:
             return True
 
     # 1b) The agent's credential .env — resolved at CHECK time, not import
-    # time. get_wafi_home() reads HERMES_HOME, which can differ from the
+    # time. get_bassera_home() reads BASSERA_HOME, which can differ from the
     # value at module import (profiles are selected before other imports,
     # but the hermetic test fixture sets it per test). Freezing this at
     # import would leave the credential file unprotected whenever the
     # home changes after import. The DEFAULT home's .env is also protected
-    # even when a profile or custom HERMES_HOME is active, so a profile
+    # even when a profile or custom BASSERA_HOME is active, so a profile
     # session can't clobber the user's main install.
-    wafi_env = os.path.realpath(str(get_wafi_home() / ".env"))
-    if resolved == wafi_env:
+    bassera_env = os.path.realpath(str(get_bassera_home() / ".env"))
+    if resolved == bassera_env:
         return True
-    default_env = os.path.realpath(os.path.join(_HOME, ".wafi", ".env"))
-    if resolved == default_env:
-        return True
+    # The DEFAULT home's .env is also protected even when a profile or
+    # custom BASSERA_HOME is active, so a profile session can't clobber
+    # the user's main install. Both the new (.bassera) and the legacy
+    # (.wafi) default roots are protected so pre-rebrand installs keep
+    # their credential file guarded under every configuration.
+    for _default_root_name in (".bassera", ".wafi"):
+        default_env = os.path.realpath(
+            os.path.join(_HOME, _default_root_name, ".env")
+        )
+        if resolved == default_env:
+            return True
 
     # 2) Optional safe-root sandbox
     safe_root = _get_safe_write_root()

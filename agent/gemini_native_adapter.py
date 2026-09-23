@@ -1,6 +1,6 @@
 """OpenAI-compatible facade over Google AI Studio's native Gemini API.
 
-Wafi keeps ``api_mode='chat_completions'`` for the ``gemini`` provider so the
+Bassera keeps ``api_mode='chat_completions'`` for the ``gemini`` provider so the
 main agent loop can keep using its existing OpenAI-shaped message flow.
 This adapter is the transport shim that converts those OpenAI-style
 ``messages[]`` / ``tools[]`` requests into Gemini's native
@@ -8,7 +8,7 @@ This adapter is the transport shim that converts those OpenAI-style
 
 Why this exists
 ---------------
-Google's OpenAI-compatible endpoint has been brittle for Wafi's multi-turn
+Google's OpenAI-compatible endpoint has been brittle for Bassera's multi-turn
 agent/tool loop (auth churn, tool-call replay quirks, thought-signature
 requirements).  The native Gemini API is the canonical path and avoids the
 OpenAI-compat layer entirely.
@@ -43,7 +43,7 @@ def is_native_gemini_base_url(base_url: str) -> bool:
 
 
 class GeminiAPIError(Exception):
-    """Error shape compatible with Wafi retry/error classification."""
+    """Error shape compatible with Bassera retry/error classification."""
 
     def __init__(
         self,
@@ -731,7 +731,7 @@ class GeminiNativeClient:
             "Content-Type": "application/json",
             "Accept": "application/json",
             "x-goog-api-key": self.api_key,
-            "User-Agent": "wafi-agent (gemini-native)",
+            "User-Agent": "bassera-agent (gemini-native)",
         }
         headers.update(self._default_headers)
         return headers

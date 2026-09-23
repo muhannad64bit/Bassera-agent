@@ -1,12 +1,12 @@
 ---
 sidebar_position: 5
 title: "Bundled Skills Catalog"
-description: "Catalog of bundled skills that ship with Hermes Agent"
+description: "Catalog of bundled skills that ship with Bassera Agent"
 ---
 
 # Bundled Skills Catalog
 
-Hermes ships with a large built-in skill library copied into `~/.hermes/skills/` on install. This page catalogs the bundled skills that live in the repository under `skills/`.
+Bassera ships with a large built-in skill library copied into `~/.bassera/skills/` on install. This page catalogs the bundled skills that live in the repository under `skills/`.
 
 ## apple
 
@@ -27,7 +27,7 @@ Skills for spawning and orchestrating autonomous AI coding agents and multi-agen
 |-------|-------------|------|
 | `claude-code` | Delegate coding tasks to Claude Code (Anthropic's CLI agent). Use for building features, refactoring, PR reviews, and iterative coding. Requires the claude CLI installed. | `autonomous-ai-agents/claude-code` |
 | `codex` | Delegate coding tasks to OpenAI Codex CLI agent. Use for building features, refactoring, PR reviews, and batch issue fixing. Requires the codex CLI and a git repository. | `autonomous-ai-agents/codex` |
-| `hermes-agent` | Complete guide to using and extending Hermes Agent — CLI usage, setup, configuration, spawning additional agents, gateway platforms, skills, voice, tools, profiles, and a concise contributor reference. Load this skill when helping users configure Hermes, troubleshoot issues, s… | `autonomous-ai-agents/hermes-agent` |
+| `bassera-agent` | Complete guide to using and extending Bassera Agent — CLI usage, setup, configuration, spawning additional agents, gateway platforms, skills, voice, tools, profiles, and a concise contributor reference. Load this skill when helping users configure Bassera, troubleshoot issues, s… | `autonomous-ai-agents/bassera-agent` |
 | `opencode` | Delegate coding tasks to OpenCode CLI agent for feature implementation, refactoring, PR review, and long-running autonomous sessions. Requires the opencode CLI installed and authenticated. | `autonomous-ai-agents/opencode` |
 
 ## creative
@@ -64,7 +64,7 @@ DevOps and infrastructure automation skills.
 
 ## dogfood
 
-Internal dogfooding and QA skills used to test Hermes Agent itself.
+Internal dogfooding and QA skills used to test Bassera Agent itself.
 
 | Skill | Description | Path |
 |-------|-------------|------|
@@ -106,7 +106,7 @@ Skills for working with MCP (Model Context Protocol) servers, tools, and integra
 
 | Skill | Description | Path |
 |-------|-------------|------|
-| `native-mcp` | Built-in MCP (Model Context Protocol) client that connects to external MCP servers, discovers their tools, and registers them as native Hermes Agent tools. Supports stdio and HTTP transports with automatic reconnection, security filtering, and zero-config tool injection. | `mcp/native-mcp` |
+| `native-mcp` | Built-in MCP (Model Context Protocol) client that connects to external MCP servers, discovers their tools, and registers them as native Bassera Agent tools. Supports stdio and HTTP transports with automatic reconnection, security filtering, and zero-config tool injection. | `mcp/native-mcp` |
 
 ## media
 
@@ -188,7 +188,7 @@ Skills for document creation, presentations, spreadsheets, and other productivit
 
 | Skill | Description | Path |
 |-------|-------------|------|
-| `google-workspace` | Gmail, Calendar, Drive, Contacts, Sheets, and Docs integration for Hermes. Uses Hermes-managed OAuth2 setup, prefers the Google Workspace CLI (`gws`) when available for broader API coverage, and falls back to the Python client libraries otherwise. | `productivity/google-workspace` |
+| `google-workspace` | Gmail, Calendar, Drive, Contacts, Sheets, and Docs integration for Bassera. Uses Bassera-managed OAuth2 setup, prefers the Google Workspace CLI (`gws`) when available for broader API coverage, and falls back to the Python client libraries otherwise. | `productivity/google-workspace` |
 | `linear` | Manage Linear issues, projects, and teams via the GraphQL API. Create, update, search, and organize issues. Uses API key auth (no OAuth needed). All operations via curl — no dependencies. | `productivity/linear` |
 | `maps` | Location intelligence — geocode, reverse-geocode, nearby POI search (44 categories, coordinates or address via `--near`), driving/walking/cycling distance + time, turn-by-turn directions, timezone, bounding box + area, POI search in a rectangle. Uses OpenStreetMap + Overpass + OSRM. No API key needed. Telegram location-pin friendly. | `productivity/maps` |
 | `nano-pdf` | Edit PDFs with natural-language instructions using the nano-pdf CLI. Modify text, fix typos, update titles, and make content changes to specific pages without manual editing. | `productivity/nano-pdf` |
@@ -202,7 +202,7 @@ Skills for LLM red-teaming, jailbreaking, and safety filter bypass research.
 
 | Skill | Description | Path |
 |-------|-------------|------|
-| `godmode` | Jailbreak API-served LLMs using G0DM0D3 techniques — Parseltongue input obfuscation (33 techniques), GODMODE CLASSIC system prompt templates, ULTRAPLINIAN multi-model racing, encoding escalation, and Hermes-native prefill/system prompt integration. Use when a user wants to byp… | `red-teaming/godmode` |
+| `godmode` | Jailbreak API-served LLMs using G0DM0D3 techniques — Parseltongue input obfuscation (33 techniques), GODMODE CLASSIC system prompt templates, ULTRAPLINIAN multi-model racing, encoding escalation, and Bassera-native prefill/system prompt integration. Use when a user wants to byp… | `red-teaming/godmode` |
 
 ## research
 
@@ -238,7 +238,7 @@ General software-engineering skills — planning, reviewing, debugging, and test
 
 | Skill | Description | Path |
 |-------|-------------|------|
-| `plan` | Plan mode for Hermes — inspect context, write a markdown plan into the active workspace's `.hermes/plans/` directory, and do not execute the work. | `software-development/plan` |
+| `plan` | Plan mode for Bassera — inspect context, write a markdown plan into the active workspace's `.bassera/plans/` directory, and do not execute the work. | `software-development/plan` |
 | `requesting-code-review` | Pre-commit verification pipeline — static security scan, baseline-aware quality gates, independent reviewer subagent, and auto-fix loop. Use after code changes and before committing, pushing, or opening a PR. | `software-development/requesting-code-review` |
 | `subagent-driven-development` | Use when executing implementation plans with independent tasks. Dispatches fresh delegate_task per task with two-stage review (spec compliance then code quality). | `software-development/subagent-driven-development` |
 | `systematic-debugging` | Use when encountering any bug, test failure, or unexpected behavior. 4-phase root cause investigation — NO fixes without understanding the problem first. | `software-development/systematic-debugging` |
@@ -253,7 +253,7 @@ General software-engineering skills — planning, reviewing, debugging, and test
 Optional skills ship with the repository under `optional-skills/` but are **not active by default**. They cover heavier or niche use cases. Install them with:
 
 ```bash
-hermes skills install official/<category>/<skill>
+bassera skills install official/<category>/<skill>
 ```
 
 ## autonomous-ai-agents
@@ -273,7 +273,7 @@ hermes skills install official/<category>/<skill>
 
 | Skill | Description | Path |
 |-------|-------------|------|
-| `blender-mcp` | Control Blender directly from Hermes via socket connection to the blender-mcp addon. Create 3D objects, materials, animations, and run arbitrary Blender Python (bpy) code. | `creative/blender-mcp` |
+| `blender-mcp` | Control Blender directly from Bassera via socket connection to the blender-mcp addon. Create 3D objects, materials, animations, and run arbitrary Blender Python (bpy) code. | `creative/blender-mcp` |
 | `meme-generation` | Generate real meme images by picking a template and overlaying text with Pillow. Produces actual .png meme files. | `creative/meme-generation` |
 | `touchdesigner-mcp` | Control a running TouchDesigner instance via the twozero MCP plugin — create operators, set parameters, wire connections, execute Python, build real-time audio-reactive visuals and GLSL networks. 36 native tools. | `creative/touchdesigner-mcp` |
 
@@ -287,7 +287,7 @@ hermes skills install official/<category>/<skill>
 
 | Skill | Description | Path |
 |-------|-------------|------|
-| `agentmail` | Give the agent its own dedicated email inbox via AgentMail. Send, receive, and manage email autonomously using agent-owned email addresses (e.g. hermes-agent@agentmail.to). | `email/agentmail` |
+| `agentmail` | Give the agent its own dedicated email inbox via AgentMail. Send, receive, and manage email autonomously using agent-owned email addresses (e.g. bassera-agent@agentmail.to). | `email/agentmail` |
 
 ## health
 
@@ -305,13 +305,13 @@ hermes skills install official/<category>/<skill>
 
 | Skill | Description | Path |
 |-------|-------------|------|
-| `openclaw-migration` | Migrate a user's OpenClaw customization footprint into Hermes Agent. Imports Hermes-compatible memories, SOUL.md, command allowlists, user skills, and selected workspace assets from ~/.openclaw, then reports what could not be migrated and why. | `migration/openclaw-migration` |
+| `openclaw-migration` | Migrate a user's OpenClaw customization footprint into Bassera Agent. Imports Bassera-compatible memories, SOUL.md, command allowlists, user skills, and selected workspace assets from ~/.openclaw, then reports what could not be migrated and why. | `migration/openclaw-migration` |
 
 ## productivity
 
 | Skill | Description | Path |
 |-------|-------------|------|
-| `telephony` | Give Hermes phone capabilities — provision and persist a Twilio number, send and receive SMS/MMS, make direct calls, and place AI-driven outbound calls through Bland.ai or Vapi. | `productivity/telephony` |
+| `telephony` | Give Bassera phone capabilities — provision and persist a Twilio number, send and receive SMS/MMS, make direct calls, and place AI-driven outbound calls through Bland.ai or Vapi. | `productivity/telephony` |
 
 ## research
 

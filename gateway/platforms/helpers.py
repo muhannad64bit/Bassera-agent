@@ -214,8 +214,8 @@ class ThreadParticipationTracker:
         self._threads: set = self._load()
 
     def _state_path(self) -> Path:
-        from wafi_constants import get_wafi_home
-        return get_wafi_home() / f"{self._platform}_threads.json"
+        from bassera_constants import get_bassera_home
+        return get_bassera_home() / f"{self._platform}_threads.json"
 
     def _load(self) -> set:
         path = self._state_path()

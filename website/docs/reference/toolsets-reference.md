@@ -1,7 +1,7 @@
 ---
 sidebar_position: 4
 title: "Toolsets Reference"
-description: "Reference for Hermes core, composite, platform, and dynamic toolsets"
+description: "Reference for Bassera core, composite, platform, and dynamic toolsets"
 ---
 
 # Toolsets Reference
@@ -14,30 +14,30 @@ Every tool belongs to exactly one toolset. When you enable a toolset, all tools 
 
 - **Core** — A single logical group of related tools (e.g., `file` bundles `read_file`, `write_file`, `patch`, `search_files`)
 - **Composite** — Combines multiple core toolsets for a common scenario (e.g., `debugging` bundles file, terminal, and web tools)
-- **Platform** — A complete tool configuration for a specific deployment context (e.g., `hermes-cli` is the default for interactive CLI sessions)
+- **Platform** — A complete tool configuration for a specific deployment context (e.g., `bassera-cli` is the default for interactive CLI sessions)
 
 ## Configuring Toolsets
 
 ### Per-session (CLI)
 
 ```bash
-hermes chat --toolsets web,file,terminal
-hermes chat --toolsets debugging        # composite — expands to file + terminal + web
-hermes chat --toolsets all              # everything
+bassera chat --toolsets web,file,terminal
+bassera chat --toolsets debugging        # composite — expands to file + terminal + web
+bassera chat --toolsets all              # everything
 ```
 
 ### Per-platform (config.yaml)
 
 ```yaml
 toolsets:
-  - hermes-cli          # default for CLI
-  # - hermes-telegram   # override for Telegram gateway
+  - bassera-cli          # default for CLI
+  # - bassera-telegram   # override for Telegram gateway
 ```
 
 ### Interactive management
 
 ```bash
-hermes tools                            # curses UI to enable/disable per platform
+bassera tools                            # curses UI to enable/disable per platform
 ```
 
 Or in-session:
@@ -54,11 +54,11 @@ Or in-session:
 |---------|-------|---------|
 | `browser` | `browser_back`, `browser_cdp`, `browser_click`, `browser_console`, `browser_get_images`, `browser_navigate`, `browser_press`, `browser_scroll`, `browser_snapshot`, `browser_type`, `browser_vision`, `web_search` | Full browser automation. Includes `web_search` as a fallback for quick lookups. `browser_cdp` is a raw CDP passthrough gated on a reachable CDP endpoint — it only appears when `/browser connect` is active or `browser.cdp_url` is set. |
 | `clarify` | `clarify` | Ask the user a question when the agent needs clarification. |
-| `code_execution` | `execute_code` | Run Python scripts that call Hermes tools programmatically. |
+| `code_execution` | `execute_code` | Run Python scripts that call Bassera tools programmatically. |
 | `cronjob` | `cronjob` | Schedule and manage recurring tasks. |
 | `delegation` | `delegate_task` | Spawn isolated subagent instances for parallel work. |
 | `feishu_doc` | `feishu_doc_read` | Read Feishu/Lark document content. Used by the Feishu document-comment intelligent-reply handler. |
-| `feishu_drive` | `feishu_drive_add_comment`, `feishu_drive_list_comments`, `feishu_drive_list_comment_replies`, `feishu_drive_reply_comment` | Feishu/Lark drive comment operations. Scoped to the comment agent; not exposed on `hermes-cli` or other messaging toolsets. |
+| `feishu_drive` | `feishu_drive_add_comment`, `feishu_drive_list_comments`, `feishu_drive_list_comment_replies`, `feishu_drive_reply_comment` | Feishu/Lark drive comment operations. Scoped to the comment agent; not exposed on `bassera-cli` or other messaging toolsets. |
 | `file` | `patch`, `read_file`, `search_files`, `write_file` | File reading, writing, searching, and editing. |
 | `homeassistant` | `ha_call_service`, `ha_get_state`, `ha_list_entities`, `ha_list_services` | Smart home control via Home Assistant. Only available when `HASS_TOKEN` is set. |
 | `image_gen` | `image_generate` | Text-to-image generation via FAL.ai. |
@@ -86,32 +86,32 @@ These expand to multiple core toolsets, providing a convenient shorthand for com
 
 ## Platform Toolsets
 
-Platform toolsets define the complete tool configuration for a deployment target. Most messaging platforms use the same set as `hermes-cli`:
+Platform toolsets define the complete tool configuration for a deployment target. Most messaging platforms use the same set as `bassera-cli`:
 
-| Toolset | Differences from `hermes-cli` |
+| Toolset | Differences from `bassera-cli` |
 |---------|-------------------------------|
-| `hermes-cli` | Full toolset — all 36 core tools including `clarify`. The default for interactive CLI sessions. |
-| `hermes-acp` | Drops `clarify`, `cronjob`, `image_generate`, `send_message`, `text_to_speech`, homeassistant tools. Focused on coding tasks in IDE context. |
-| `hermes-api-server` | Drops `clarify`, `send_message`, and `text_to_speech`. Adds everything else — suitable for programmatic access where user interaction isn't possible. |
-| `hermes-telegram` | Same as `hermes-cli`. |
-| `hermes-discord` | Same as `hermes-cli`. |
-| `hermes-slack` | Same as `hermes-cli`. |
-| `hermes-whatsapp` | Same as `hermes-cli`. |
-| `hermes-signal` | Same as `hermes-cli`. |
-| `hermes-matrix` | Same as `hermes-cli`. |
-| `hermes-mattermost` | Same as `hermes-cli`. |
-| `hermes-email` | Same as `hermes-cli`. |
-| `hermes-sms` | Same as `hermes-cli`. |
-| `hermes-bluebubbles` | Same as `hermes-cli`. |
-| `hermes-dingtalk` | Same as `hermes-cli`. |
-| `hermes-feishu` | Same as `hermes-cli`. Note: the `feishu_doc` / `feishu_drive` toolsets are used only by the document-comment handler, not by the regular Feishu chat adapter. |
-| `hermes-qqbot` | Same as `hermes-cli`. |
-| `hermes-wecom` | Same as `hermes-cli`. |
-| `hermes-wecom-callback` | Same as `hermes-cli`. |
-| `hermes-weixin` | Same as `hermes-cli`. |
-| `hermes-homeassistant` | Same as `hermes-cli` plus the `homeassistant` toolset always on. |
-| `hermes-webhook` | Same as `hermes-cli`. |
-| `hermes-gateway` | Internal gateway orchestrator toolset — union of the broadest possible tool set when the gateway needs to accept any message source. |
+| `bassera-cli` | Full toolset — all 36 core tools including `clarify`. The default for interactive CLI sessions. |
+| `bassera-acp` | Drops `clarify`, `cronjob`, `image_generate`, `send_message`, `text_to_speech`, homeassistant tools. Focused on coding tasks in IDE context. |
+| `bassera-api-server` | Drops `clarify`, `send_message`, and `text_to_speech`. Adds everything else — suitable for programmatic access where user interaction isn't possible. |
+| `bassera-telegram` | Same as `bassera-cli`. |
+| `bassera-discord` | Same as `bassera-cli`. |
+| `bassera-slack` | Same as `bassera-cli`. |
+| `bassera-whatsapp` | Same as `bassera-cli`. |
+| `bassera-signal` | Same as `bassera-cli`. |
+| `bassera-matrix` | Same as `bassera-cli`. |
+| `bassera-mattermost` | Same as `bassera-cli`. |
+| `bassera-email` | Same as `bassera-cli`. |
+| `bassera-sms` | Same as `bassera-cli`. |
+| `bassera-bluebubbles` | Same as `bassera-cli`. |
+| `bassera-dingtalk` | Same as `bassera-cli`. |
+| `bassera-feishu` | Same as `bassera-cli`. Note: the `feishu_doc` / `feishu_drive` toolsets are used only by the document-comment handler, not by the regular Feishu chat adapter. |
+| `bassera-qqbot` | Same as `bassera-cli`. |
+| `bassera-wecom` | Same as `bassera-cli`. |
+| `bassera-wecom-callback` | Same as `bassera-cli`. |
+| `bassera-weixin` | Same as `bassera-cli`. |
+| `bassera-homeassistant` | Same as `bassera-cli` plus the `homeassistant` toolset always on. |
+| `bassera-webhook` | Same as `bassera-cli`. |
+| `bassera-gateway` | Internal gateway orchestrator toolset — union of the broadest possible tool set when the gateway needs to accept any message source. |
 
 ## Dynamic Toolsets
 
@@ -139,7 +139,7 @@ Define custom toolsets in `config.yaml` to create project-specific bundles:
 
 ```yaml
 toolsets:
-  - hermes-cli
+  - bassera-cli
 custom_toolsets:
   data-science:
     - file
@@ -153,8 +153,8 @@ custom_toolsets:
 
 - `all` or `*` — expands to every registered toolset (built-in + dynamic + plugin)
 
-## Relationship to `hermes tools`
+## Relationship to `bassera tools`
 
-The `hermes tools` command provides a curses-based UI for toggling individual tools on or off per platform. This operates at the tool level (finer than toolsets) and persists to `config.yaml`. Disabled tools are filtered out even if their toolset is enabled.
+The `bassera tools` command provides a curses-based UI for toggling individual tools on or off per platform. This operates at the tool level (finer than toolsets) and persists to `config.yaml`. Disabled tools are filtered out even if their toolset is enabled.
 
 See also: [Tools Reference](./tools-reference.md) for the complete list of individual tools and their parameters.

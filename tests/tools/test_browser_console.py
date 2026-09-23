@@ -124,9 +124,9 @@ class TestBrowserConsoleToolsetWiring:
         from toolsets import TOOLSETS
         assert "browser_console" in TOOLSETS["browser"]["tools"]
 
-    def test_in_wafi_core_tools(self):
-        from toolsets import _HERMES_CORE_TOOLS
-        assert "browser_console" in _HERMES_CORE_TOOLS
+    def test_in_bassera_core_tools(self):
+        from toolsets import _BASSERA_CORE_TOOLS
+        assert "browser_console" in _BASSERA_CORE_TOOLS
 
     def test_in_legacy_toolset_map(self):
         from model_tools import _LEGACY_TOOLSET_MAP
@@ -201,7 +201,7 @@ class TestRecordSessionsConfig:
     """browser.record_sessions config option."""
 
     def test_default_config_has_record_sessions(self):
-        from wafi_cli.config import DEFAULT_CONFIG
+        from bassera_cli.config import DEFAULT_CONFIG
 
         browser_cfg = DEFAULT_CONFIG.get("browser", {})
         assert "record_sessions" in browser_cfg

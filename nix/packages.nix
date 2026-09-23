@@ -1,14 +1,14 @@
-# nix/packages.nix — Hermes Agent package built with uv2nix
+# nix/packages.nix — Bassera Agent package built with uv2nix
 { inputs, ... }:
 {
   perSystem =
     { pkgs, inputs', ... }:
     let
-      hermesVenv = pkgs.callPackage ./python.nix {
+      basseraVenv = pkgs.callPackage ./python.nix {
         inherit (inputs) uv2nix pyproject-nix pyproject-build-systems;
       };
 
-      hermesTui = pkgs.callPackage ./tui.nix {
+      basseraTui = pkgs.callPackage ./tui.nix {
         npm-lockfile-fix = inputs'.npm-lockfile-fix.packages.default;
       };
 
@@ -18,7 +18,7 @@
         filter = path: _type: !(pkgs.lib.hasInfix "/index-cache/" path);
       };
 
-      hermesWeb = pkgs.callPackage ./web.nix {
+      basseraWeb = pkgs.callPackage ./web.nix {
         npm-lockfile-fix = inputs'.npm-lockfile-fix.packages.default;
       };
 
@@ -44,7 +44,7 @@
     {
       packages = {
         default = pkgs.stdenv.mkDerivation {
-          pname = "hermes-agent";
+          pname = "bassera-agent";
           version = (fromTOML (builtins.readFile ../pyproject.toml)).project.version;
 
           dontUnpack = true;
@@ -54,28 +54,28 @@
           installPhase = ''
             runHook preInstall
 
-            mkdir -p $out/share/hermes-agent $out/bin
-            cp -r ${bundledSkills} $out/share/hermes-agent/skills
-            cp -r ${hermesWeb} $out/share/hermes-agent/web_dist
+            mkdir -p $out/share/bassera-agent $out/bin
+            cp -r ${bundledSkills} $out/share/bassera-agent/skills
+            cp -r ${basseraWeb} $out/share/bassera-agent/web_dist
 
             # copy pre-built TUI (same layout as dev: ui-tui/dist/ + node_modules/)
             mkdir -p $out/ui-tui
-            cp -r ${hermesTui}/lib/hermes-tui/* $out/ui-tui/
+            cp -r ${basseraTui}/lib/bassera-tui/* $out/ui-tui/
 
             ${pkgs.lib.concatMapStringsSep "\n"
               (name: ''
-                makeWrapper ${hermesVenv}/bin/${name} $out/bin/${name} \
+                makeWrapper ${basseraVenv}/bin/${name} $out/bin/${name} \
                   --suffix PATH : "${runtimePath}" \
-                  --set HERMES_BUNDLED_SKILLS $out/share/hermes-agent/skills \
-                  --set HERMES_WEB_DIST $out/share/hermes-agent/web_dist \
-                  --set HERMES_TUI_DIR $out/ui-tui \
-                  --set HERMES_PYTHON ${hermesVenv}/bin/python3 \
-                  --set HERMES_NODE ${pkgs.nodejs_22}/bin/node
+                  --set BASSERA_BUNDLED_SKILLS $out/share/bassera-agent/skills \
+                  --set BASSERA_WEB_DIST $out/share/bassera-agent/web_dist \
+                  --set BASSERA_TUI_DIR $out/ui-tui \
+                  --set BASSERA_PYTHON ${basseraVenv}/bin/python3 \
+                  --set BASSERA_NODE ${pkgs.nodejs_22}/bin/node
               '')
               [
-                "hermes"
-                "hermes-agent"
-                "hermes-acp"
+                "bassera"
+                "bassera-agent"
+                "bassera-acp"
               ]
             }
 
@@ -83,10 +83,10 @@
           '';
 
           passthru.devShellHook = ''
-            STAMP=".nix-stamps/hermes-agent"
+            STAMP=".nix-stamps/bassera-agent"
             STAMP_VALUE="${pyprojectHash}:${uvLockHash}"
             if [ ! -f "$STAMP" ] || [ "$(cat "$STAMP")" != "$STAMP_VALUE" ]; then
-              echo "hermes-agent: installing Python dependencies..."
+              echo "bassera-agent: installing Python dependencies..."
               uv venv .venv --python ${pkgs.python312}/bin/python3 2>/dev/null || true
               source .venv/bin/activate
               uv pip install -e ".[all]"
@@ -96,21 +96,21 @@
               echo "$STAMP_VALUE" > "$STAMP"
             else
               source .venv/bin/activate
-              export HERMES_PYTHON=${hermesVenv}/bin/python3
+              export BASSERA_PYTHON=${basseraVenv}/bin/python3
             fi
           '';
 
           meta = with pkgs.lib; {
             description = "AI agent with advanced tool-calling capabilities";
             homepage = "https://github.com/NousResearch/hermes-agent";
-            mainProgram = "hermes";
+            mainProgram = "bassera";
             license = licenses.mit;
             platforms = platforms.unix;
           };
         };
 
-        tui = hermesTui;
-        web = hermesWeb;
+        tui = basseraTui;
+        web = basseraWeb;
       };
     };
 }

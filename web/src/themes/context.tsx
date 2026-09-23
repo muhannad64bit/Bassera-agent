@@ -13,7 +13,7 @@ import { api } from "@/lib/api";
 
 /** LocalStorage key — pre-applied before the React tree mounts to avoid
  *  a visible flash of the default palette on theme-overridden installs. */
-const STORAGE_KEY = "hermes-dashboard-theme";
+const STORAGE_KEY = "bassera-dashboard-theme";
 
 /** Turn a ThemeLayer into the two CSS expressions the DS consumes:
  *  `--<name>` (color-mix'd with alpha) and `--<name>-base` (opaque hex). */

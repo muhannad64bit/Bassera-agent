@@ -238,7 +238,7 @@ async def _summarize_session(
 
 # Sources that are excluded from session browsing/searching by default.
 # Third-party integrations (Paperclip agents, etc.) tag their sessions with
-# HERMES_SESSION_SOURCE=tool so they don't clutter the user's session history.
+# BASSERA_SESSION_SOURCE=tool so they don't clutter the user's session history.
 _HIDDEN_SESSION_SOURCES = ("tool",)
 
 
@@ -491,7 +491,7 @@ def session_search(
 def check_session_search_requirements() -> bool:
     """Requires SQLite state database and an auxiliary text model."""
     try:
-        from wafi_state import DEFAULT_DB_PATH
+        from bassera_state import DEFAULT_DB_PATH
         return DEFAULT_DB_PATH.parent.exists()
     except ImportError:
         return False

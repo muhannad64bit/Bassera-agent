@@ -1,17 +1,17 @@
-"""Shared fixtures for the wafi-agent test suite.
+"""Shared fixtures for the bassera-agent test suite.
 
 Hermetic-test invariants enforced here (see AGENTS.md for rationale):
 
 1. **No credential env vars.** All provider/credential-shaped env vars
    (ending in _API_KEY, _TOKEN, _SECRET, _PASSWORD, _CREDENTIALS, etc.)
    are unset before every test. Local developer keys cannot leak in.
-2. **Isolated HERMES_HOME.** HERMES_HOME points to a per-test tempdir so
-   code reading ``~/.wafi/*`` via ``get_wafi_home()`` can't see the
+2. **Isolated BASSERA_HOME.** BASSERA_HOME points to a per-test tempdir so
+   code reading ``~/.bassera/*`` via ``get_bassera_home()`` can't see the
    real one. (We do NOT also redirect HOME — that broke subprocesses in
-   CI. Code using ``Path.home() / ".wafi"`` instead of the canonical
-   ``get_wafi_home()`` is a bug to fix at the callsite.)
+   CI. Code using ``Path.home() / ".bassera"`` instead of the canonical
+   ``get_bassera_home()`` is a bug to fix at the callsite.)
 3. **Deterministic runtime.** TZ=UTC, LANG=C.UTF-8, PYTHONHASHSEED=0.
-4. **No HERMES_SESSION_* inheritance** — the agent's current gateway
+4. **No BASSERA_SESSION_* inheritance** — the agent's current gateway
    session must not leak into tests.
 
 These invariants make the local test run match CI closely. Gaps that
@@ -41,25 +41,25 @@ if str(PROJECT_ROOT) not in sys.path:
 
 # ── Import-time home isolation ─────────────────────────────────────────────
 #
-# Many project modules freeze HERMES_HOME into module-level constants at
-# import time (wafi_state.DEFAULT_DB_PATH, tools.process_registry
+# Many project modules freeze BASSERA_HOME into module-level constants at
+# import time (bassera_state.DEFAULT_DB_PATH, tools.process_registry
 # .CHECKPOINT_PATH, gateway.channel_directory.DIRECTORY_PATH, gateway
 # .platforms.base.DOCUMENT_CACHE_DIR, ...). pytest imports this conftest
-# BEFORE any test module imports those, so pointing HERMES_HOME at a
+# BEFORE any test module imports those, so pointing BASSERA_HOME at a
 # throwaway directory here makes every frozen constant resolve into that
-# directory instead of the developer's real ~/.wafi. Without this, test
+# directory instead of the developer's real ~/.bassera. Without this, test
 # runs leak state.db, processes.json, document caches, gateway state and
 # pairing data into the real home (observed in practice).
 #
-# The per-test hermetic fixture below still redirects HERMES_HOME to a
+# The per-test hermetic fixture below still redirects BASSERA_HOME to a
 # fresh per-test tempdir for everything that resolves the home at RUNTIME;
 # this block covers the import-time-frozen half of the codebase.
-_TEST_HOME_ROOT = tempfile.mkdtemp(prefix="wafi-import-isolated-")
-os.environ["HERMES_HOME"] = _TEST_HOME_ROOT
+_TEST_HOME_ROOT = tempfile.mkdtemp(prefix="bassera-import-isolated-")
+os.environ["BASSERA_HOME"] = _TEST_HOME_ROOT
 
 # Machine-local gateway locks (gateway/status.py) deliberately live
-# OUTSIDE the agent home in production (~/.local/state/wafi/gateway-
-# locks): two HERMES_HOMEs on one machine must not drive the same bot
+# OUTSIDE the agent home in production (~/.local/state/bassera/gateway-
+# locks): two BASSERA_HOMEs on one machine must not drive the same bot
 # token. That also means the suite must isolate them explicitly —
 # otherwise xdist workers (which share one machine) collide on the
 # identical test identities: the whatsapp connect tests failed
@@ -67,7 +67,7 @@ os.environ["HERMES_HOME"] = _TEST_HOME_ROOT
 # runs left lock files in the developer's real state directory
 # (observed in practice). Per-process throwaway => per-worker
 # isolation; test_status.py's lock tests override it per-test anyway.
-os.environ["HERMES_GATEWAY_LOCK_DIR"] = os.path.join(
+os.environ["BASSERA_GATEWAY_LOCK_DIR"] = os.path.join(
     _TEST_HOME_ROOT, "gateway-locks"
 )
 
@@ -230,33 +230,33 @@ def _looks_like_credential(name: str) -> bool:
     return any(name.endswith(suf) for suf in _CREDENTIAL_SUFFIXES)
 
 
-# HERMES_* vars that change test behavior by being set. Unset all of these
+# BASSERA_* vars that change test behavior by being set. Unset all of these
 # unconditionally — individual tests that need them set do so explicitly.
-_HERMES_BEHAVIORAL_VARS = frozenset({
-    "HERMES_YOLO_MODE",
-    "HERMES_INTERACTIVE",
-    "HERMES_QUIET",
-    "HERMES_TOOL_PROGRESS",
-    "HERMES_TOOL_PROGRESS_MODE",
-    "HERMES_MAX_ITERATIONS",
-    "HERMES_SESSION_PLATFORM",
-    "HERMES_SESSION_CHAT_ID",
-    "HERMES_SESSION_CHAT_NAME",
-    "HERMES_SESSION_THREAD_ID",
-    "HERMES_SESSION_SOURCE",
-    "HERMES_SESSION_KEY",
-    "HERMES_GATEWAY_SESSION",
-    "HERMES_PLATFORM",
-    "HERMES_INFERENCE_PROVIDER",
-    "HERMES_MANAGED",
-    "HERMES_DEV",
-    "HERMES_CONTAINER",
-    "HERMES_EPHEMERAL_SYSTEM_PROMPT",
-    "HERMES_TIMEZONE",
-    "HERMES_REDACT_SECRETS",
-    "HERMES_BACKGROUND_NOTIFICATIONS",
-    "HERMES_EXEC_ASK",
-    "HERMES_HOME_MODE",
+_BASSERA_BEHAVIORAL_VARS = frozenset({
+    "BASSERA_YOLO_MODE",
+    "BASSERA_INTERACTIVE",
+    "BASSERA_QUIET",
+    "BASSERA_TOOL_PROGRESS",
+    "BASSERA_TOOL_PROGRESS_MODE",
+    "BASSERA_MAX_ITERATIONS",
+    "BASSERA_SESSION_PLATFORM",
+    "BASSERA_SESSION_CHAT_ID",
+    "BASSERA_SESSION_CHAT_NAME",
+    "BASSERA_SESSION_THREAD_ID",
+    "BASSERA_SESSION_SOURCE",
+    "BASSERA_SESSION_KEY",
+    "BASSERA_GATEWAY_SESSION",
+    "BASSERA_PLATFORM",
+    "BASSERA_INFERENCE_PROVIDER",
+    "BASSERA_MANAGED",
+    "BASSERA_DEV",
+    "BASSERA_CONTAINER",
+    "BASSERA_EPHEMERAL_SYSTEM_PROMPT",
+    "BASSERA_TIMEZONE",
+    "BASSERA_REDACT_SECRETS",
+    "BASSERA_BACKGROUND_NOTIFICATIONS",
+    "BASSERA_EXEC_ASK",
+    "BASSERA_HOME_MODE",
     # Terminal backend selection — determines tool availability
     # (check_terminal_requirements). Some tests select modal/docker/ssh
     # backends; without clearing, a leak makes terminal+file tools
@@ -274,8 +274,8 @@ _HERMES_BEHAVIORAL_VARS = frozenset({
 def _hermetic_environment(tmp_path, monkeypatch):
     """Blank out all credential/behavioral env vars so local and CI match.
 
-    Also redirects HOME and HERMES_HOME to per-test tempdirs so code that
-    reads ``~/.wafi/*`` can't touch the real one, and pins TZ/LANG so
+    Also redirects HOME and BASSERA_HOME to per-test tempdirs so code that
+    reads ``~/.bassera/*`` can't touch the real one, and pins TZ/LANG so
     datetime/locale-sensitive tests are deterministic.
     """
     # 1. Blank every credential-shaped env var that's currently set.
@@ -283,31 +283,31 @@ def _hermetic_environment(tmp_path, monkeypatch):
         if _looks_like_credential(name):
             monkeypatch.delenv(name, raising=False)
 
-    # 2. Blank behavioral HERMES_* vars that could change test semantics.
-    for name in _HERMES_BEHAVIORAL_VARS:
+    # 2. Blank behavioral BASSERA_* vars that could change test semantics.
+    for name in _BASSERA_BEHAVIORAL_VARS:
         monkeypatch.delenv(name, raising=False)
 
     # 2b. Blank BASSERA_HOME so a developer's Bassera home alias can't
-    #     override the isolated HERMES_HOME we set in step 3.
+    #     override the isolated BASSERA_HOME we set in step 3.
     monkeypatch.delenv("BASSERA_HOME", raising=False)
 
-    # 3. Redirect HERMES_HOME to a per-test tempdir. Code that reads
-    #    ``~/.wafi/*`` via ``get_wafi_home()`` now gets the tempdir.
+    # 3. Redirect BASSERA_HOME to a per-test tempdir. Code that reads
+    #    ``~/.bassera/*`` via ``get_bassera_home()`` now gets the tempdir.
     #
     #    NOTE: We do NOT also redirect HOME. Doing so broke CI because
     #    some tests (and their transitive deps) spawn subprocesses that
     #    inherit HOME and expect it to be stable. If a test genuinely
     #    needs HOME isolated, it should set it explicitly in its own
-    #    fixture. Any code in the codebase reading ``~/.wafi/*`` via
-    #    ``Path.home() / ".wafi"`` instead of ``get_wafi_home()``
+    #    fixture. Any code in the codebase reading ``~/.bassera/*`` via
+    #    ``Path.home() / ".bassera"`` instead of ``get_bassera_home()``
     #    is a bug to fix at the callsite.
-    fake_wafi_home = tmp_path / "wafi_test"
-    fake_wafi_home.mkdir()
-    (fake_wafi_home / "sessions").mkdir()
-    (fake_wafi_home / "cron").mkdir()
-    (fake_wafi_home / "memories").mkdir()
-    (fake_wafi_home / "skills").mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(fake_wafi_home))
+    fake_bassera_home = tmp_path / "bassera_test"
+    fake_bassera_home.mkdir()
+    (fake_bassera_home / "sessions").mkdir()
+    (fake_bassera_home / "cron").mkdir()
+    (fake_bassera_home / "memories").mkdir()
+    (fake_bassera_home / "skills").mkdir()
+    monkeypatch.setenv("BASSERA_HOME", str(fake_bassera_home))
 
     # 4. Deterministic locale / timezone / hashseed. CI runs in UTC with
     #    C.UTF-8 locale; local dev often doesn't. Pin everything.
@@ -326,10 +326,10 @@ def _hermetic_environment(tmp_path, monkeypatch):
     monkeypatch.setenv("AWS_METADATA_SERVICE_NUM_ATTEMPTS", "1")
 
     # 5. Reset plugin singleton so tests don't leak plugins from
-    #    ~/.wafi/plugins/ (which, per step 3, is now empty — but the
+    #    ~/.bassera/plugins/ (which, per step 3, is now empty — but the
     #    singleton might still be cached from a previous test).
     try:
-        import wafi_cli.plugins as _plugins_mod
+        import bassera_cli.plugins as _plugins_mod
         monkeypatch.setattr(_plugins_mod, "_plugin_manager", None)
     except Exception:
         pass
@@ -338,7 +338,7 @@ def _hermetic_environment(tmp_path, monkeypatch):
 # Backward-compat alias — old tests reference this fixture name. Keep it
 # as a no-op wrapper so imports don't break.
 @pytest.fixture(autouse=True)
-def _isolate_wafi_home(_hermetic_environment):
+def _isolate_bassera_home(_hermetic_environment):
     """Alias preserved for any test that yields this name explicitly."""
     return None
 
@@ -351,7 +351,7 @@ def tmp_dir(tmp_path):
 
 @pytest.fixture()
 def mock_config():
-    """Return a minimal wafi config dict suitable for unit tests."""
+    """Return a minimal bassera config dict suitable for unit tests."""
     return {
         "model": "test/mock-model",
         "toolsets": ["terminal", "file"],

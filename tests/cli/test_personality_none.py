@@ -9,8 +9,8 @@ import yaml
 class TestCLIPersonalityNone:
 
     def _make_cli(self, personalities=None):
-        from cli import WafiCLI
-        cli = WafiCLI.__new__(WafiCLI)
+        from cli import BasseraCLI
+        cli = BasseraCLI.__new__(BasseraCLI)
         cli.personalities = personalities or {
             "helpful": "You are helpful.",
             "concise": "You are concise.",
@@ -98,7 +98,7 @@ class TestGatewayPersonalityNone:
         config_file = tmp_path / "config.yaml"
         config_file.write_text(yaml.dump(config_data))
 
-        with patch("gateway.run._wafi_home", tmp_path):
+        with patch("gateway.run._bassera_home", tmp_path):
             event = self._make_event("none")
             result = await runner._handle_personality_command(event)
 
@@ -112,7 +112,7 @@ class TestGatewayPersonalityNone:
         config_file = tmp_path / "config.yaml"
         config_file.write_text(yaml.dump(config_data))
 
-        with patch("gateway.run._wafi_home", tmp_path):
+        with patch("gateway.run._bassera_home", tmp_path):
             event = self._make_event("default")
             result = await runner._handle_personality_command(event)
 
@@ -125,7 +125,7 @@ class TestGatewayPersonalityNone:
         config_file = tmp_path / "config.yaml"
         config_file.write_text(yaml.dump(config_data))
 
-        with patch("gateway.run._wafi_home", tmp_path):
+        with patch("gateway.run._bassera_home", tmp_path):
             event = self._make_event("")
             result = await runner._handle_personality_command(event)
 
@@ -138,7 +138,7 @@ class TestGatewayPersonalityNone:
         config_file = tmp_path / "config.yaml"
         config_file.write_text(yaml.dump(config_data))
 
-        with patch("gateway.run._wafi_home", tmp_path):
+        with patch("gateway.run._bassera_home", tmp_path):
             event = self._make_event("nonexistent")
             result = await runner._handle_personality_command(event)
 
@@ -149,20 +149,20 @@ class TestGatewayPersonalityNone:
         runner = self._make_runner(personalities={})
         (tmp_path / "config.yaml").write_text(yaml.dump({"agent": {"personalities": {}}}))
 
-        with patch("gateway.run._wafi_home", tmp_path), \
-             patch("wafi_constants.display_wafi_home", return_value="~/.wafi/profiles/coder"):
+        with patch("gateway.run._bassera_home", tmp_path), \
+             patch("bassera_constants.display_bassera_home", return_value="~/.bassera/profiles/coder"):
             event = self._make_event("")
             result = await runner._handle_personality_command(event)
 
-        assert result == "No personalities configured in `~/.wafi/profiles/coder/config.yaml`"
+        assert result == "No personalities configured in `~/.bassera/profiles/coder/config.yaml`"
 
 
 class TestPersonalityDictFormat:
     """Test dict-format custom personalities with description, tone, style."""
 
     def _make_cli(self, personalities):
-        from cli import WafiCLI
-        cli = WafiCLI.__new__(WafiCLI)
+        from cli import BasseraCLI
+        cli = BasseraCLI.__new__(BasseraCLI)
         cli.personalities = personalities
         cli.system_prompt = ""
         cli.agent = None
@@ -211,14 +211,14 @@ class TestPersonalityDictFormat:
         assert cli.system_prompt == "You are helpful."
 
     def test_resolve_prompt_dict_no_tone_no_style(self):
-        from cli import WafiCLI
-        result = WafiCLI._resolve_personality_prompt({
+        from cli import BasseraCLI
+        result = BasseraCLI._resolve_personality_prompt({
             "description": "A helper",
             "system_prompt": "You are helpful.",
         })
         assert result == "You are helpful."
 
     def test_resolve_prompt_string(self):
-        from cli import WafiCLI
-        result = WafiCLI._resolve_personality_prompt("You are helpful.")
+        from cli import BasseraCLI
+        result = BasseraCLI._resolve_personality_prompt("You are helpful.")
         assert result == "You are helpful."

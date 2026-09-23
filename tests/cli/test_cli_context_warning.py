@@ -9,24 +9,24 @@ import pytest
 
 @pytest.fixture
 def _isolate(tmp_path, monkeypatch):
-    """Isolate HERMES_HOME so tests don't touch real config."""
-    home = tmp_path / ".wafi"
+    """Isolate BASSERA_HOME so tests don't touch real config."""
+    home = tmp_path / ".bassera"
     home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setenv("BASSERA_HOME", str(home))
 
 
 @pytest.fixture
 def cli_obj(_isolate):
-    """Create a minimal WafiCLI instance for banner testing."""
+    """Create a minimal BasseraCLI instance for banner testing."""
     with patch("cli.load_cli_config", return_value={
         "display": {"tool_progress": "new"},
         "terminal": {},
     }), patch("cli.get_tool_definitions", return_value=[]), \
          patch("cli.build_welcome_banner"):
-        from cli import WafiCLI
-        obj = WafiCLI.__new__(WafiCLI)
+        from cli import BasseraCLI
+        obj = BasseraCLI.__new__(BasseraCLI)
         obj.model = "test-model"
-        obj.enabled_toolsets = ["wafi-core"]
+        obj.enabled_toolsets = ["bassera-core"]
         obj.compact = False
         obj.console = MagicMock()
         obj.session_id = None

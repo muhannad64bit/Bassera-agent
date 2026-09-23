@@ -1,4 +1,4 @@
-"""Shared utility functions for wafi-agent."""
+"""Shared utility functions for bassera-agent."""
 
 import json
 import logging

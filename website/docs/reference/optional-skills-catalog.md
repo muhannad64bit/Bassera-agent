@@ -1,22 +1,22 @@
 ---
 sidebar_position: 9
 title: "Optional Skills Catalog"
-description: "Official optional skills shipped with hermes-agent — install via hermes skills install official/<category>/<skill>"
+description: "Official optional skills shipped with bassera-agent — install via bassera skills install official/<category>/<skill>"
 ---
 
 # Optional Skills Catalog
 
-Official optional skills ship with the hermes-agent repository under `optional-skills/` but are **not active by default**. Install them explicitly:
+Official optional skills ship with the bassera-agent repository under `optional-skills/` but are **not active by default**. Install them explicitly:
 
 ```bash
-hermes skills install official/<category>/<skill>
+bassera skills install official/<category>/<skill>
 ```
 
 For example:
 
 ```bash
-hermes skills install official/blockchain/solana
-hermes skills install official/mlops/flash-attention
+bassera skills install official/blockchain/solana
+bassera skills install official/mlops/flash-attention
 ```
 
 Once installed, the skill appears in the agent's skill list and can be loaded automatically when relevant tasks are detected.
@@ -24,7 +24,7 @@ Once installed, the skill appears in the agent's skill list and can be loaded au
 To uninstall:
 
 ```bash
-hermes skills uninstall <skill-name>
+bassera skills uninstall <skill-name>
 ```
 
 ---
@@ -34,7 +34,7 @@ hermes skills uninstall <skill-name>
 | Skill | Description |
 |-------|-------------|
 | **blackbox** | Delegate coding tasks to Blackbox AI CLI agent. Multi-model agent with built-in judge that runs tasks through multiple LLMs and picks the best result. |
-| **honcho** | Configure and use Honcho memory with Hermes — cross-session user modeling, multi-profile peer isolation, observation config, and dialectic reasoning. |
+| **honcho** | Configure and use Honcho memory with Bassera — cross-session user modeling, multi-profile peer isolation, observation config, and dialectic reasoning. |
 
 ## Blockchain
 
@@ -53,7 +53,7 @@ hermes skills uninstall <skill-name>
 
 | Skill | Description |
 |-------|-------------|
-| **blender-mcp** | Control Blender directly from Hermes via socket connection to the blender-mcp addon. Create 3D objects, materials, animations, and run arbitrary Blender Python (bpy) code. |
+| **blender-mcp** | Control Blender directly from Bassera via socket connection to the blender-mcp addon. Create 3D objects, materials, animations, and run arbitrary Blender Python (bpy) code. |
 | **concept-diagrams** | Generate flat, minimal light/dark-aware SVG diagrams as standalone HTML files, using a unified educational visual language (9 semantic color ramps, automatic dark mode). Best for physics setups, chemistry mechanisms, math curves, physical objects (aircraft, turbines, smartphones), floor plans, cross-sections, lifecycle/process narratives, and hub-spoke system diagrams. Ships with 15 example diagrams. |
 | **meme-generation** | Generate real meme images by picking a template and overlaying text with Pillow. Produces actual `.png` meme files. |
 | **touchdesigner-mcp** | Control a running TouchDesigner instance via the twozero MCP plugin — create operators, set parameters, wire connections, execute Python, build real-time audio-reactive visuals and GLSL networks. 36 native tools. |
@@ -89,7 +89,7 @@ hermes skills uninstall <skill-name>
 
 | Skill | Description |
 |-------|-------------|
-| **openclaw-migration** | Migrate a user's OpenClaw customization footprint into Hermes Agent. Imports memories, SOUL.md, command allowlists, user skills, and selected workspace assets. |
+| **openclaw-migration** | Migrate a user's OpenClaw customization footprint into Bassera Agent. Imports memories, SOUL.md, command allowlists, user skills, and selected workspace assets. |
 
 ## MLOps
 
@@ -103,7 +103,7 @@ The largest optional category — covers the full ML pipeline from data curation
 | **faiss** | Facebook's library for efficient similarity search and clustering of dense vectors. Supports billions of vectors, GPU acceleration, and various index types (Flat, IVF, HNSW). |
 | **flash-attention** | Optimize transformer attention with Flash Attention for 2-4x speedup and 10-20x memory reduction. Supports PyTorch SDPA, flash-attn library, H100 FP8, and sliding window. |
 | **guidance** | Control LLM output with regex and grammars, guarantee valid JSON/XML/code generation, enforce structured formats, and build multi-step workflows with Guidance — Microsoft Research's constrained generation framework. |
-| **hermes-atropos-environments** | Build, test, and debug Hermes Agent RL environments for Atropos training. Covers the HermesAgentBaseEnv interface, reward functions, agent loop integration, and evaluation. |
+| **bassera-atropos-environments** | Build, test, and debug Bassera Agent RL environments for Atropos training. Covers the BasseraAgentBaseEnv interface, reward functions, agent loop integration, and evaluation. |
 | **huggingface-tokenizers** | Fast Rust-based tokenizers for research and production. Tokenizes 1GB in under 20 seconds. Supports BPE, WordPiece, and Unigram algorithms. |
 | **instructor** | Extract structured data from LLM responses with Pydantic validation, retry failed extractions automatically, and stream partial results. |
 | **lambda-labs** | Reserved and on-demand GPU cloud instances for ML training and inference. SSH access, persistent filesystems, and multi-node clusters. |
@@ -130,7 +130,7 @@ The largest optional category — covers the full ML pipeline from data curation
 | **canvas** | Canvas LMS integration — fetch enrolled courses and assignments using API token authentication. |
 | **memento-flashcards** | Spaced repetition flashcard system for learning and knowledge retention. |
 | **siyuan** | SiYuan Note API for searching, reading, creating, and managing blocks and documents in a self-hosted knowledge base. |
-| **telephony** | Give Hermes phone capabilities — provision a Twilio number, send/receive SMS/MMS, make calls, and place AI-driven outbound calls through Bland.ai or Vapi. |
+| **telephony** | Give Bassera phone capabilities — provision a Twilio number, send/receive SMS/MMS, make calls, and place AI-driven outbound calls through Bland.ai or Vapi. |
 
 ## Research
 

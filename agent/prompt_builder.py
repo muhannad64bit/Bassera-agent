@@ -12,7 +12,7 @@ import threading
 from collections import OrderedDict
 from pathlib import Path
 
-from wafi_constants import get_wafi_home, get_skills_dir, is_wsl
+from bassera_constants import get_bassera_home, get_skills_dir, is_wsl
 from typing import Optional
 
 from agent.skill_utils import (
@@ -86,11 +86,11 @@ def _find_git_root(start: Path) -> Optional[Path]:
     return None
 
 
-_HERMES_MD_NAMES = (".wafi.md", "HERMES.md")
+_BASSERA_MD_NAMES = (".bassera.md", "BASSERA.md")
 
 
-def _find_wafi_md(cwd: Path) -> Optional[Path]:
-    """Discover the nearest ``.wafi.md`` or ``HERMES.md``.
+def _find_bassera_md(cwd: Path) -> Optional[Path]:
+    """Discover the nearest ``.bassera.md`` or ``BASSERA.md``.
 
     Search order: *cwd* first, then each parent directory up to (and
     including) the git repository root.  Returns the first match, or
@@ -100,7 +100,7 @@ def _find_wafi_md(cwd: Path) -> Optional[Path]:
     current = cwd.resolve()
 
     for directory in [current, *current.parents]:
-        for name in _HERMES_MD_NAMES:
+        for name in _BASSERA_MD_NAMES:
             candidate = directory / name
             if candidate.is_file():
                 return candidate
@@ -132,7 +132,7 @@ def _strip_yaml_frontmatter(content: str) -> str:
 # =========================================================================
 
 DEFAULT_AGENT_IDENTITY = (
-    "You are Wafi Agent, an intelligent AI assistant created by Nous Research. "
+    "You are Bassera Agent, an intelligent AI assistant created by Nous Research. "
     "You are helpful, knowledgeable, and direct. You assist users with a wide "
     "range of tasks including answering questions, writing and editing code, "
     "analyzing information, creative work, and executing actions via your tools. "
@@ -438,7 +438,7 @@ _SKILLS_SNAPSHOT_VERSION = 1
 
 
 def _skills_prompt_snapshot_path() -> Path:
-    return get_wafi_home() / ".skills_prompt_snapshot.json"
+    return get_bassera_home() / ".skills_prompt_snapshot.json"
 
 
 def clear_skills_system_prompt_cache(*, clear_snapshot: bool = False) -> None:
@@ -600,7 +600,7 @@ def build_skills_system_prompt(
     Falls back to a full filesystem scan when both layers miss.
 
     External skill directories (``skills.external_dirs`` in config.yaml) are
-    scanned alongside the local ``~/.wafi/skills/`` directory.  External dirs
+    scanned alongside the local ``~/.bassera/skills/`` directory.  External dirs
     are read-only — they appear in the index but new skills are always created
     in the local dir.  Local skills take precedence when names collide.
     """
@@ -615,8 +615,8 @@ def build_skills_system_prompt(
     # produce distinct cache entries (gateway serves multiple platforms).
     from gateway.session_context import get_session_env
     _platform_hint = (
-        os.environ.get("HERMES_PLATFORM")
-        or get_session_env("HERMES_SESSION_PLATFORM")
+        os.environ.get("BASSERA_PLATFORM")
+        or get_session_env("BASSERA_SESSION_PLATFORM")
         or ""
     )
     disabled = get_disabled_skill_names()
@@ -818,7 +818,7 @@ def build_skills_system_prompt(
 def build_nous_subscription_prompt(valid_tool_names: "set[str] | None" = None) -> str:
     """Build a compact Nous subscription capability block for the system prompt."""
     try:
-        from wafi_cli.nous_subscription import get_nous_subscription_features
+        from bassera_cli.nous_subscription import get_nous_subscription_features
         from tools.tool_backend_helpers import managed_nous_tools_enabled
     except Exception as exc:
         logger.debug("Failed to import Nous subscription helper: %s", exc)
@@ -875,7 +875,7 @@ def build_nous_subscription_prompt(valid_tool_names: "set[str] | None" = None) -
             "When a Nous-managed feature is active, do not ask the user for Firecrawl, FAL, OpenAI TTS, or Browser-Use API keys.",
             "If the user is not subscribed and asks for a capability that Nous subscription would unlock or simplify, suggest Nous subscription as one option alongside direct setup or local alternatives.",
             "Do not mention subscription unless the user asks about it or it directly solves the current missing capability.",
-            "Useful commands: wafi setup, wafi setup tools, wafi setup terminal, wafi status.",
+            "Useful commands: bassera setup, bassera setup tools, bassera setup terminal, bassera status.",
         ]
     )
     return "\n".join(lines)
@@ -898,19 +898,19 @@ def _truncate_content(content: str, filename: str, max_chars: int = CONTEXT_FILE
 
 
 def load_soul_md() -> Optional[str]:
-    """Load SOUL.md from HERMES_HOME and return its content, or None.
+    """Load SOUL.md from BASSERA_HOME and return its content, or None.
 
     Used as the agent identity (slot #1 in the system prompt).  When this
     returns content, ``build_context_files_prompt`` should be called with
     ``skip_soul=True`` so SOUL.md isn't injected twice.
     """
     try:
-        from wafi_cli.config import ensure_wafi_home
-        ensure_wafi_home()
+        from bassera_cli.config import ensure_bassera_home
+        ensure_bassera_home()
     except Exception as e:
-        logger.debug("Could not ensure HERMES_HOME before loading SOUL.md: %s", e)
+        logger.debug("Could not ensure BASSERA_HOME before loading SOUL.md: %s", e)
 
-    soul_path = get_wafi_home() / "SOUL.md"
+    soul_path = get_bassera_home() / "SOUL.md"
     if not soul_path.exists():
         return None
     try:
@@ -925,26 +925,26 @@ def load_soul_md() -> Optional[str]:
         return None
 
 
-def _load_wafi_md(cwd_path: Path) -> str:
-    """.wafi.md / HERMES.md — walk to git root."""
-    wafi_md_path = _find_wafi_md(cwd_path)
-    if not wafi_md_path:
+def _load_bassera_md(cwd_path: Path) -> str:
+    """.bassera.md / BASSERA.md — walk to git root."""
+    bassera_md_path = _find_bassera_md(cwd_path)
+    if not bassera_md_path:
         return ""
     try:
-        content = wafi_md_path.read_text(encoding="utf-8").strip()
+        content = bassera_md_path.read_text(encoding="utf-8").strip()
         if not content:
             return ""
         content = _strip_yaml_frontmatter(content)
-        rel = wafi_md_path.name
+        rel = bassera_md_path.name
         try:
-            rel = str(wafi_md_path.relative_to(cwd_path))
+            rel = str(bassera_md_path.relative_to(cwd_path))
         except ValueError:
             pass
         content = _scan_context_content(content, rel)
         result = f"## {rel}\n\n{content}"
-        return _truncate_content(result, ".wafi.md")
+        return _truncate_content(result, ".bassera.md")
     except Exception as e:
-        logger.debug("Could not read %s: %s", wafi_md_path, e)
+        logger.debug("Could not read %s: %s", bassera_md_path, e)
         return ""
 
 
@@ -1014,12 +1014,12 @@ def build_context_files_prompt(cwd: Optional[str] = None, skip_soul: bool = Fals
     """Discover and load context files for the system prompt.
 
     Priority (first found wins — only ONE project context type is loaded):
-      1. .wafi.md / HERMES.md  (walk to git root)
+      1. .bassera.md / BASSERA.md  (walk to git root)
       2. AGENTS.md / agents.md   (cwd only)
       3. CLAUDE.md / claude.md   (cwd only)
       4. .cursorrules / .cursor/rules/*.mdc  (cwd only)
 
-    SOUL.md from HERMES_HOME is independent and always included when present.
+    SOUL.md from BASSERA_HOME is independent and always included when present.
     Each context source is capped at 20,000 chars.
 
     When *skip_soul* is True, SOUL.md is not included here (it was already
@@ -1033,7 +1033,7 @@ def build_context_files_prompt(cwd: Optional[str] = None, skip_soul: bool = Fals
 
     # Priority-based project context: first match wins
     project_context = (
-        _load_wafi_md(cwd_path)
+        _load_bassera_md(cwd_path)
         or _load_agents_md(cwd_path)
         or _load_claude_md(cwd_path)
         or _load_cursorrules(cwd_path)
@@ -1041,7 +1041,7 @@ def build_context_files_prompt(cwd: Optional[str] = None, skip_soul: bool = Fals
     if project_context:
         sections.append(project_context)
 
-    # SOUL.md from HERMES_HOME only — skip when already loaded as identity
+    # SOUL.md from BASSERA_HOME only — skip when already loaded as identity
     if not skip_soul:
         soul_content = load_soul_md()
         if soul_content:

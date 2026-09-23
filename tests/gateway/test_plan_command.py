@@ -83,7 +83,7 @@ description: Plan mode skill.
 # Plan
 
 Use the current conversation context when no explicit instruction is provided.
-Save plans under the active workspace's .wafi/plans directory.
+Save plans under the active workspace's .bassera/plans directory.
 """
     )
 
@@ -111,7 +111,7 @@ class TestGatewayPlanCommand:
         forwarded = runner._run_agent.call_args.kwargs["message"]
         assert "Plan mode skill" in forwarded
         assert "Add OAuth login" in forwarded
-        assert ".wafi/plans" in forwarded
+        assert ".bassera/plans" in forwarded
         assert str(tmp_path / "plans") not in forwarded
         assert "active workspace/backend cwd" in forwarded
         assert "Runtime note:" in forwarded

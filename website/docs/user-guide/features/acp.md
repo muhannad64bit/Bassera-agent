@@ -1,12 +1,12 @@
 ---
 sidebar_position: 11
 title: "ACP Editor Integration"
-description: "Use Hermes Agent inside ACP-compatible editors such as VS Code, Zed, and JetBrains"
+description: "Use Bassera Agent inside ACP-compatible editors such as VS Code, Zed, and JetBrains"
 ---
 
 # ACP Editor Integration
 
-Hermes Agent can run as an ACP server, letting ACP-compatible editors talk to Hermes over stdio and render:
+Bassera Agent can run as an ACP server, letting ACP-compatible editors talk to Bassera over stdio and render:
 
 - chat messages
 - tool activity
@@ -15,11 +15,11 @@ Hermes Agent can run as an ACP server, letting ACP-compatible editors talk to He
 - approval prompts
 - streamed thinking / response chunks
 
-ACP is a good fit when you want Hermes to behave like an editor-native coding agent instead of a standalone CLI or messaging bot.
+ACP is a good fit when you want Bassera to behave like an editor-native coding agent instead of a standalone CLI or messaging bot.
 
-## What Hermes exposes in ACP mode
+## What Bassera exposes in ACP mode
 
-Hermes runs with a curated `hermes-acp` toolset designed for editor workflows. It includes:
+Bassera runs with a curated `bassera-acp` toolset designed for editor workflows. It includes:
 
 - file tools: `read_file`, `write_file`, `patch`, `search_files`
 - terminal tools: `terminal`, `process`
@@ -33,7 +33,7 @@ It intentionally excludes things that do not fit typical editor UX, such as mess
 
 ## Installation
 
-Install Hermes normally, then add the ACP extra:
+Install Bassera normally, then add the ACP extra:
 
 ```bash
 pip install -e '.[acp]'
@@ -41,27 +41,27 @@ pip install -e '.[acp]'
 
 This installs the `agent-client-protocol` dependency and enables:
 
-- `hermes acp`
-- `hermes-acp`
+- `bassera acp`
+- `bassera-acp`
 - `python -m acp_adapter`
 
 ## Launching the ACP server
 
-Any of the following starts Hermes in ACP mode:
+Any of the following starts Bassera in ACP mode:
 
 ```bash
-hermes acp
+bassera acp
 ```
 
 ```bash
-hermes-acp
+bassera-acp
 ```
 
 ```bash
 python -m acp_adapter
 ```
 
-Hermes logs to stderr so stdout remains reserved for ACP JSON-RPC traffic.
+Bassera logs to stderr so stdout remains reserved for ACP JSON-RPC traffic.
 
 ## Editor setup
 
@@ -75,8 +75,8 @@ Example settings snippet:
 {
   "acpClient.agents": [
     {
-      "name": "hermes-agent",
-      "registryDir": "/path/to/hermes-agent/acp_registry"
+      "name": "bassera-agent",
+      "registryDir": "/path/to/bassera-agent/acp_registry"
     }
   ]
 }
@@ -89,9 +89,9 @@ Example settings snippet:
 ```json
 {
   "agent_servers": {
-    "hermes-agent": {
+    "bassera-agent": {
       "type": "custom",
-      "command": "hermes",
+      "command": "bassera",
       "args": ["acp"],
     },
   },
@@ -103,7 +103,7 @@ Example settings snippet:
 Use an ACP-compatible plugin and point it at:
 
 ```text
-/path/to/hermes-agent/acp_registry
+/path/to/bassera-agent/acp_registry
 ```
 
 ## Registry manifest
@@ -117,19 +117,19 @@ acp_registry/agent.json
 It advertises a command-based agent whose launch command is:
 
 ```text
-hermes acp
+bassera acp
 ```
 
 ## Configuration and credentials
 
-ACP mode uses the same Hermes configuration as the CLI:
+ACP mode uses the same Bassera configuration as the CLI:
 
-- `~/.hermes/.env`
-- `~/.hermes/config.yaml`
-- `~/.hermes/skills/`
-- `~/.hermes/state.db`
+- `~/.bassera/.env`
+- `~/.bassera/config.yaml`
+- `~/.bassera/skills/`
+- `~/.bassera/state.db`
 
-Provider resolution uses Hermes' normal runtime resolver, so ACP inherits the currently configured provider and credentials.
+Provider resolution uses Bassera' normal runtime resolver, so ACP inherits the currently configured provider and credentials.
 
 ## Session behavior
 
@@ -143,11 +143,11 @@ Each session stores:
 - current conversation history
 - cancel event
 
-The underlying `AIAgent` still uses Hermes' normal persistence/logging paths, but ACP `list/load/resume/fork` are scoped to the currently running ACP server process.
+The underlying `AIAgent` still uses Bassera' normal persistence/logging paths, but ACP `list/load/resume/fork` are scoped to the currently running ACP server process.
 
 ## Working directory behavior
 
-ACP sessions bind the editor's cwd to the Hermes task ID so file and terminal tools run relative to the editor workspace, not the server process cwd.
+ACP sessions bind the editor's cwd to the Bassera task ID so file and terminal tools run relative to the editor workspace, not the server process cwd.
 
 ## Approvals
 
@@ -166,7 +166,7 @@ On timeout or error, the approval bridge denies the request.
 Check:
 
 - the editor is pointed at the correct `acp_registry/` path
-- Hermes is installed and on your PATH
+- Bassera is installed and on your PATH
 - the ACP extra is installed (`pip install -e '.[acp]'`)
 
 ### ACP starts but immediately errors
@@ -174,20 +174,20 @@ Check:
 Try these checks:
 
 ```bash
-hermes doctor
-hermes status
-hermes acp
+bassera doctor
+bassera status
+bassera acp
 ```
 
 ### Missing credentials
 
-ACP mode does not have its own login flow. It uses Hermes' existing provider setup. Configure credentials with:
+ACP mode does not have its own login flow. It uses Bassera' existing provider setup. Configure credentials with:
 
 ```bash
-hermes model
+bassera model
 ```
 
-or by editing `~/.hermes/.env`.
+or by editing `~/.bassera/.env`.
 
 ## See also
 

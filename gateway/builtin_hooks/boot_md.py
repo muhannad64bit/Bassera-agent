@@ -1,7 +1,7 @@
-"""Built-in boot-md hook — run ~/.wafi/BOOT.md on gateway startup.
+"""Built-in boot-md hook — run ~/.bassera/BOOT.md on gateway startup.
 
 This hook is always registered. It silently skips if no BOOT.md exists.
-To activate, create ``~/.wafi/BOOT.md`` with instructions for the
+To activate, create ``~/.bassera/BOOT.md`` with instructions for the
 agent to execute on every gateway restart.
 
 Example BOOT.md::
@@ -22,9 +22,9 @@ import threading
 
 logger = logging.getLogger("hooks.boot-md")
 
-from wafi_constants import get_wafi_home
-HERMES_HOME = get_wafi_home()
-BOOT_FILE = HERMES_HOME / "BOOT.md"
+from bassera_constants import get_bassera_home
+BASSERA_HOME = get_bassera_home()
+BOOT_FILE = BASSERA_HOME / "BOOT.md"
 
 
 def _build_boot_prompt(content: str) -> str:

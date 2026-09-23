@@ -22,8 +22,8 @@ from plugins.memory.honcho.client import (
 class TestHonchoClientConfigDefaults:
     def test_default_values(self):
         config = HonchoClientConfig()
-        assert config.host == "wafi"
-        assert config.workspace_id == "wafi"
+        assert config.host == "bassera"
+        assert config.workspace_id == "bassera"
         assert config.api_key is None
         assert config.environment == "production"
         assert config.timeout is None
@@ -101,7 +101,7 @@ class TestFromGlobalConfig:
             "workspace": "my-workspace",
             "environment": "staging",
             "peerName": "alice",
-            "aiPeer": "wafi-custom",
+            "aiPeer": "bassera-custom",
             "enabled": True,
             "saveMessages": False,
             "contextTokens": 2000,
@@ -109,14 +109,14 @@ class TestFromGlobalConfig:
             "sessionPeerPrefix": True,
             "sessions": {"/home/user/proj": "my-session"},
             "hosts": {
-                "wafi": {
+                "bassera": {
                     "workspace": "override-ws",
                     "aiPeer": "override-ai",
                 }
             }
         }))
-        # Isolate from real ~/.wafi/honcho.json
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "isolated"))
+        # Isolate from real ~/.bassera/honcho.json
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path / "isolated"))
 
         config = HonchoClientConfig.from_global_config(config_path=config_file)
         assert config.api_key == "***"
@@ -137,7 +137,7 @@ class TestFromGlobalConfig:
             "workspace": "root-ws",
             "aiPeer": "root-ai",
             "hosts": {
-                "wafi": {
+                "bassera": {
                     "workspace": "host-ws",
                     "aiPeer": "host-ai",
                 }
@@ -194,7 +194,7 @@ class TestFromGlobalConfig:
         config_file.write_text(json.dumps({
             "apiKey": "key",
             "contextTokens": 1000,
-            "hosts": {"wafi": {"contextTokens": 2000}},
+            "hosts": {"bassera": {"contextTokens": 2000}},
         }))
         config = HonchoClientConfig.from_global_config(config_path=config_file)
         assert config.context_tokens == 2000
@@ -205,7 +205,7 @@ class TestFromGlobalConfig:
         config_file.write_text(json.dumps({
             "apiKey": "key",
             "recallMode": "tools",
-            "hosts": {"wafi": {"recallMode": "context"}},
+            "hosts": {"bassera": {"recallMode": "context"}},
         }))
         config = HonchoClientConfig.from_global_config(config_path=config_file)
         assert config.recall_mode == "context"
@@ -256,7 +256,7 @@ class TestFromGlobalConfig:
         config_file = tmp_path / "config.json"
         config_file.write_text(json.dumps({
             "baseUrl": "http://root:9000",
-            "hosts": {"wafi": {"baseUrl": "http://host-block:9001"}},
+            "hosts": {"bassera": {"baseUrl": "http://host-block:9001"}},
         }))
 
         config = HonchoClientConfig.from_global_config(config_path=config_file)
@@ -306,10 +306,10 @@ class TestResolveSessionName:
     def test_per_repo_uses_git_root(self):
         config = HonchoClientConfig(session_strategy="per-repo")
         with patch.object(
-            HonchoClientConfig, "_git_repo_name", return_value="wafi-agent"
+            HonchoClientConfig, "_git_repo_name", return_value="bassera-agent"
         ):
-            result = config.resolve_session_name("/home/user/wafi-agent/subdir")
-        assert result == "wafi-agent"
+            result = config.resolve_session_name("/home/user/bassera-agent/subdir")
+        assert result == "bassera-agent"
 
     def test_per_repo_with_peer_prefix(self):
         config = HonchoClientConfig(
@@ -339,49 +339,49 @@ class TestResolveSessionName:
 
 
 class TestResolveConfigPath:
-    def test_prefers_wafi_home_when_exists(self, tmp_path):
-        wafi_home = tmp_path / "wafi"
-        wafi_home.mkdir()
-        local_cfg = wafi_home / "honcho.json"
+    def test_prefers_bassera_home_when_exists(self, tmp_path):
+        bassera_home = tmp_path / "bassera"
+        bassera_home.mkdir()
+        local_cfg = bassera_home / "honcho.json"
         local_cfg.write_text('{"apiKey": "local"}')
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(wafi_home)}):
+        with patch.dict(os.environ, {"BASSERA_HOME": str(bassera_home)}):
             result = resolve_config_path()
         assert result == local_cfg
 
     def test_falls_back_to_global_when_no_local(self, tmp_path):
-        wafi_home = tmp_path / "wafi"
-        wafi_home.mkdir()
-        # No honcho.json in HERMES_HOME — also isolate ~/.wafi so
+        bassera_home = tmp_path / "bassera"
+        bassera_home.mkdir()
+        # No honcho.json in BASSERA_HOME — also isolate ~/.bassera so
         # the default-profile fallback doesn't hit the real filesystem.
         fake_home = tmp_path / "fakehome"
         fake_home.mkdir()
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(wafi_home)}), \
+        with patch.dict(os.environ, {"BASSERA_HOME": str(bassera_home)}), \
              patch.object(Path, "home", return_value=fake_home):
             result = resolve_config_path()
         assert result == GLOBAL_CONFIG_PATH
 
-    def test_falls_back_to_global_without_wafi_home_env(self, tmp_path):
+    def test_falls_back_to_global_without_bassera_home_env(self, tmp_path):
         fake_home = tmp_path / "fakehome"
         fake_home.mkdir()
 
         with patch.dict(os.environ, {}, clear=False), \
              patch.object(Path, "home", return_value=fake_home):
-            os.environ.pop("HERMES_HOME", None)
+            os.environ.pop("BASSERA_HOME", None)
             result = resolve_config_path()
         assert result == GLOBAL_CONFIG_PATH
 
     def test_from_global_config_uses_local_path(self, tmp_path):
-        wafi_home = tmp_path / "wafi"
-        wafi_home.mkdir()
-        local_cfg = wafi_home / "honcho.json"
+        bassera_home = tmp_path / "bassera"
+        bassera_home.mkdir()
+        local_cfg = bassera_home / "honcho.json"
         local_cfg.write_text(json.dumps({
             "apiKey": "***",
             "workspace": "local-ws",
         }))
 
-        with patch.dict(os.environ, {"HERMES_HOME": str(wafi_home)}), \
+        with patch.dict(os.environ, {"BASSERA_HOME": str(bassera_home)}), \
              patch.object(Path, "home", return_value=tmp_path):
             config = HonchoClientConfig.from_global_config()
         assert config.api_key == "***"
@@ -389,83 +389,83 @@ class TestResolveConfigPath:
 
 
 class TestResolveActiveHost:
-    def test_default_returns_wafi(self):
+    def test_default_returns_bassera(self):
         with patch.dict(os.environ, {}, clear=True):
-            os.environ.pop("HERMES_HONCHO_HOST", None)
-            os.environ.pop("HERMES_HOME", None)
-            assert resolve_active_host() == "wafi"
+            os.environ.pop("BASSERA_HONCHO_HOST", None)
+            os.environ.pop("BASSERA_HOME", None)
+            assert resolve_active_host() == "bassera"
 
     def test_explicit_env_var_wins(self):
-        with patch.dict(os.environ, {"HERMES_HONCHO_HOST": "wafi.coder"}):
-            assert resolve_active_host() == "wafi.coder"
+        with patch.dict(os.environ, {"BASSERA_HONCHO_HOST": "bassera.coder"}):
+            assert resolve_active_host() == "bassera.coder"
 
     def test_profile_name_derives_host(self):
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("HERMES_HONCHO_HOST", None)
-            with patch("wafi_cli.profiles.get_active_profile_name", return_value="coder"):
-                assert resolve_active_host() == "wafi.coder"
+            os.environ.pop("BASSERA_HONCHO_HOST", None)
+            with patch("bassera_cli.profiles.get_active_profile_name", return_value="coder"):
+                assert resolve_active_host() == "bassera.coder"
 
-    def test_default_profile_returns_wafi(self):
+    def test_default_profile_returns_bassera(self):
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("HERMES_HONCHO_HOST", None)
-            with patch("wafi_cli.profiles.get_active_profile_name", return_value="default"):
-                assert resolve_active_host() == "wafi"
+            os.environ.pop("BASSERA_HONCHO_HOST", None)
+            with patch("bassera_cli.profiles.get_active_profile_name", return_value="default"):
+                assert resolve_active_host() == "bassera"
 
-    def test_custom_profile_returns_wafi(self):
+    def test_custom_profile_returns_bassera(self):
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("HERMES_HONCHO_HOST", None)
-            with patch("wafi_cli.profiles.get_active_profile_name", return_value="custom"):
-                assert resolve_active_host() == "wafi"
+            os.environ.pop("BASSERA_HONCHO_HOST", None)
+            with patch("bassera_cli.profiles.get_active_profile_name", return_value="custom"):
+                assert resolve_active_host() == "bassera"
 
     def test_profiles_import_failure_falls_back(self):
         import sys
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("HERMES_HONCHO_HOST", None)
-            # Temporarily remove wafi_cli.profiles to simulate import failure
-            saved = sys.modules.get("wafi_cli.profiles")
-            sys.modules["wafi_cli.profiles"] = None  # type: ignore
+            os.environ.pop("BASSERA_HONCHO_HOST", None)
+            # Temporarily remove bassera_cli.profiles to simulate import failure
+            saved = sys.modules.get("bassera_cli.profiles")
+            sys.modules["bassera_cli.profiles"] = None  # type: ignore
             try:
-                assert resolve_active_host() == "wafi"
+                assert resolve_active_host() == "bassera"
             finally:
                 if saved is not None:
-                    sys.modules["wafi_cli.profiles"] = saved
+                    sys.modules["bassera_cli.profiles"] = saved
                 else:
-                    sys.modules.pop("wafi_cli.profiles", None)
+                    sys.modules.pop("bassera_cli.profiles", None)
 
 
 class TestProfileScopedConfig:
     def test_from_env_uses_profile_host(self):
         with patch.dict(os.environ, {"HONCHO_API_KEY": "key"}):
-            config = HonchoClientConfig.from_env(host="wafi.coder")
-        assert config.host == "wafi.coder"
-        assert config.workspace_id == "wafi"  # shared workspace
-        assert config.ai_peer == "wafi.coder"
+            config = HonchoClientConfig.from_env(host="bassera.coder")
+        assert config.host == "bassera.coder"
+        assert config.workspace_id == "bassera"  # shared workspace
+        assert config.ai_peer == "bassera.coder"
 
     def test_from_env_default_workspace_preserved_for_default_host(self):
         with patch.dict(os.environ, {"HONCHO_API_KEY": "key"}):
-            config = HonchoClientConfig.from_env(host="wafi")
-        assert config.host == "wafi"
-        assert config.workspace_id == "wafi"
+            config = HonchoClientConfig.from_env(host="bassera")
+        assert config.host == "bassera"
+        assert config.workspace_id == "bassera"
 
     def test_from_global_config_reads_profile_host_block(self, tmp_path):
         config_file = tmp_path / "config.json"
         config_file.write_text(json.dumps({
             "apiKey": "shared-key",
             "hosts": {
-                "wafi": {"aiPeer": "wafi", "peerName": "alice"},
-                "wafi.coder": {
-                    "aiPeer": "wafi.coder",
+                "bassera": {"aiPeer": "bassera", "peerName": "alice"},
+                "bassera.coder": {
+                    "aiPeer": "bassera.coder",
                     "peerName": "alice-coder",
                     "workspace": "coder-ws",
                 },
             },
         }))
         config = HonchoClientConfig.from_global_config(
-            host="wafi.coder", config_path=config_file,
+            host="bassera.coder", config_path=config_file,
         )
-        assert config.host == "wafi.coder"
+        assert config.host == "bassera.coder"
         assert config.workspace_id == "coder-ws"
-        assert config.ai_peer == "wafi.coder"
+        assert config.ai_peer == "bassera.coder"
         assert config.peer_name == "alice-coder"
 
     def test_from_global_config_auto_resolves_host(self, tmp_path):
@@ -473,12 +473,12 @@ class TestProfileScopedConfig:
         config_file.write_text(json.dumps({
             "apiKey": "key",
             "hosts": {
-                "wafi.dreamer": {"peerName": "dreamer-user"},
+                "bassera.dreamer": {"peerName": "dreamer-user"},
             },
         }))
-        with patch("plugins.memory.honcho.client.resolve_active_host", return_value="wafi.dreamer"):
+        with patch("plugins.memory.honcho.client.resolve_active_host", return_value="bassera.dreamer"):
             config = HonchoClientConfig.from_global_config(config_path=config_file)
-        assert config.host == "wafi.dreamer"
+        assert config.host == "bassera.dreamer"
         assert config.peer_name == "dreamer-user"
 
 
@@ -490,7 +490,7 @@ class TestObservationModeMigration:
         cfg_file = tmp_path / "config.json"
         cfg_file.write_text(json.dumps({
             "apiKey": "k",
-            "hosts": {"wafi": {"enabled": True, "aiPeer": "wafi"}},
+            "hosts": {"bassera": {"enabled": True, "aiPeer": "bassera"}},
         }))
         cfg = HonchoClientConfig.from_global_config(config_path=cfg_file)
         assert cfg.observation_mode == "unified"
@@ -507,7 +507,7 @@ class TestObservationModeMigration:
         cfg_file = tmp_path / "config.json"
         cfg_file.write_text(json.dumps({
             "apiKey": "k",
-            "hosts": {"wafi": {"enabled": True, "observationMode": "directional"}},
+            "hosts": {"bassera": {"enabled": True, "observationMode": "directional"}},
         }))
         cfg = HonchoClientConfig.from_global_config(config_path=cfg_file)
         assert cfg.observation_mode == "directional"
@@ -518,7 +518,7 @@ class TestObservationModeMigration:
         cfg_file.write_text(json.dumps({
             "apiKey": "k",
             "observationMode": "unified",
-            "hosts": {"wafi": {"enabled": True}},
+            "hosts": {"bassera": {"enabled": True}},
         }))
         cfg = HonchoClientConfig.from_global_config(config_path=cfg_file)
         assert cfg.observation_mode == "unified"
@@ -528,7 +528,7 @@ class TestObservationModeMigration:
         cfg_file = tmp_path / "config.json"
         cfg_file.write_text(json.dumps({
             "apiKey": "k",
-            "hosts": {"wafi": {
+            "hosts": {"bassera": {
                 "enabled": True,
                 "observation": {
                     "user": {"observeMe": True, "observeOthers": False},
@@ -558,7 +558,7 @@ class TestGetHonchoClient:
         cfg = HonchoClientConfig(
             api_key="test-key",
             timeout=91.0,
-            workspace_id="wafi",
+            workspace_id="bassera",
             environment="production",
         )
 
@@ -573,16 +573,16 @@ class TestGetHonchoClient:
         not importlib.util.find_spec("honcho"),
         reason="honcho SDK not installed"
     )
-    def test_wafi_config_timeout_override_used_when_config_timeout_missing(self):
+    def test_bassera_config_timeout_override_used_when_config_timeout_missing(self):
         fake_honcho = MagicMock(name="Honcho")
         cfg = HonchoClientConfig(
             api_key="test-key",
-            workspace_id="wafi",
+            workspace_id="bassera",
             environment="production",
         )
 
         with patch("honcho.Honcho", return_value=fake_honcho) as mock_honcho, \
-             patch("wafi_cli.config.load_config", return_value={"honcho": {"timeout": 88}}):
+             patch("bassera_cli.config.load_config", return_value={"honcho": {"timeout": 88}}):
             client = get_honcho_client(cfg)
 
         assert client is fake_honcho
@@ -593,16 +593,16 @@ class TestGetHonchoClient:
         not importlib.util.find_spec("honcho"),
         reason="honcho SDK not installed"
     )
-    def test_wafi_request_timeout_alias_used(self):
+    def test_bassera_request_timeout_alias_used(self):
         fake_honcho = MagicMock(name="Honcho")
         cfg = HonchoClientConfig(
             api_key="test-key",
-            workspace_id="wafi",
+            workspace_id="bassera",
             environment="production",
         )
 
         with patch("honcho.Honcho", return_value=fake_honcho) as mock_honcho, \
-             patch("wafi_cli.config.load_config", return_value={"honcho": {"request_timeout": "77.5"}}):
+             patch("bassera_cli.config.load_config", return_value={"honcho": {"request_timeout": "77.5"}}):
             client = get_honcho_client(cfg)
 
         assert client is fake_honcho
@@ -686,7 +686,7 @@ class TestDialecticDepthParsing:
         config_file.write_text(json.dumps({
             "apiKey": "***",
             "dialecticDepth": 1,
-            "hosts": {"wafi": {"dialecticDepth": 3}},
+            "hosts": {"bassera": {"dialecticDepth": 3}},
         }))
         config = HonchoClientConfig.from_global_config(config_path=config_file)
         assert config.dialectic_depth == 3

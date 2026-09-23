@@ -636,8 +636,8 @@ class QQAdapter(BasePlatformAdapter):
                 "shard": [0, 1],
                 "properties": {
                     "$os": "macOS",
-                    "$browser": "wafi-agent",
-                    "$device": "wafi-agent",
+                    "$browser": "bassera-agent",
+                    "$device": "bassera-agent",
                 },
             },
         }
@@ -1629,7 +1629,7 @@ class QQAdapter(BasePlatformAdapter):
                                  or ("glm-asr" if provider in ("zai", "glm") else "whisper-1"),
                     }
 
-        # 2. QQ-specific env vars (set by `wafi setup gateway` / `wafi gateway`)
+        # 2. QQ-specific env vars (set by `bassera setup gateway` / `bassera gateway`)
         qq_stt_key = os.getenv("QQ_STT_API_KEY", "")
         if qq_stt_key:
             base_url = os.getenv(

@@ -1,5 +1,5 @@
 """
-Cron job management tools for Wafi Agent.
+Cron job management tools for Bassera Agent.
 
 Expose a single compressed action-oriented tool to avoid schema/context bloat.
 Compatibility wrappers remain for direct Python callers and legacy tests.
@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from wafi_constants import display_wafi_home
+from bassera_constants import display_bassera_home
 
 logger = logging.getLogger(__name__)
 
@@ -70,10 +70,10 @@ def _scan_cron_prompt(prompt: str) -> str:
 
 def _origin_from_env() -> Optional[Dict[str, str]]:
     from gateway.session_context import get_session_env
-    origin_platform = get_session_env("HERMES_SESSION_PLATFORM")
-    origin_chat_id = get_session_env("HERMES_SESSION_CHAT_ID")
+    origin_platform = get_session_env("BASSERA_SESSION_PLATFORM")
+    origin_chat_id = get_session_env("BASSERA_SESSION_CHAT_ID")
     if origin_platform and origin_chat_id:
-        thread_id = get_session_env("HERMES_SESSION_THREAD_ID") or None
+        thread_id = get_session_env("BASSERA_SESSION_THREAD_ID") or None
         if thread_id:
             logger.debug(
                 "Cron origin captured thread_id=%s for %s:%s",
@@ -82,7 +82,7 @@ def _origin_from_env() -> Optional[Dict[str, str]]:
         return {
             "platform": origin_platform,
             "chat_id": origin_chat_id,
-            "chat_name": get_session_env("HERMES_SESSION_CHAT_NAME") or None,
+            "chat_name": get_session_env("BASSERA_SESSION_CHAT_NAME") or None,
             "thread_id": thread_id,
         }
     return None
@@ -120,7 +120,7 @@ def _resolve_model_override(model_obj: Optional[Dict[str, Any]]) -> tuple:
     """Resolve a model override object into (provider, model) for job storage.
 
     If provider is omitted, pins the current main provider from config so the
-    job doesn't drift when the user later changes their default via wafi model.
+    job doesn't drift when the user later changes their default via bassera model.
 
     Returns (provider_str_or_none, model_str_or_none).
     """
@@ -131,7 +131,7 @@ def _resolve_model_override(model_obj: Optional[Dict[str, Any]]) -> tuple:
     if model_name and not provider_name:
         # Pin to the current main provider so the job is stable
         try:
-            from wafi_cli.config import load_config
+            from bassera_cli.config import load_config
             cfg = load_config()
             model_cfg = cfg.get("model", {})
             if isinstance(model_cfg, dict):
@@ -153,7 +153,7 @@ def _normalize_optional_job_value(value: Optional[Any], *, strip_trailing_slash:
 def _validate_cron_script_path(script: Optional[str]) -> Optional[str]:
     """Validate a cron job script path at the API boundary.
 
-    Scripts must be relative paths that resolve within HERMES_HOME/scripts/.
+    Scripts must be relative paths that resolve within BASSERA_HOME/scripts/.
     Absolute paths and ~ expansion are rejected to prevent arbitrary script
     execution via prompt injection.
 
@@ -162,23 +162,23 @@ def _validate_cron_script_path(script: Optional[str]) -> Optional[str]:
     if not script or not script.strip():
         return None  # empty/None = clearing the field, always OK
 
-    from wafi_constants import get_wafi_home
+    from bassera_constants import get_bassera_home
 
     raw = script.strip()
 
     # Reject absolute paths and ~ expansion at the API boundary.
-    # Only relative paths within ~/.wafi/scripts/ are allowed.
+    # Only relative paths within ~/.bassera/scripts/ are allowed.
     if raw.startswith(("/", "~")) or (len(raw) >= 2 and raw[1] == ":"):
         return (
-            f"Script path must be relative to ~/.wafi/scripts/. "
+            f"Script path must be relative to ~/.bassera/scripts/. "
             f"Got absolute or home-relative path: {raw!r}. "
-            f"Place scripts in ~/.wafi/scripts/ and use just the filename."
+            f"Place scripts in ~/.bassera/scripts/ and use just the filename."
         )
 
     # Validate containment after resolution
     from tools.path_security import validate_within_dir
 
-    scripts_dir = get_wafi_home() / "scripts"
+    scripts_dir = get_bassera_home() / "scripts"
     scripts_dir.mkdir(parents=True, exist_ok=True)
     containment_error = validate_within_dir(scripts_dir / raw, scripts_dir)
     if containment_error:
@@ -457,7 +457,7 @@ Important safety rule: cron-run sessions should not recursively schedule more cr
             },
             "script": {
                 "type": "string",
-                "description": f"Optional path to a Python script that runs before each cron job execution. Its stdout is injected into the prompt as context. Use for data collection and change detection. Relative paths resolve under {display_wafi_home()}/scripts/. On update, pass empty string to clear."
+                "description": f"Optional path to a Python script that runs before each cron job execution. Its stdout is injected into the prompt as context. Use for data collection and change detection. Relative paths resolve under {display_bassera_home()}/scripts/. On update, pass empty string to clear."
             },
         },
         "required": ["action"]
@@ -474,9 +474,9 @@ def check_cronjob_requirements() -> bool:
     so no external crontab executable is required.
     """
     return bool(
-        os.getenv("HERMES_INTERACTIVE")
-        or os.getenv("HERMES_GATEWAY_SESSION")
-        or os.getenv("HERMES_EXEC_ASK")
+        os.getenv("BASSERA_INTERACTIVE")
+        or os.getenv("BASSERA_GATEWAY_SESSION")
+        or os.getenv("BASSERA_EXEC_ASK")
     )
 
 

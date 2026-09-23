@@ -14,7 +14,7 @@ description: "Build an automated AI code reviewer that monitors your repos, revi
 
 ```
 ┌──────────────┐     ┌───────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Cron Timer  │────▶│  Hermes Agent │────▶│  GitHub API  │────▶│  Review to   │
+│  Cron Timer  │────▶│  Bassera Agent │────▶│  GitHub API  │────▶│  Review to   │
 │  (every 2h)  │     │  + gh CLI     │     │  (PR diffs)  │     │  Telegram/   │
 │              │     │  + skill      │     │              │     │  Discord/    │
 │              │     │  + memory     │     │              │     │  local file  │
@@ -24,19 +24,19 @@ description: "Build an automated AI code reviewer that monitors your repos, revi
 This guide uses **cron jobs** to poll for PRs on a schedule — no server or public endpoint needed. Works behind NAT and firewalls.
 
 :::tip Want real-time reviews instead?
-If you have a public endpoint available, check out [Automated GitHub PR Comments with Webhooks](./webhook-github-pr-review.md) — GitHub pushes events to Hermes instantly when PRs are opened or updated.
+If you have a public endpoint available, check out [Automated GitHub PR Comments with Webhooks](./webhook-github-pr-review.md) — GitHub pushes events to Bassera instantly when PRs are opened or updated.
 :::
 
 ---
 
 ## Prerequisites
 
-- **Hermes Agent installed** — see the [Installation guide](/docs/getting-started/installation)
+- **Bassera Agent installed** — see the [Installation guide](/docs/getting-started/installation)
 - **Gateway running** for cron jobs:
   ```bash
-  hermes gateway install   # Install as a service
+  bassera gateway install   # Install as a service
   # or
-  hermes gateway           # Run in foreground
+  bassera gateway           # Run in foreground
   ```
 - **GitHub CLI (`gh`) installed and authenticated**:
   ```bash
@@ -50,17 +50,17 @@ If you have a public endpoint available, check out [Automated GitHub PR Comments
 - **Messaging configured** (optional) — [Telegram](/docs/user-guide/messaging/telegram) or [Discord](/docs/user-guide/messaging/discord)
 
 :::tip No messaging? No problem
-Use `deliver: "local"` to save reviews to `~/.hermes/cron/output/`. Great for testing before wiring up notifications.
+Use `deliver: "local"` to save reviews to `~/.bassera/cron/output/`. Great for testing before wiring up notifications.
 :::
 
 ---
 
 ## Step 1: Verify the Setup
 
-Make sure Hermes can access GitHub. Start a chat:
+Make sure Bassera can access GitHub. Start a chat:
 
 ```bash
-hermes
+bassera
 ```
 
 Test with a simple command:
@@ -75,7 +75,7 @@ You should see a list of open PRs. If this works, you're ready.
 
 ## Step 2: Try a Manual Review
 
-Still in the chat, ask Hermes to review a real PR:
+Still in the chat, ask Bassera to review a real PR:
 
 ```
 Review this pull request. Read the diff, check for bugs, security issues,
@@ -84,7 +84,7 @@ and code quality. Be specific about line numbers and quote problematic code.
 Run: gh pr diff 3888 --repo NousResearch/hermes-agent
 ```
 
-Hermes will:
+Bassera will:
 1. Execute `gh pr diff` to fetch the code changes
 2. Read through the entire diff
 3. Produce a structured review with specific findings
@@ -95,13 +95,13 @@ If you're happy with the quality, time to automate it.
 
 ## Step 3: Create a Review Skill
 
-A skill gives Hermes consistent review guidelines that persist across sessions and cron runs. Without one, review quality varies.
+A skill gives Bassera consistent review guidelines that persist across sessions and cron runs. Without one, review quality varies.
 
 ```bash
-mkdir -p ~/.hermes/skills/code-review
+mkdir -p ~/.bassera/skills/code-review
 ```
 
-Create `~/.hermes/skills/code-review/SKILL.md`:
+Create `~/.bassera/skills/code-review/SKILL.md`:
 
 ```markdown
 ---
@@ -134,13 +134,13 @@ For each finding:
 - End with: APPROVE / REQUEST_CHANGES / COMMENT
 ```
 
-Verify it loaded — start `hermes` and you should see `code-review` in the skills list at startup.
+Verify it loaded — start `bassera` and you should see `code-review` in the skills list at startup.
 
 ---
 
 ## Step 4: Teach It Your Conventions
 
-This is what makes the reviewer actually useful. Start a session and teach Hermes your team's standards:
+This is what makes the reviewer actually useful. Start a session and teach Bassera your team's standards:
 
 ```
 Remember: In our backend repo, we use Python with FastAPI.
@@ -164,7 +164,7 @@ These memories persist forever — the reviewer will enforce your conventions wi
 Now wire it all together. Create a cron job that runs every 2 hours:
 
 ```bash
-hermes cron create "0 */2 * * *" \
+bassera cron create "0 */2 * * *" \
   "Check for new open PRs and review them.
 
 Repos to monitor:
@@ -193,7 +193,7 @@ If no new PRs found, say: No new PRs to review." \
 Verify it's scheduled:
 
 ```bash
-hermes cron list
+bassera cron list
 ```
 
 ### Other useful schedules
@@ -212,7 +212,7 @@ hermes cron list
 Don't want to wait for the schedule? Trigger it manually:
 
 ```bash
-hermes cron run pr-review
+bassera cron run pr-review
 ```
 
 Or from within a chat session:
@@ -247,7 +247,7 @@ Make sure `gh` has a token with `repo` scope. Reviews are posted as whoever `gh`
 Create a Monday morning overview of all your repos:
 
 ```bash
-hermes cron create "0 9 * * 1" \
+bassera cron create "0 9 * * 1" \
   "Generate a weekly PR dashboard:
 - myorg/backend-api
 - myorg/frontend-app
@@ -277,13 +277,13 @@ The gateway runs in a minimal environment. Ensure `gh` is in the system PATH and
 
 ### Reviews are too generic
 1. Add the `code-review` skill (Step 3)
-2. Teach Hermes your conventions via memory (Step 4)
+2. Teach Bassera your conventions via memory (Step 4)
 3. The more context it has about your stack, the better the reviews
 
 ### Cron job doesn't run
 ```bash
-hermes gateway status    # Is the gateway running?
-hermes cron list         # Is the job enabled?
+bassera gateway status    # Is the gateway running?
+bassera cron list         # Is the job enabled?
 ```
 
 ### Rate limits
@@ -295,6 +295,6 @@ GitHub allows 5,000 API requests/hour for authenticated users. Each PR review us
 
 - **[Webhook-Based PR Reviews](./webhook-github-pr-review.md)** — get instant reviews when PRs are opened (requires a public endpoint)
 - **[Daily Briefing Bot](/docs/guides/daily-briefing-bot)** — combine PR reviews with your morning news digest
-- **[Build a Plugin](/docs/guides/build-a-hermes-plugin)** — wrap the review logic into a shareable plugin
+- **[Build a Plugin](/docs/guides/build-a-bassera-plugin)** — wrap the review logic into a shareable plugin
 - **[Profiles](/docs/user-guide/profiles)** — run a dedicated reviewer profile with its own memory and config
 - **[Fallback Providers](/docs/user-guide/features/fallback-providers)** — ensure reviews run even when one provider is down

@@ -1,10 +1,10 @@
-"""Tests for slash command prefix matching in WafiCLI.process_command."""
+"""Tests for slash command prefix matching in BasseraCLI.process_command."""
 from unittest.mock import MagicMock, patch
-from cli import WafiCLI
+from cli import BasseraCLI
 
 
 def _make_cli():
-    cli_obj = WafiCLI.__new__(WafiCLI)
+    cli_obj = BasseraCLI.__new__(BasseraCLI)
     cli_obj.config = {}
     cli_obj.console = MagicMock()
     cli_obj.agent = None
@@ -51,7 +51,7 @@ class TestSlashCommandPrefixMatching:
         cli_obj = _make_cli()
         call_count = [0]
 
-        original_pc = WafiCLI.process_command
+        original_pc = BasseraCLI.process_command
 
         def guarded(self_inner, cmd):
             call_count[0] += 1
@@ -60,7 +60,7 @@ class TestSlashCommandPrefixMatching:
             return original_pc(self_inner, cmd)
 
         # Mock show_config since the test is about recursion, not config display
-        with patch.object(WafiCLI, 'process_command', guarded), \
+        with patch.object(BasseraCLI, 'process_command', guarded), \
              patch.object(cli_obj, 'show_config'):
             try:
                 cli_obj.process_command("/config set key value")

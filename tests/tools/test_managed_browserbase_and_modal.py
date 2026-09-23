@@ -52,10 +52,10 @@ def _enable_managed_nous_tools(monkeypatch):
     The _install_fake_tools_package() helper resets and reimports tool modules,
     so a simple monkeypatch on tool_backend_helpers doesn't survive.  We patch
     the *source* modules that the reimported modules will import from — both
-    wafi_cli.auth and wafi_cli.models — so the function body returns True.
+    bassera_cli.auth and bassera_cli.models — so the function body returns True.
     """
-    monkeypatch.setattr("wafi_cli.auth.get_nous_auth_status", lambda: {"logged_in": True})
-    monkeypatch.setattr("wafi_cli.models.check_nous_free_tier", lambda: False)
+    monkeypatch.setattr("bassera_cli.auth.get_nous_auth_status", lambda: {"logged_in": True})
+    monkeypatch.setattr("bassera_cli.models.check_nous_free_tier", lambda: False)
 
 
 def _install_fake_tools_package():
@@ -131,7 +131,7 @@ def test_browser_use_explicit_local_mode_stays_local_even_when_managed_gateway_i
     env = os.environ.copy()
     env.pop("BROWSER_USE_API_KEY", None)
     env.update({
-        "HERMES_HOME": str(tmp_path),
+        "BASSERA_HOME": str(tmp_path),
         "TOOL_GATEWAY_USER_TOKEN": "nous-token",
         "BROWSER_USE_GATEWAY_URL": "http://127.0.0.1:3009",
     })

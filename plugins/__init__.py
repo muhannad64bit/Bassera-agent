@@ -1,1 +1,1 @@
-# Wafi plugins package
+# Bassera plugins package

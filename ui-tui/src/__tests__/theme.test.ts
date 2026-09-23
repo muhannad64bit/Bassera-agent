@@ -30,7 +30,7 @@ describe('LIGHT_THEME', () => {
 })
 
 describe('DEFAULT_THEME aliasing', () => {
-  it('defaults to DARK_THEME when HERMES_TUI_LIGHT is unset', () => {
+  it('defaults to DARK_THEME when BASSERA_TUI_LIGHT is unset', () => {
     expect(DEFAULT_THEME).toBe(DARK_THEME)
   })
 })

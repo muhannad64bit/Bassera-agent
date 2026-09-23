@@ -223,7 +223,7 @@ def test_persist_dm_topic_thread_id_writes_config(tmp_path):
         }
     }
 
-    config_file = tmp_path / ".wafi" / "config.yaml"
+    config_file = tmp_path / ".bassera" / "config.yaml"
     config_file.parent.mkdir(parents=True)
     with open(config_file, "w") as f:
         yaml.dump(config_data, f)
@@ -231,7 +231,7 @@ def test_persist_dm_topic_thread_id_writes_config(tmp_path):
     adapter = _make_adapter()
 
     with patch.object(Path, "home", return_value=tmp_path), \
-         patch.dict(os.environ, {"HERMES_HOME": str(tmp_path / ".wafi")}):
+         patch.dict(os.environ, {"BASSERA_HOME": str(tmp_path / ".bassera")}):
         adapter._persist_dm_topic_thread_id(111, "General", 999)
 
     with open(config_file) as f:
@@ -263,7 +263,7 @@ def test_persist_dm_topic_thread_id_skips_if_already_set(tmp_path):
         }
     }
 
-    config_file = tmp_path / ".wafi" / "config.yaml"
+    config_file = tmp_path / ".bassera" / "config.yaml"
     config_file.parent.mkdir(parents=True)
     with open(config_file, "w") as f:
         yaml.dump(config_data, f)
@@ -365,13 +365,13 @@ def test_get_dm_topic_info_hot_reloads_from_config(tmp_path):
             }
         }
     }
-    config_file = tmp_path / ".wafi" / "config.yaml"
+    config_file = tmp_path / ".bassera" / "config.yaml"
     config_file.parent.mkdir(parents=True)
     with open(config_file, "w") as f:
         yaml.dump(config_data, f)
 
     with patch.object(Path, "home", return_value=tmp_path), \
-         patch.dict(os.environ, {"HERMES_HOME": str(tmp_path / ".wafi")}):
+         patch.dict(os.environ, {"BASSERA_HOME": str(tmp_path / ".bassera")}):
         result = adapter._get_dm_topic_info("111", "555")
 
     assert result is not None
@@ -633,7 +633,7 @@ def test_group_topic_chat_id_int_string_coercion():
         {
             "chat_id": "-1001234567890",  # string, not int
             "topics": [
-                {"name": "Dev", "thread_id": "7", "skill": "wafi-agent-dev"},
+                {"name": "Dev", "thread_id": "7", "skill": "bassera-agent-dev"},
             ],
         }
     ])
@@ -643,7 +643,7 @@ def test_group_topic_chat_id_int_string_coercion():
     )
     event = adapter._build_message_event(msg, MessageType.TEXT)
 
-    assert event.auto_skill == "wafi-agent-dev"
+    assert event.auto_skill == "bassera-agent-dev"
     assert event.source.chat_topic == "Dev"
 
 

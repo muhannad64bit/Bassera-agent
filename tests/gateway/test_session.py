@@ -283,7 +283,7 @@ class TestBuildSessionContextPrompt:
         assert "Local" in prompt
         assert "machine running this agent" in prompt
 
-    def test_local_delivery_path_uses_display_wafi_home(self):
+    def test_local_delivery_path_uses_display_bassera_home(self):
         config = GatewayConfig()
         source = SessionSource(
             platform=Platform.LOCAL, chat_id="cli",
@@ -291,10 +291,10 @@ class TestBuildSessionContextPrompt:
         )
         ctx = build_session_context(source, config)
 
-        with patch("wafi_constants.display_wafi_home", return_value="~/.wafi/profiles/coder"):
+        with patch("bassera_constants.display_bassera_home", return_value="~/.bassera/profiles/coder"):
             prompt = build_session_context_prompt(ctx)
 
-        assert "~/.wafi/profiles/coder/cron/output/" in prompt
+        assert "~/.bassera/profiles/coder/cron/output/" in prompt
 
     def test_whatsapp_prompt(self):
         config = GatewayConfig(
@@ -478,7 +478,7 @@ class TestLoadTranscriptPreferLongerSource:
     @pytest.fixture()
     def store_with_db(self, tmp_path):
         """SessionStore with both SQLite and JSONL active."""
-        from wafi_state import SessionDB
+        from bassera_state import SessionDB
 
         config = GatewayConfig()
         with patch("gateway.session.SessionStore._ensure_loaded"):
@@ -569,7 +569,7 @@ class TestSessionStoreSwitchSession:
     """Regression coverage for gateway /resume session switching semantics."""
 
     def test_switch_session_reopens_target_session_in_db(self, tmp_path):
-        from wafi_state import SessionDB
+        from bassera_state import SessionDB
 
         config = GatewayConfig()
         with patch("gateway.session.SessionStore._ensure_loaded"):
@@ -1025,7 +1025,7 @@ class TestRewriteTranscriptPreservesReasoning:
     """rewrite_transcript must not drop reasoning fields from SQLite."""
 
     def test_reasoning_survives_rewrite(self, tmp_path):
-        from wafi_state import SessionDB
+        from bassera_state import SessionDB
 
         db = SessionDB(db_path=tmp_path / "test.db")
         session_id = "reasoning-test"

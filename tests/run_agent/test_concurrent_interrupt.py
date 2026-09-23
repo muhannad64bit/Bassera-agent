@@ -9,15 +9,15 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def _isolate_wafi(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".wafi"))
-    (tmp_path / ".wafi").mkdir(exist_ok=True)
+def _isolate_bassera(tmp_path, monkeypatch):
+    monkeypatch.setenv("BASSERA_HOME", str(tmp_path / ".bassera"))
+    (tmp_path / ".bassera").mkdir(exist_ok=True)
 
 
 def _make_agent(monkeypatch):
     """Create a minimal AIAgent-like object with just the methods under test."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "")
-    monkeypatch.setenv("HERMES_INFERENCE_PROVIDER", "")
+    monkeypatch.setenv("BASSERA_INFERENCE_PROVIDER", "")
     # Avoid full AIAgent init — just import the class and build a stub
     import run_agent as _ra
 

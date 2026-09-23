@@ -10,12 +10,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from cli import WafiCLI
+from cli import BasseraCLI
 
 
 def _make_cli():
-    """Create a minimal WafiCLI instance for testing."""
-    cli_obj = WafiCLI.__new__(WafiCLI)
+    """Create a minimal BasseraCLI instance for testing."""
+    cli_obj = BasseraCLI.__new__(BasseraCLI)
     cli_obj.model = "test-model"
     cli_obj._background_tasks = {}
     cli_obj._background_task_counter = 0

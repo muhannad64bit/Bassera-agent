@@ -1,7 +1,7 @@
 # Logging and audit trail
 
 Bassera Agent uses Python's `logging` module throughout, configured by
-`wafi_logging.setup_logging()`. This document defines the conventions a
+`bassera_logging.setup_logging()`. This document defines the conventions a
 contributor must follow and the exact audit-log format.
 
 ## 1. Where logs live
@@ -13,9 +13,9 @@ contributor must follow and the exact audit-log format.
 | `<home>/logs/audit.log` | approval-decision audit trail (JSON lines) | plain append |
 | stderr | console copy; `setup_verbose_logging()` swaps in a timestamped `HH:MM:SS` format | `StreamHandler` |
 
-`<home>` is the Bassera home (`~/.wafi` by default, `BASSERA_HOME` /
-`HERMES_HOME` overrides). All file handlers use rotation; handler classes
-in `wafi_logging.py` (`_ManagedRotatingFileHandler`) enforce permissions
+`<home>` is the Bassera home (`~/.bassera` by default, `BASSERA_HOME` /
+`BASSERA_HOME` overrides). All file handlers use rotation; handler classes
+in `bassera_logging.py` (`_ManagedRotatingFileHandler`) enforce permissions
 in managed mode.
 
 ## 2. Format and levels
@@ -76,8 +76,8 @@ Schema:
 Reading the trail:
 
 ```bash
-tail -n 200 ~/.wafi/logs/audit.log | jq .
-jq 'select(.decision=="approved" and .unchecked==true)' ~/.wafi/logs/audit.log
+tail -n 200 ~/.bassera/logs/audit.log | jq .
+jq 'select(.decision=="approved" and .unchecked==true)' ~/.bassera/logs/audit.log
 ```
 
 The audit trail is a security artifact: tests that touch approval code
@@ -87,7 +87,7 @@ hermetic — see CONTRIBUTING), and new decision points must extend
 
 ## 4. Component filters
 
-`_ComponentFilter` (in `wafi_logging.py`) routes records by logger-name
+`_ComponentFilter` (in `bassera_logging.py`) routes records by logger-name
 prefix to per-component files (agent vs gateway). New top-level
 components that deserve their own log file register a filter there,
 rather than writing bespoke log setup code.

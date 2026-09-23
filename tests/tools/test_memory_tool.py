@@ -739,7 +739,7 @@ class TestStructuredMemoryRetrieval:
 
         block = store.build_doctrine_guidance("How should you respond by default?")
 
-        assert "WAFI OWNER DOCTRINE" in block
+        assert "BASSERA OWNER DOCTRINE" in block
         assert "Explicit user instructions" in block
         assert "verbosity_preference" in block
 

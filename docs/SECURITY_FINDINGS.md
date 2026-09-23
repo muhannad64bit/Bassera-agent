@@ -1,9 +1,9 @@
 # Security findings — full-history secret scan and related decisions
 
 This document records the results of the exhaustive secret scan of the
-entire git history of Bassera Agent (fork chain: hermes-agent →
-wafi-agent → Bassera-agent), plus the explicit decisions attached to
-each finding. The threat model (`wafi_architecture/threat_model.md`)
+entire git history of Bassera Agent (fork chain: bassera-agent →
+bassera-agent → Bassera-agent), plus the explicit decisions attached to
+each finding. The threat model (`bassera_architecture/threat_model.md`)
 summarizes these as residual risks; this file holds the details.
 
 ## 1. Scan method
@@ -33,10 +33,10 @@ summarizes these as residual risks; this file holds the details.
   anyone who reads upstream's public history.
 - **Fix in this fork**: commit `175f69d4` replaced it with an obvious
   fixture (`1234567890:AAFixtureTokenEnvSanitizeTest__NotReal00000`)
-  in `tests/hermes_cli/test_env_sanitize_on_load.py`. The fork tip is
+  in `tests/bassera_cli/test_env_sanitize_on_load.py`. The fork tip is
   clean (`git grep` verifies).
 - **Status**: **Fixed at tip; still present in upstream public history.**
-- **Recommendation**: report upstream (hermes-agent) so they rewrite
+- **Recommendation**: report upstream (bassera-agent) so they rewrite
   their history and the reporter revokes the token via @BotFather.
   History rewriting is only possible upstream — this fork cannot purge
   the value from objects it inherited; anyone cloning upstream remains
@@ -65,7 +65,7 @@ summarizes these as residual risks; this file holds the details.
 Every remaining hit is an obviously synthetic fixture: `sk-ant-abc123...`
 in exfiltration tests, redaction-pattern strings in `agent/redact.py`
 (the detector itself, not secrets), `xoxb-workspace-token-here` doc
-placeholders, `SECRET = "WAFI_GEMINI_CLIENT_SECRET"` (an env var *name*),
+placeholders, `SECRET = "BASSERA_GEMINI_CLIENT_SECRET"` (an env var *name*),
 and similar. **No other real credentials were found in 42,510 blobs.**
 
 ## 3. Decision D-1: restore the 1password optional skill

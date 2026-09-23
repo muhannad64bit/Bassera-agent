@@ -9,18 +9,18 @@ from gateway import status
 
 class TestGatewayPidState:
     def test_write_pid_file_records_gateway_metadata(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
 
         status.write_pid_file()
 
         payload = json.loads((tmp_path / "gateway.pid").read_text())
         assert payload["pid"] == os.getpid()
-        assert payload["kind"] == "wafi-gateway"
+        assert payload["kind"] == "bassera-gateway"
         assert isinstance(payload["argv"], list)
         assert payload["argv"]
 
     def test_get_running_pid_rejects_live_non_gateway_pid(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         pid_path = tmp_path / "gateway.pid"
         pid_path.write_text(str(os.getpid()))
 
@@ -28,12 +28,12 @@ class TestGatewayPidState:
         assert not pid_path.exists()
 
     def test_get_running_pid_accepts_gateway_metadata_when_cmdline_unavailable(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         pid_path = tmp_path / "gateway.pid"
         pid_path.write_text(json.dumps({
             "pid": os.getpid(),
-            "kind": "wafi-gateway",
-            "argv": ["python", "-m", "wafi_cli.main", "gateway"],
+            "kind": "bassera-gateway",
+            "argv": ["python", "-m", "bassera_cli.main", "gateway"],
             "start_time": 123,
         }))
 
@@ -44,12 +44,12 @@ class TestGatewayPidState:
         assert status.get_running_pid() == os.getpid()
 
     def test_get_running_pid_accepts_script_style_gateway_cmdline(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         pid_path = tmp_path / "gateway.pid"
         pid_path.write_text(json.dumps({
             "pid": os.getpid(),
-            "kind": "wafi-gateway",
-            "argv": ["/venv/bin/python", "/repo/wafi_cli/main.py", "gateway", "run", "--replace"],
+            "kind": "bassera-gateway",
+            "argv": ["/venv/bin/python", "/repo/bassera_cli/main.py", "gateway", "run", "--replace"],
             "start_time": 123,
         }))
 
@@ -58,7 +58,7 @@ class TestGatewayPidState:
         monkeypatch.setattr(
             status,
             "_read_process_cmdline",
-            lambda pid: "/venv/bin/python /repo/wafi_cli/main.py gateway run --replace",
+            lambda pid: "/venv/bin/python /repo/bassera_cli/main.py gateway run --replace",
         )
 
         assert status.get_running_pid() == os.getpid()
@@ -69,8 +69,8 @@ class TestGatewayPidState:
         pid_path = other_home / "gateway.pid"
         pid_path.write_text(json.dumps({
             "pid": os.getpid(),
-            "kind": "wafi-gateway",
-            "argv": ["python", "-m", "wafi_cli.main", "gateway"],
+            "kind": "bassera-gateway",
+            "argv": ["python", "-m", "bassera_cli.main", "gateway"],
             "start_time": 123,
         }))
 
@@ -85,14 +85,14 @@ class TestGatewayPidState:
 class TestGatewayRuntimeStatus:
     def test_write_runtime_status_overwrites_stale_pid_on_restart(self, tmp_path, monkeypatch):
         """Regression: setdefault() preserved stale PID from previous process (#1631)."""
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
 
         # Simulate a previous gateway run that left a state file with a stale PID
         state_path = tmp_path / "gateway_state.json"
         state_path.write_text(json.dumps({
             "pid": 99999,
             "start_time": 1000.0,
-            "kind": "wafi-gateway",
+            "kind": "bassera-gateway",
             "platforms": {},
             "updated_at": "2025-01-01T00:00:00Z",
         }))
@@ -104,7 +104,7 @@ class TestGatewayRuntimeStatus:
         assert payload["start_time"] != 1000.0, "start_time should be overwritten on restart"
 
     def test_write_runtime_status_records_platform_failure(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
 
         status.write_runtime_status(
             gateway_state="startup_failed",
@@ -123,7 +123,7 @@ class TestGatewayRuntimeStatus:
         assert payload["platforms"]["telegram"]["error_message"] == "another poller is active"
 
     def test_write_runtime_status_explicit_none_clears_stale_fields(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
 
         status.write_runtime_status(
             gateway_state="startup_failed",
@@ -188,13 +188,13 @@ class TestTerminatePid:
 
 class TestScopedLocks:
     def test_acquire_scoped_lock_rejects_live_other_process(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_GATEWAY_LOCK_DIR", str(tmp_path / "locks"))
+        monkeypatch.setenv("BASSERA_GATEWAY_LOCK_DIR", str(tmp_path / "locks"))
         lock_path = tmp_path / "locks" / "telegram-bot-token-2bb80d537b1da3e3.lock"
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         lock_path.write_text(json.dumps({
             "pid": 99999,
             "start_time": 123,
-            "kind": "wafi-gateway",
+            "kind": "bassera-gateway",
         }))
 
         monkeypatch.setattr(status.os, "kill", lambda pid, sig: None)
@@ -206,13 +206,13 @@ class TestScopedLocks:
         assert existing["pid"] == 99999
 
     def test_acquire_scoped_lock_replaces_stale_record(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_GATEWAY_LOCK_DIR", str(tmp_path / "locks"))
+        monkeypatch.setenv("BASSERA_GATEWAY_LOCK_DIR", str(tmp_path / "locks"))
         lock_path = tmp_path / "locks" / "telegram-bot-token-2bb80d537b1da3e3.lock"
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         lock_path.write_text(json.dumps({
             "pid": 99999,
             "start_time": 123,
-            "kind": "wafi-gateway",
+            "kind": "bassera-gateway",
         }))
 
         def fake_kill(pid, sig):
@@ -229,7 +229,7 @@ class TestScopedLocks:
 
     def test_acquire_scoped_lock_recovers_empty_lock_file(self, tmp_path, monkeypatch):
         """Empty lock file (0 bytes) left by a crashed process should be treated as stale."""
-        monkeypatch.setenv("HERMES_GATEWAY_LOCK_DIR", str(tmp_path / "locks"))
+        monkeypatch.setenv("BASSERA_GATEWAY_LOCK_DIR", str(tmp_path / "locks"))
         lock_path = tmp_path / "locks" / "slack-app-token-2bb80d537b1da3e3.lock"
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         lock_path.write_text("")  # simulate crash between O_CREAT and json.dump
@@ -243,7 +243,7 @@ class TestScopedLocks:
 
     def test_acquire_scoped_lock_recovers_corrupt_lock_file(self, tmp_path, monkeypatch):
         """Lock file with invalid JSON should be treated as stale."""
-        monkeypatch.setenv("HERMES_GATEWAY_LOCK_DIR", str(tmp_path / "locks"))
+        monkeypatch.setenv("BASSERA_GATEWAY_LOCK_DIR", str(tmp_path / "locks"))
         lock_path = tmp_path / "locks" / "slack-app-token-2bb80d537b1da3e3.lock"
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         lock_path.write_text("{truncated")  # simulate partial write
@@ -255,7 +255,7 @@ class TestScopedLocks:
         assert payload["pid"] == os.getpid()
 
     def test_release_scoped_lock_only_removes_current_owner(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_GATEWAY_LOCK_DIR", str(tmp_path / "locks"))
+        monkeypatch.setenv("BASSERA_GATEWAY_LOCK_DIR", str(tmp_path / "locks"))
 
         acquired, _ = status.acquire_scoped_lock("telegram-bot-token", "secret", metadata={"platform": "telegram"})
         assert acquired is True
@@ -276,7 +276,7 @@ class TestTakeoverMarker:
     """
 
     def test_write_marker_records_target_identity(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         monkeypatch.setattr(status, "_get_process_start_time", lambda pid: 42)
 
         ok = status.write_takeover_marker(target_pid=12345)
@@ -292,7 +292,7 @@ class TestTakeoverMarker:
 
     def test_consume_returns_true_when_marker_names_self(self, tmp_path, monkeypatch):
         """Primary happy path: planned takeover is recognised."""
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         # Mark THIS process as the target
         monkeypatch.setattr(status, "_get_process_start_time", lambda pid: 100)
         ok = status.write_takeover_marker(target_pid=os.getpid())
@@ -307,7 +307,7 @@ class TestTakeoverMarker:
 
     def test_consume_returns_false_for_different_pid(self, tmp_path, monkeypatch):
         """A marker naming a DIFFERENT process must not be consumed as ours."""
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         monkeypatch.setattr(status, "_get_process_start_time", lambda pid: 100)
         # Marker names a different PID
         other_pid = os.getpid() + 9999
@@ -324,7 +324,7 @@ class TestTakeoverMarker:
 
     def test_consume_returns_false_on_start_time_mismatch(self, tmp_path, monkeypatch):
         """PID reuse defence: old marker's start_time mismatches current process."""
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         # Marker says target started at time 100 with our PID
         monkeypatch.setattr(status, "_get_process_start_time", lambda pid: 100)
         status.write_takeover_marker(target_pid=os.getpid())
@@ -337,7 +337,7 @@ class TestTakeoverMarker:
         assert result is False
 
     def test_consume_returns_false_when_marker_missing(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
 
         result = status.consume_takeover_marker_for_self()
 
@@ -347,7 +347,7 @@ class TestTakeoverMarker:
         """A marker older than 60s must be ignored."""
         from datetime import datetime, timezone, timedelta
 
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         marker_path = tmp_path / ".gateway-takeover.json"
         # Hand-craft a marker written 2 minutes ago
         stale_time = (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat()
@@ -366,7 +366,7 @@ class TestTakeoverMarker:
         assert not marker_path.exists()
 
     def test_consume_handles_malformed_marker_gracefully(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         marker_path = tmp_path / ".gateway-takeover.json"
         marker_path.write_text("not valid json{")
 
@@ -376,7 +376,7 @@ class TestTakeoverMarker:
         assert result is False
 
     def test_consume_handles_marker_with_missing_fields(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         marker_path = tmp_path / ".gateway-takeover.json"
         marker_path.write_text(json.dumps({"only_replacer_pid": 99999}))
 
@@ -387,7 +387,7 @@ class TestTakeoverMarker:
         assert not marker_path.exists()
 
     def test_clear_takeover_marker_is_idempotent(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
 
         # Nothing to clear — must not raise
         status.clear_takeover_marker()
@@ -405,7 +405,7 @@ class TestTakeoverMarker:
 
     def test_write_marker_returns_false_on_write_failure(self, tmp_path, monkeypatch):
         """write_takeover_marker is best-effort; returns False but doesn't raise."""
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
 
         def raise_oserror(*args, **kwargs):
             raise OSError("simulated write failure")
@@ -426,7 +426,7 @@ class TestTakeoverMarker:
         The distinguishing check is ``target_pid == our_pid AND
         target_start_time == our_start_time``. Different PID always wins.
         """
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         marker_path = tmp_path / ".gateway-takeover.json"
         # Fresh marker (timestamp is recent) but names a totally different PID
         from datetime import datetime, timezone

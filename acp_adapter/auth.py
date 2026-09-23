@@ -1,4 +1,4 @@
-"""ACP auth helpers — detect the currently configured Wafi provider."""
+"""ACP auth helpers — detect the currently configured Bassera provider."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ from typing import Optional
 
 
 def detect_provider() -> Optional[str]:
-    """Resolve the active Wafi runtime provider, or None if unavailable."""
+    """Resolve the active Bassera runtime provider, or None if unavailable."""
     try:
-        from wafi_cli.runtime_provider import resolve_runtime_provider
+        from bassera_cli.runtime_provider import resolve_runtime_provider
         runtime = resolve_runtime_provider()
         api_key = runtime.get("api_key")
         provider = runtime.get("provider")
@@ -20,5 +20,5 @@ def detect_provider() -> Optional[str]:
 
 
 def has_provider() -> bool:
-    """Return True if Wafi can resolve any runtime provider credentials."""
+    """Return True if Bassera can resolve any runtime provider credentials."""
     return detect_provider() is not None

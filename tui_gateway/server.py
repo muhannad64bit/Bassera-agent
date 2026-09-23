@@ -12,8 +12,8 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from wafi_constants import get_wafi_home
-from wafi_cli.env_loader import load_wafi_dotenv
+from bassera_constants import get_bassera_home
+from bassera_cli.env_loader import load_bassera_dotenv
 from tui_gateway.transport import (
     StdioTransport,
     bind_transport,
@@ -21,11 +21,11 @@ from tui_gateway.transport import (
     reset_transport,
 )
 
-_wafi_home = get_wafi_home()
-load_wafi_dotenv(wafi_home=_wafi_home, project_env=Path(__file__).parent.parent / ".env")
+_bassera_home = get_bassera_home()
+load_bassera_dotenv(bassera_home=_bassera_home, project_env=Path(__file__).parent.parent / ".env")
 
 try:
-    from wafi_cli.banner import prefetch_update_check
+    from bassera_cli.banner import prefetch_update_check
     prefetch_update_check()
 except Exception:
     pass
@@ -41,7 +41,7 @@ _stdout_lock = threading.Lock()
 _cfg_lock = threading.Lock()
 _cfg_cache: dict | None = None
 _cfg_mtime: float | None = None
-_SLASH_WORKER_TIMEOUT_S = max(5.0, float(os.environ.get("HERMES_TUI_SLASH_TIMEOUT_S", "45") or 45))
+_SLASH_WORKER_TIMEOUT_S = max(5.0, float(os.environ.get("BASSERA_TUI_SLASH_TIMEOUT_S", "45") or 45))
 
 # ── Async RPC dispatch (#12546) ──────────────────────────────────────
 # A handful of handlers block the dispatcher loop in entry.py for seconds
@@ -55,7 +55,7 @@ _SLASH_WORKER_TIMEOUT_S = max(5.0, float(os.environ.get("HERMES_TUI_SLASH_TIMEOU
 _LONG_HANDLERS = frozenset({"cli.exec", "session.branch", "session.resume", "shell.exec", "slash.exec"})
 
 _pool = concurrent.futures.ThreadPoolExecutor(
-    max_workers=max(2, int(os.environ.get("HERMES_TUI_RPC_POOL_WORKERS", "4") or 4)),
+    max_workers=max(2, int(os.environ.get("BASSERA_TUI_RPC_POOL_WORKERS", "4") or 4)),
     thread_name_prefix="tui-rpc",
 )
 atexit.register(lambda: _pool.shutdown(wait=False, cancel_futures=True))
@@ -80,7 +80,7 @@ _detached_ws_transport = _DropTransport()
 
 
 class _SlashWorker:
-    """Persistent WafiCLI subprocess for slash commands."""
+    """Persistent BasseraCLI subprocess for slash commands."""
 
     def __init__(self, session_key: str, model: str):
         self._lock = threading.Lock()
@@ -158,7 +158,7 @@ atexit.register(lambda: [
 def _get_db():
     global _db
     if _db is None:
-        from wafi_state import SessionDB
+        from bassera_state import SessionDB
         _db = SessionDB()
     return _db
 
@@ -296,7 +296,7 @@ def _load_cfg() -> dict:
     global _cfg_cache, _cfg_mtime
     try:
         import yaml
-        p = _wafi_home / "config.yaml"
+        p = _bassera_home / "config.yaml"
         mtime = p.stat().st_mtime if p.exists() else None
         with _cfg_lock:
             if _cfg_cache is not None and _cfg_mtime == mtime:
@@ -318,7 +318,7 @@ def _load_cfg() -> dict:
 def _save_cfg(cfg: dict):
     global _cfg_cache, _cfg_mtime
     import yaml
-    path = _wafi_home / "config.yaml"
+    path = _bassera_home / "config.yaml"
     with open(path, "w") as f:
         yaml.safe_dump(cfg, f)
     with _cfg_lock:
@@ -349,9 +349,9 @@ def _clear_session_context(tokens: list) -> None:
 
 def _enable_gateway_prompts() -> None:
     """Route approvals through gateway callbacks instead of CLI input()."""
-    os.environ["HERMES_GATEWAY_SESSION"] = "1"
-    os.environ["HERMES_EXEC_ASK"] = "1"
-    os.environ["HERMES_INTERACTIVE"] = "1"
+    os.environ["BASSERA_GATEWAY_SESSION"] = "1"
+    os.environ["BASSERA_EXEC_ASK"] = "1"
+    os.environ["BASSERA_INTERACTIVE"] = "1"
 
 
 # ── Blocking prompt factory ──────────────────────────────────────────
@@ -386,7 +386,7 @@ def _clear_pending(sid: str | None = None) -> None:
 
 def resolve_skin() -> dict:
     try:
-        from wafi_cli.skin_engine import init_skin_from_config, get_active_skin
+        from bassera_cli.skin_engine import init_skin_from_config, get_active_skin
         init_skin_from_config(_load_cfg())
         skin = get_active_skin()
         return {
@@ -403,7 +403,7 @@ def resolve_skin() -> dict:
 
 
 def _resolve_model() -> str:
-    env = os.environ.get("HERMES_MODEL", "")
+    env = os.environ.get("BASSERA_MODEL", "")
     if env:
         return env
     m = _load_cfg().get("model", "")
@@ -427,7 +427,7 @@ def _write_config_key(key_path: str, value):
 
 
 def _load_reasoning_config() -> dict | None:
-    from wafi_constants import parse_reasoning_effort
+    from bassera_constants import parse_reasoning_effort
 
     effort = str(_load_cfg().get("agent", {}).get("reasoning_effort", "") or "").strip()
     return parse_reasoning_effort(effort)
@@ -458,8 +458,8 @@ def _load_tool_progress_mode() -> str:
 
 def _load_enabled_toolsets() -> list[str] | None:
     try:
-        from wafi_cli.config import load_config
-        from wafi_cli.tools_config import _get_platform_tools
+        from bassera_cli.config import load_config
+        from bassera_cli.tools_config import _get_platform_tools
 
         enabled = sorted(_get_platform_tools(load_config(), "cli", include_default_mcp_servers=False))
         return enabled or None
@@ -489,7 +489,7 @@ def _restart_slash_worker(session: dict):
 
 
 def _persist_model_switch(result) -> None:
-    from wafi_cli.config import save_config
+    from bassera_cli.config import save_config
 
     cfg = _load_cfg()
     model_cfg = cfg.get("model")
@@ -507,8 +507,8 @@ def _persist_model_switch(result) -> None:
 
 
 def _apply_model_switch(sid: str, session: dict, raw_input: str) -> dict:
-    from wafi_cli.model_switch import parse_model_flags, switch_model
-    from wafi_cli.runtime_provider import resolve_runtime_provider
+    from bassera_cli.model_switch import parse_model_flags, switch_model
+    from bassera_cli.runtime_provider import resolve_runtime_provider
 
     model_input, explicit_provider, persist_global = parse_model_flags(raw_input)
     if not model_input:
@@ -550,7 +550,7 @@ def _apply_model_switch(sid: str, session: dict, raw_input: str) -> dict:
         _restart_slash_worker(session)
         _emit("session.info", sid, _session_info(agent))
 
-    os.environ["HERMES_MODEL"] = result.new_model
+    os.environ["BASSERA_MODEL"] = result.new_model
     if persist_global:
         _persist_model_switch(result)
     return {"value": result.new_model, "warning": result.warning_message or ""}
@@ -643,7 +643,7 @@ def _session_info(agent) -> dict:
         "usage": _get_usage(agent),
     }
     try:
-        from wafi_cli import __version__, __release_date__
+        from bassera_cli import __version__, __release_date__
         info["version"] = __version__
         info["release_date"] = __release_date__
     except Exception:
@@ -656,7 +656,7 @@ def _session_info(agent) -> dict:
     except Exception:
         pass
     try:
-        from wafi_cli.banner import get_available_skills
+        from bassera_cli.banner import get_available_skills
         info["skills"] = get_available_skills()
     except Exception:
         pass
@@ -666,8 +666,8 @@ def _session_info(agent) -> dict:
     except Exception:
         info["mcp_servers"] = []
     try:
-        from wafi_cli.banner import get_update_result
-        from wafi_cli.config import recommended_update_command
+        from bassera_cli.banner import get_update_result
+        from bassera_cli.config import recommended_update_command
         info["update_behind"] = get_update_result(timeout=0.5)
         info["update_command"] = recommended_update_command()
     except Exception:
@@ -834,7 +834,7 @@ def _wire_callbacks(sid: str):
         val = _block("secret.request", sid, pl)
         if not val:
             return {"success": True, "stored_as": env_var, "validated": False, "skipped": True, "message": "skipped"}
-        from wafi_cli.config import save_env_value_secure
+        from bassera_cli.config import save_env_value_secure
         return {**save_env_value_secure(env_var, val), "skipped": False, "message": "ok"}
 
     set_secret_capture_callback(secret_cb)
@@ -851,7 +851,7 @@ def _resolve_personality_prompt(cfg: dict) -> str:
         personalities = load_cli_config().get("agent", {}).get("personalities", {})
     except Exception:
         try:
-            from wafi_cli.config import load_config as _load_full_cfg
+            from bassera_cli.config import load_config as _load_full_cfg
 
             personalities = _load_full_cfg().get("agent", {}).get("personalities", {})
         except Exception:
@@ -880,7 +880,7 @@ def _available_personalities(cfg: dict | None = None) -> dict:
         return load_cli_config().get("agent", {}).get("personalities", {}) or {}
     except Exception:
         try:
-            from wafi_cli.config import load_config as _load_full_cfg
+            from bassera_cli.config import load_config as _load_full_cfg
 
             return _load_full_cfg().get("agent", {}).get("personalities", {}) or {}
         except Exception:
@@ -1378,7 +1378,7 @@ def _(rid, params: dict) -> dict:
     if err:
         return err
     import time as _time
-    filename = os.path.abspath(f"wafi_conversation_{_time.strftime('%Y%m%d_%H%M%S')}.json")
+    filename = os.path.abspath(f"bassera_conversation_{_time.strftime('%Y%m%d_%H%M%S')}.json")
     try:
         with open(filename, "w") as f:
             json.dump({"model": getattr(session["agent"], "model", ""), "messages": session.get("history", [])},
@@ -1633,12 +1633,12 @@ def _(rid, params: dict) -> dict:
         return err
     try:
         from datetime import datetime
-        from wafi_cli.clipboard import has_clipboard_image, save_clipboard_image
+        from bassera_cli.clipboard import has_clipboard_image, save_clipboard_image
     except Exception as e:
         return _err(rid, 5027, f"clipboard unavailable: {e}")
 
     session["image_counter"] = session.get("image_counter", 0) + 1
-    img_dir = _wafi_home / "images"
+    img_dir = _bassera_home / "images"
     img_dir.mkdir(parents=True, exist_ok=True)
     img_path = img_dir / f"clip_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{session['image_counter']}.png"
 
@@ -1901,12 +1901,12 @@ def _(rid, params: dict) -> dict:
                     enable_session_yolo(session["session_key"])
                     nv = "1"
             else:
-                current = bool(os.environ.get("HERMES_YOLO_MODE"))
+                current = bool(os.environ.get("BASSERA_YOLO_MODE"))
                 if current:
-                    os.environ.pop("HERMES_YOLO_MODE", None)
+                    os.environ.pop("BASSERA_YOLO_MODE", None)
                     nv = "0"
                 else:
-                    os.environ["HERMES_YOLO_MODE"] = "1"
+                    os.environ["BASSERA_YOLO_MODE"] = "1"
                     nv = "1"
             return _ok(rid, {"key": key, "value": nv})
         except Exception as e:
@@ -1914,7 +1914,7 @@ def _(rid, params: dict) -> dict:
 
     if key == "reasoning":
         try:
-            from wafi_constants import parse_reasoning_effort
+            from bassera_constants import parse_reasoning_effort
 
             arg = str(value or "").strip().lower()
             if arg in ("show", "on"):
@@ -2014,7 +2014,7 @@ def _(rid, params: dict) -> dict:
     key = params.get("key", "")
     if key == "provider":
         try:
-            from wafi_cli.models import list_available_providers, normalize_provider
+            from bassera_cli.models import list_available_providers, normalize_provider
             model = _resolve_model()
             parts = model.split("/", 1)
             return _ok(rid, {"model": model, "provider": normalize_provider(parts[0]) if len(parts) > 1 else "unknown",
@@ -2022,8 +2022,8 @@ def _(rid, params: dict) -> dict:
         except Exception as e:
             return _err(rid, 5013, str(e))
     if key == "profile":
-        from wafi_constants import display_wafi_home
-        return _ok(rid, {"home": str(_wafi_home), "display": display_wafi_home()})
+        from bassera_constants import display_bassera_home
+        return _ok(rid, {"home": str(_bassera_home), "display": display_bassera_home()})
     if key == "full":
         return _ok(rid, {"config": _load_cfg()})
     if key == "prompt":
@@ -2059,7 +2059,7 @@ def _(rid, params: dict) -> dict:
         on = bool(_load_cfg().get("display", {}).get("tui_statusbar", True))
         return _ok(rid, {"value": "on" if on else "off"})
     if key == "mtime":
-        cfg_path = _wafi_home / "config.yaml"
+        cfg_path = _bassera_home / "config.yaml"
         try:
             return _ok(rid, {"mtime": cfg_path.stat().st_mtime if cfg_path.exists() else 0})
         except Exception:
@@ -2070,7 +2070,7 @@ def _(rid, params: dict) -> dict:
 @method("setup.status")
 def _(rid, params: dict) -> dict:
     try:
-        from wafi_cli.main import _has_any_provider_configured
+        from bassera_cli.main import _has_any_provider_configured
         return _ok(rid, {"provider_configured": bool(_has_any_provider_configured())})
     except Exception as e:
         return _err(rid, 5016, str(e))
@@ -2125,7 +2125,7 @@ _PENDING_INPUT_COMMANDS: frozenset[str] = frozenset({
 def _(rid, params: dict) -> dict:
     """Registry-backed slash metadata for the TUI — categorized, no aliases."""
     try:
-        from wafi_cli.commands import COMMAND_REGISTRY, SUBCOMMANDS, _build_description
+        from bassera_cli.commands import COMMAND_REGISTRY, SUBCOMMANDS, _build_description
 
         all_pairs: list[list[str]] = []
         canon: dict[str, str] = {}
@@ -2215,22 +2215,22 @@ def _(rid, params: dict) -> dict:
 def _cli_exec_blocked(argv: list[str]) -> str | None:
     """Return user hint if this argv must not run headless in the gateway process."""
     if not argv:
-        return "bare `wafi` is interactive — use `/wafi chat -q …` or run `wafi` in another terminal"
+        return "bare `bassera` is interactive — use `/bassera chat -q …` or run `bassera` in another terminal"
     a0 = argv[0].lower()
     if a0 == "setup":
-        return "`wafi setup` needs a full terminal — run it outside the TUI"
+        return "`bassera setup` needs a full terminal — run it outside the TUI"
     if a0 == "gateway":
-        return "`wafi gateway` is long-running — run it in another terminal"
+        return "`bassera gateway` is long-running — run it in another terminal"
     if a0 == "sessions" and len(argv) > 1 and argv[1].lower() == "browse":
-        return "`wafi sessions browse` is interactive — use /resume here, or run browse in another terminal"
+        return "`bassera sessions browse` is interactive — use /resume here, or run browse in another terminal"
     if a0 == "config" and len(argv) > 1 and argv[1].lower() == "edit":
-        return "`wafi config edit` needs $EDITOR in a real terminal"
+        return "`bassera config edit` needs $EDITOR in a real terminal"
     return None
 
 
 @method("cli.exec")
 def _(rid, params: dict) -> dict:
-    """Run `python -m wafi_cli.main` with argv; capture stdout/stderr (non-interactive only)."""
+    """Run `python -m bassera_cli.main` with argv; capture stdout/stderr (non-interactive only)."""
     argv = params.get("argv", [])
     if not isinstance(argv, list) or not all(isinstance(x, str) for x in argv):
         return _err(rid, 4003, "argv must be list[str]")
@@ -2239,7 +2239,7 @@ def _(rid, params: dict) -> dict:
         return _ok(rid, {"blocked": True, "hint": hint, "code": -1, "output": ""})
     try:
         r = subprocess.run(
-            [sys.executable, "-m", "wafi_cli.main", *argv],
+            [sys.executable, "-m", "bassera_cli.main", *argv],
             capture_output=True,
             text=True,
             timeout=min(int(params.get("timeout", 240)), 600),
@@ -2258,7 +2258,7 @@ def _(rid, params: dict) -> dict:
 @method("command.resolve")
 def _(rid, params: dict) -> dict:
     try:
-        from wafi_cli.commands import resolve_command
+        from bassera_cli.commands import resolve_command
         r = resolve_command(params.get("name", ""))
         if r:
             return _ok(rid, {"canonical": r.name, "description": r.description, "category": r.category})
@@ -2269,7 +2269,7 @@ def _(rid, params: dict) -> dict:
 
 def _resolve_name(name: str) -> str:
     try:
-        from wafi_cli.commands import resolve_command
+        from bassera_cli.commands import resolve_command
         r = resolve_command(name)
         return r.name if r else name
     except Exception:
@@ -2297,7 +2297,7 @@ def _(rid, params: dict) -> dict:
             return _ok(rid, {"type": "alias", "target": qc.get("target", "")})
 
     try:
-        from wafi_cli.plugins import get_plugin_command_handler
+        from bassera_cli.plugins import get_plugin_command_handler
         handler = get_plugin_command_handler(name)
         if handler:
             return _ok(rid, {"type": "plugin", "output": str(handler(arg) or "")})
@@ -2402,7 +2402,7 @@ def _(rid, params: dict) -> dict:
 
     _paste_counter += 1
     line_count = text.count('\n') + 1
-    paste_dir = _wafi_home / "pastes"
+    paste_dir = _bassera_home / "pastes"
     paste_dir.mkdir(parents=True, exist_ok=True)
 
     from datetime import datetime
@@ -2493,7 +2493,7 @@ def _(rid, params: dict) -> dict:
         return _ok(rid, {"items": []})
 
     try:
-        from wafi_cli.commands import SlashCommandCompleter
+        from bassera_cli.commands import SlashCommandCompleter
         from prompt_toolkit.document import Document
         from prompt_toolkit.formatted_text import to_plain_text
 
@@ -2522,7 +2522,7 @@ def _(rid, params: dict) -> dict:
 @method("model.options")
 def _(rid, params: dict) -> dict:
     try:
-        from wafi_cli.model_switch import list_authenticated_providers
+        from bassera_cli.model_switch import list_authenticated_providers
 
         session = _sessions.get(params.get("session_id", ""))
         agent = session.get("agent") if session else None
@@ -2530,7 +2530,7 @@ def _(rid, params: dict) -> dict:
         current_provider = getattr(agent, "provider", "") or ""
         current_model = getattr(agent, "model", "") or _resolve_model()
         # list_authenticated_providers already populates each provider's
-        # "models" with the curated list (same source as `wafi model` and
+        # "models" with the curated list (same source as `bassera model` and
         # classic CLI's /model picker). Do NOT overwrite with live
         # provider_model_ids() — that bypasses curation and pulls in
         # non-agentic models (e.g. Nous /models returns ~400 IDs including
@@ -2660,13 +2660,13 @@ def _(rid, params: dict) -> dict:
 def _(rid, params: dict) -> dict:
     action = params.get("action", "status")
     if action == "status":
-        env = os.environ.get("HERMES_VOICE", "").strip()
+        env = os.environ.get("BASSERA_VOICE", "").strip()
         if env in {"0", "1"}:
             return _ok(rid, {"enabled": env == "1"})
         return _ok(rid, {"enabled": bool(_load_cfg().get("display", {}).get("voice_enabled", False))})
     if action in ("on", "off"):
         enabled = action == "on"
-        os.environ["HERMES_VOICE"] = "1" if enabled else "0"
+        os.environ["BASSERA_VOICE"] = "1" if enabled else "0"
         _write_config_key("display.voice_enabled", enabled)
         return _ok(rid, {"enabled": action == "on"})
     return _err(rid, 4013, f"unknown voice action: {action}")
@@ -2677,11 +2677,11 @@ def _(rid, params: dict) -> dict:
     action = params.get("action", "start")
     try:
         if action == "start":
-            from wafi_cli.voice import start_recording
+            from bassera_cli.voice import start_recording
             start_recording()
             return _ok(rid, {"status": "recording"})
         if action == "stop":
-            from wafi_cli.voice import stop_and_transcribe
+            from bassera_cli.voice import stop_and_transcribe
             return _ok(rid, {"text": stop_and_transcribe() or ""})
         return _err(rid, 4019, f"unknown voice action: {action}")
     except ImportError:
@@ -2696,7 +2696,7 @@ def _(rid, params: dict) -> dict:
     if not text:
         return _err(rid, 4020, "text required")
     try:
-        from wafi_cli.voice import speak_text
+        from bassera_cli.voice import speak_text
         threading.Thread(target=speak_text, args=(text,), daemon=True).start()
         return _ok(rid, {"status": "speaking"})
     except ImportError:
@@ -2851,7 +2851,7 @@ def _(rid, params: dict) -> dict:
 @method("plugins.list")
 def _(rid, params: dict) -> dict:
     try:
-        from wafi_cli.plugins import get_plugin_manager
+        from bassera_cli.plugins import get_plugin_manager
         return _ok(rid, {"plugins": [
             {"name": n, "version": getattr(i, "version", "?"), "enabled": getattr(i, "enabled", True)}
             for n, i in get_plugin_manager()._plugins.items()]})
@@ -2864,9 +2864,9 @@ def _(rid, params: dict) -> dict:
     try:
         cfg = _load_cfg()
         model = _resolve_model()
-        api_key = os.environ.get("HERMES_API_KEY", "") or cfg.get("api_key", "")
+        api_key = os.environ.get("BASSERA_API_KEY", "") or cfg.get("api_key", "")
         masked = f"****{api_key[-4:]}" if len(api_key) > 4 else "(not set)"
-        base_url = os.environ.get("HERMES_BASE_URL", "") or cfg.get("base_url", "")
+        base_url = os.environ.get("BASSERA_BASE_URL", "") or cfg.get("base_url", "")
 
         sections = [{
             "title": "Model",
@@ -2886,7 +2886,7 @@ def _(rid, params: dict) -> dict:
             "title": "Environment",
             "rows": [
                 ["Working Dir", os.getcwd()],
-                ["Config File", str(_wafi_home / "config.yaml")],
+                ["Config File", str(_bassera_home / "config.yaml")],
             ]
         }]
         return _ok(rid, {"sections": sections})
@@ -2956,8 +2956,8 @@ def _(rid, params: dict) -> dict:
         return _err(rid, 4018, "names required")
 
     try:
-        from wafi_cli.config import load_config, save_config
-        from wafi_cli.tools_config import (
+        from bassera_cli.config import load_config, save_config
+        from bassera_cli.tools_config import (
             CONFIGURABLE_TOOLSETS,
             _apply_mcp_change,
             _apply_toolset_change,
@@ -3060,24 +3060,24 @@ def _(rid, params: dict) -> dict:
     action, query = params.get("action", "list"), params.get("query", "")
     try:
         if action == "list":
-            from wafi_cli.banner import get_available_skills
+            from bassera_cli.banner import get_available_skills
             return _ok(rid, {"skills": get_available_skills()})
         if action == "search":
-            from wafi_cli.skills_hub import unified_search, GitHubAuth, create_source_router
+            from bassera_cli.skills_hub import unified_search, GitHubAuth, create_source_router
             raw = unified_search(query, create_source_router(GitHubAuth()), source_filter="all", limit=20) or []
             return _ok(rid, {"results": [{"name": r.name, "description": r.description} for r in raw]})
         if action == "install":
-            from wafi_cli.skills_hub import do_install
+            from bassera_cli.skills_hub import do_install
             class _Q:
                 def print(self, *a, **k): pass
             do_install(query, skip_confirm=True, console=_Q())
             return _ok(rid, {"installed": True, "name": query})
         if action == "browse":
-            from wafi_cli.skills_hub import browse_skills
+            from bassera_cli.skills_hub import browse_skills
             pg = int(params.get("page", 0) or 0) or (int(query) if query.isdigit() else 1)
             return _ok(rid, browse_skills(page=pg, page_size=int(params.get("page_size", 20))))
         if action == "inspect":
-            from wafi_cli.skills_hub import inspect_skill
+            from bassera_cli.skills_hub import inspect_skill
             return _ok(rid, {"info": inspect_skill(query) or {}})
         return _err(rid, 4017, f"unknown skills action: {action}")
     except Exception as e:

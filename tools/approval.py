@@ -52,19 +52,22 @@ def get_current_session_key(default: str = "default") -> str:
     if session_key:
         return session_key
     from gateway.session_context import get_session_env
-    return get_session_env("HERMES_SESSION_KEY", default)
+    return get_session_env("BASSERA_SESSION_KEY", default)
 
 # Sensitive write targets that should trigger approval even when referenced
-# via shell expansions like $HOME or $HERMES_HOME.
+# via shell expansions like $HOME or $BASSERA_HOME.
 _SSH_SENSITIVE_PATH = r'(?:~|\$home|\$\{home\})/\.ssh(?:/|$)'
 # Matches the agent's credential file (`.env`) under any of the home
-# spellings the runtime actually uses. The command text is lowercased
+# spellings the runtime has ever used. The command text is lowercased
 # before matching (see detect_dangerous_command), so patterns use the
-# lowercase env-var names. HERMES_HOME is the canonical var read by
-# get_wafi_home(); WAFI_HOME is accepted as an alias; the literal
-# ~/.wafi and $HOME/.wafi paths cover unexpanded shells.
-_HERMES_ENV_PATH = (
-    r'(?:~/\.wafi/|'
+# lowercase env-var names. BASSERA_HOME is the canonical var read by
+# get_bassera_home(); HERMES_HOME and WAFI_HOME remain accepted as
+# legacy aliases (mapped at import), so commands using them must keep
+# being flagged; the literal ~/.bassera, ~/.wafi and $HOME/... paths
+# cover unexpanded shells on both new and legacy installs.
+_BASSERA_ENV_PATH = (
+    r'(?:~/\.bassera/|~/\.wafi/|'
+    r'(?:\$home|\$\{home\})/\.bassera/|'
     r'(?:\$home|\$\{home\})/\.wafi/|'
     r'(?:\$hermes_home|\$\{hermes_home\})/|'
     r'(?:\$wafi_home|\$\{wafi_home\})/|'
@@ -74,7 +77,7 @@ _HERMES_ENV_PATH = (
 _SENSITIVE_WRITE_TARGET = (
     r'(?:/etc/|/dev/sd|'
     rf'{_SSH_SENSITIVE_PATH}|'
-    rf'{_HERMES_ENV_PATH})'
+    rf'{_BASSERA_ENV_PATH})'
 )
 
 # =========================================================================
@@ -113,16 +116,16 @@ DANGEROUS_PATTERNS = [
     # Gateway lifecycle protection: prevent the agent from killing its own
     # gateway process.  These commands trigger a gateway restart/stop that
     # terminates all running agents mid-work.
-    (r'\bwafi\s+gateway\s+(stop|restart)\b', "stop/restart wafi gateway (kills running agents)"),
-    (r'\bwafi\s+update\b', "wafi update (restarts gateway, kills running agents)"),
+    (r'\b(?:bassera|wafi)\s+gateway\s+(stop|restart)\b', "stop/restart bassera gateway (kills running agents)"),
+    (r'\b(?:bassera|wafi)\s+update\b', "bassera update (restarts gateway, kills running agents)"),
     # Gateway protection: never start gateway outside systemd management
-    (r'gateway\s+run\b.*(&\s*$|&\s*;|\bdisown\b|\bsetsid\b)', "start gateway outside systemd (use 'systemctl --user restart wafi-gateway')"),
-    (r'\bnohup\b.*gateway\s+run\b', "start gateway outside systemd (use 'systemctl --user restart wafi-gateway')"),
+    (r'gateway\s+run\b.*(&\s*$|&\s*;|\bdisown\b|\bsetsid\b)', "start gateway outside systemd (use 'systemctl --user restart bassera-gateway')"),
+    (r'\bnohup\b.*gateway\s+run\b', "start gateway outside systemd (use 'systemctl --user restart bassera-gateway')"),
     # Self-termination protection: prevent agent from killing its own process
-    (r'\b(pkill|killall)\b.*\b(wafi|gateway|cli\.py)\b', "kill wafi/gateway process (self-termination)"),
+    (r'\b(pkill|killall)\b.*\b(bassera|wafi|gateway|cli\.py)\b', "kill bassera/gateway process (self-termination)"),
     # Self-termination via kill + command substitution (pgrep/pidof).
-    # The name-based pattern above catches `pkill wafi` but not
-    # `kill -9 $(pgrep -f wafi)` because the substitution is opaque
+    # The name-based pattern above catches `pkill bassera` but not
+    # `kill -9 $(pgrep -f bassera)` because the substitution is opaque
     # to regex at detection time. Catch the structural pattern instead.
     (r'\bkill\b.*\$\(\s*pgrep\b', "kill process via pgrep expansion (self-termination)"),
     (r'\bkill\b.*`\s*pgrep\b', "kill process via backtick pgrep expansion (self-termination)"),
@@ -130,7 +133,7 @@ DANGEROUS_PATTERNS = [
     # Generalized patterns (found by property-based fuzzing, tests/tools/
     # test_approval_fuzz.py): cp/mv/install/rsync and in-place sed could
     # write into ANY sensitive target — the credential .env (the direct
-    # sibling of the original $HERMES_HOME/.env hole), ~/.ssh/authorized_keys
+    # sibling of the original $BASSERA_HOME/.env hole), ~/.ssh/authorized_keys
     # (silent SSH key injection), /etc/, and block devices — and bypass
     # approval entirely. The /etc/-only patterns are kept unchanged below
     # so existing command-allowlist entries keyed to them stay valid.
@@ -401,7 +404,7 @@ def load_permanent_allowlist() -> set:
     patterns added via 'always' in a previous session.
     """
     try:
-        from wafi_cli.config import load_config
+        from bassera_cli.config import load_config
         config = load_config()
         patterns = set(config.get("command_allowlist", []) or [])
         if patterns:
@@ -415,7 +418,7 @@ def load_permanent_allowlist() -> set:
 def save_permanent_allowlist(patterns: set):
     """Save permanently allowed command patterns to config."""
     try:
-        from wafi_cli.config import load_config, save_config
+        from bassera_cli.config import load_config, save_config
         config = load_config()
         config["command_allowlist"] = list(patterns)
         save_config(config)
@@ -454,7 +457,7 @@ def prompt_dangerous_approval(command: str, description: str,
             logger.error("Approval callback failed: %s", e, exc_info=True)
             return "deny"
 
-    os.environ["HERMES_SPINNER_PAUSE"] = "1"
+    os.environ["BASSERA_SPINNER_PAUSE"] = "1"
     try:
         while True:
             print()
@@ -506,8 +509,8 @@ def prompt_dangerous_approval(command: str, description: str,
         print("\n      ✗ Cancelled")
         return "deny"
     finally:
-        if "HERMES_SPINNER_PAUSE" in os.environ:
-            del os.environ["HERMES_SPINNER_PAUSE"]
+        if "BASSERA_SPINNER_PAUSE" in os.environ:
+            del os.environ["BASSERA_SPINNER_PAUSE"]
         print()
         sys.stdout.flush()
 
@@ -530,7 +533,7 @@ def _normalize_approval_mode(mode) -> str:
 def _get_approval_config() -> dict:
     """Read the approvals config block. Returns a dict with 'mode', 'timeout', etc."""
     try:
-        from wafi_cli.config import load_config
+        from bassera_cli.config import load_config
         config = load_config()
         return config.get("approvals", {}) or {}
     except Exception as e:
@@ -555,7 +558,7 @@ def _get_approval_timeout() -> int:
 def _get_cron_approval_mode() -> str:
     """Read the cron approval mode from config. Returns 'deny' or 'approve'."""
     try:
-        from wafi_cli.config import load_config
+        from bassera_cli.config import load_config
         config = load_config()
         mode = str(config.get("approvals", {}).get("cron_mode", "deny")).lower().strip()
         if mode in ("approve", "off", "allow", "yes"):
@@ -632,7 +635,7 @@ def check_dangerous_command(command: str, env_type: str,
 
     # --yolo: bypass all approval prompts. Gateway /yolo is session-scoped;
     # CLI --yolo remains process-scoped via the env var for local use.
-    if os.getenv("HERMES_YOLO_MODE") or is_current_session_yolo_enabled():
+    if os.getenv("BASSERA_YOLO_MODE") or is_current_session_yolo_enabled():
         return {"approved": True, "message": None}
 
     is_dangerous, pattern_key, description = detect_dangerous_command(command)
@@ -643,12 +646,12 @@ def check_dangerous_command(command: str, env_type: str,
     if is_approved(session_key, pattern_key):
         return {"approved": True, "message": None}
 
-    is_cli = os.getenv("HERMES_INTERACTIVE")
-    is_gateway = os.getenv("HERMES_GATEWAY_SESSION")
+    is_cli = os.getenv("BASSERA_INTERACTIVE")
+    is_gateway = os.getenv("BASSERA_GATEWAY_SESSION")
 
     if not is_cli and not is_gateway:
         # Cron sessions: respect cron_mode config
-        if os.getenv("HERMES_CRON_SESSION"):
+        if os.getenv("BASSERA_CRON_SESSION"):
             if _get_cron_approval_mode() == "deny":
                 return {
                     "approved": False,
@@ -662,7 +665,7 @@ def check_dangerous_command(command: str, env_type: str,
                 }
         return {"approved": True, "message": None}
 
-    if is_gateway or os.getenv("HERMES_EXEC_ASK"):
+    if is_gateway or os.getenv("BASSERA_EXEC_ASK"):
         submit_pending(session_key, {
             "command": command,
             "pattern_key": pattern_key,
@@ -760,7 +763,7 @@ def _audit_approval_decision(command: str, result: dict, env_type: str) -> None:
         import time
 
         from agent.redact import redact_sensitive_text
-        from wafi_constants import get_wafi_home
+        from bassera_constants import get_bassera_home
 
         entry = {
             "ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
@@ -772,7 +775,7 @@ def _audit_approval_decision(command: str, result: dict, env_type: str) -> None:
             "smart": bool(result.get("smart_approved") or result.get("smart_denied")),
             "command": redact_sensitive_text(command)[:2000],
         }
-        audit_dir = get_wafi_home() / "logs"
+        audit_dir = get_bassera_home() / "logs"
         audit_dir.mkdir(parents=True, exist_ok=True)
         with _audit_lock:
             with open(audit_dir / "audit.log", "a", encoding="utf-8") as fh:
@@ -806,18 +809,18 @@ def _check_all_command_guards_impl(command: str, env_type: str,
     # --yolo or approvals.mode=off: bypass all approval prompts.
     # Gateway /yolo is session-scoped; CLI --yolo remains process-scoped.
     approval_mode = _get_approval_mode()
-    if os.getenv("HERMES_YOLO_MODE") or is_current_session_yolo_enabled() or approval_mode == "off":
+    if os.getenv("BASSERA_YOLO_MODE") or is_current_session_yolo_enabled() or approval_mode == "off":
         return {"approved": True, "message": None}
 
-    is_cli = os.getenv("HERMES_INTERACTIVE")
-    is_gateway = os.getenv("HERMES_GATEWAY_SESSION")
-    is_ask = os.getenv("HERMES_EXEC_ASK")
+    is_cli = os.getenv("BASSERA_INTERACTIVE")
+    is_gateway = os.getenv("BASSERA_GATEWAY_SESSION")
+    is_ask = os.getenv("BASSERA_EXEC_ASK")
 
     # Preserve the existing non-interactive behavior: outside CLI/gateway/ask
     # flows, we do not block on approvals and we skip external guard work.
     if not is_cli and not is_gateway and not is_ask:
         # Cron sessions: respect cron_mode config
-        if os.getenv("HERMES_CRON_SESSION"):
+        if os.getenv("BASSERA_CRON_SESSION"):
             if _get_cron_approval_mode() == "deny":
                 # Run detection to get a description for the block message
                 is_dangerous, _pk, description = detect_dangerous_command(command)

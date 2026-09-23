@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Skills Hub — Source adapters and hub state management for the Wafi Skills Hub.
+Skills Hub — Source adapters and hub state management for the Bassera Skills Hub.
 
 This is a library module (not an agent tool). It provides:
   - GitHubAuth: Shared GitHub API authentication (PAT, gh CLI, GitHub App)
@@ -10,7 +10,7 @@ This is a library module (not an agent tool). It provides:
   - HubLockFile: Track provenance of installed hub skills
   - Hub state directory management (quarantine, audit log, taps, index cache)
 
-Used by wafi_cli/skills_hub.py for CLI commands and the /skills slash command.
+Used by bassera_cli/skills_hub.py for CLI commands and the /skills slash command.
 """
 
 import hashlib
@@ -25,7 +25,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from wafi_constants import get_wafi_home
+from bassera_constants import get_bassera_home
 from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse, urlunparse
 
@@ -43,8 +43,8 @@ logger = logging.getLogger(__name__)
 # Paths
 # ---------------------------------------------------------------------------
 
-HERMES_HOME = get_wafi_home()
-SKILLS_DIR = HERMES_HOME / "skills"
+BASSERA_HOME = get_bassera_home()
+SKILLS_DIR = BASSERA_HOME / "skills"
 HUB_DIR = SKILLS_DIR / ".hub"
 LOCK_FILE = HUB_DIR / "lock.json"
 QUARANTINE_DIR = HUB_DIR / "quarantine"
@@ -395,9 +395,9 @@ class GitHubSource(SkillSource):
         tags = []
         metadata = fm.get("metadata", {})
         if isinstance(metadata, dict):
-            wafi_meta = metadata.get("wafi", {})
-            if isinstance(wafi_meta, dict):
-                tags = wafi_meta.get("tags", [])
+            bassera_meta = metadata.get("bassera", {})
+            if isinstance(bassera_meta, dict):
+                tags = bassera_meta.get("tags", [])
         if not tags:
             raw_tags = fm.get("tags", [])
             tags = raw_tags if isinstance(raw_tags, list) else []
@@ -2126,7 +2126,7 @@ class LobeHubSource(SkillSource):
             f"name: {identifier}",
             f"description: {description[:500]}",
             "metadata:",
-            "  wafi:",
+            "  bassera:",
             f"    tags: [{', '.join(str(t) for t in tag_list)}]",
             "  lobehub:",
             "    source: lobehub",
@@ -2156,12 +2156,12 @@ class OptionalSkillSource(SkillSource):
 
     These skills are official (maintained by Nous Research) but not activated
     by default — they don't appear in the system prompt and aren't copied to
-    ~/.wafi/skills/ during setup.  They are discoverable via the Skills Hub
+    ~/.bassera/skills/ during setup.  They are discoverable via the Skills Hub
     (search / install / inspect) and labelled "official" with "builtin" trust.
     """
 
     def __init__(self):
-        from wafi_constants import get_optional_skills_dir
+        from bassera_constants import get_optional_skills_dir
 
         self._optional_dir = get_optional_skills_dir(
             Path(__file__).parent.parent / "optional-skills"
@@ -2285,9 +2285,9 @@ class OptionalSkillSource(SkillSource):
             tags = []
             meta_block = fm.get("metadata", {})
             if isinstance(meta_block, dict):
-                wafi_meta = meta_block.get("wafi", {})
-                if isinstance(wafi_meta, dict):
-                    tags = wafi_meta.get("tags", [])
+                bassera_meta = meta_block.get("bassera", {})
+                if isinstance(bassera_meta, dict):
+                    tags = bassera_meta.get("tags", [])
 
             rel_path = str(parent.relative_to(self._optional_dir))
 
@@ -2699,39 +2699,39 @@ def check_for_skill_updates(
 
 
 # ---------------------------------------------------------------------------
-# Wafi centralized index source
+# Bassera centralized index source
 # ---------------------------------------------------------------------------
 
-HERMES_INDEX_URL = "https://wafi-agent.nousresearch.com/docs/api/skills-index.json"
-HERMES_INDEX_CACHE_FILE = INDEX_CACHE_DIR / "wafi-index.json"
-HERMES_INDEX_TTL = 6 * 3600  # 6 hours
+BASSERA_INDEX_URL = "https://bassera-agent.nousresearch.com/docs/api/skills-index.json"
+BASSERA_INDEX_CACHE_FILE = INDEX_CACHE_DIR / "bassera-index.json"
+BASSERA_INDEX_TTL = 6 * 3600  # 6 hours
 
 
-def _load_wafi_index() -> Optional[dict]:
+def _load_bassera_index() -> Optional[dict]:
     """Fetch the centralized skills index, with local cache.
 
     The index is a JSON file hosted on the docs site, rebuilt daily by CI.
-    We cache it locally for HERMES_INDEX_TTL seconds to avoid repeated
+    We cache it locally for BASSERA_INDEX_TTL seconds to avoid repeated
     downloads within a session.
     """
     # Check local cache
-    if HERMES_INDEX_CACHE_FILE.exists():
+    if BASSERA_INDEX_CACHE_FILE.exists():
         try:
-            age = time.time() - HERMES_INDEX_CACHE_FILE.stat().st_mtime
-            if age < HERMES_INDEX_TTL:
-                return json.loads(HERMES_INDEX_CACHE_FILE.read_text())
+            age = time.time() - BASSERA_INDEX_CACHE_FILE.stat().st_mtime
+            if age < BASSERA_INDEX_TTL:
+                return json.loads(BASSERA_INDEX_CACHE_FILE.read_text())
         except (OSError, json.JSONDecodeError):
             pass
 
     # Fetch from docs site
     try:
-        resp = httpx.get(HERMES_INDEX_URL, timeout=15, follow_redirects=True)
+        resp = httpx.get(BASSERA_INDEX_URL, timeout=15, follow_redirects=True)
         if resp.status_code != 200:
-            logger.debug("Wafi index fetch returned %d", resp.status_code)
+            logger.debug("Bassera index fetch returned %d", resp.status_code)
             return _load_stale_index_cache()
         data = resp.json()
     except (httpx.HTTPError, json.JSONDecodeError) as e:
-        logger.debug("Wafi index fetch failed: %s", e)
+        logger.debug("Bassera index fetch failed: %s", e)
         return _load_stale_index_cache()
 
     # Validate structure
@@ -2740,8 +2740,8 @@ def _load_wafi_index() -> Optional[dict]:
 
     # Cache locally
     try:
-        HERMES_INDEX_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        HERMES_INDEX_CACHE_FILE.write_text(json.dumps(data))
+        BASSERA_INDEX_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        BASSERA_INDEX_CACHE_FILE.write_text(json.dumps(data))
     except OSError:
         pass
 
@@ -2750,16 +2750,16 @@ def _load_wafi_index() -> Optional[dict]:
 
 def _load_stale_index_cache() -> Optional[dict]:
     """Fall back to stale cache when the network fetch fails."""
-    if HERMES_INDEX_CACHE_FILE.exists():
+    if BASSERA_INDEX_CACHE_FILE.exists():
         try:
-            return json.loads(HERMES_INDEX_CACHE_FILE.read_text())
+            return json.loads(BASSERA_INDEX_CACHE_FILE.read_text())
         except (OSError, json.JSONDecodeError):
             pass
     return None
 
 
-class WafiIndexSource(SkillSource):
-    """Skill source backed by the centralized Wafi Skills Index.
+class BasseraIndexSource(SkillSource):
+    """Skill source backed by the centralized Bassera Skills Index.
 
     The index is a JSON catalog published to the docs site and rebuilt
     daily by CI.  It contains metadata + resolved GitHub paths for every
@@ -2780,7 +2780,7 @@ class WafiIndexSource(SkillSource):
 
     def _ensure_loaded(self) -> dict:
         if not self._loaded:
-            self._index = _load_wafi_index()
+            self._index = _load_bassera_index()
             self._loaded = True
         return self._index or {}
 
@@ -2790,7 +2790,7 @@ class WafiIndexSource(SkillSource):
         return self._github
 
     def source_id(self) -> str:
-        return "wafi-index"
+        return "bassera-index"
 
     @property
     def is_available(self) -> bool:
@@ -2844,7 +2844,7 @@ class WafiIndexSource(SkillSource):
         if resolved:
             bundle = self._get_github().fetch(resolved)
             if bundle:
-                bundle.source = entry.get("source", "wafi-index")
+                bundle.source = entry.get("source", "bassera-index")
                 bundle.identifier = identifier
                 return bundle
 
@@ -2855,7 +2855,7 @@ class WafiIndexSource(SkillSource):
             github_id = f"{repo}/{path}"
             bundle = self._get_github().fetch(github_id)
             if bundle:
-                bundle.source = entry.get("source", "wafi-index")
+                bundle.source = entry.get("source", "bassera-index")
                 bundle.identifier = identifier
                 return bundle
 
@@ -2904,7 +2904,7 @@ class WafiIndexSource(SkillSource):
         return SkillMeta(
             name=entry.get("name", ""),
             description=entry.get("description", ""),
-            source=entry.get("source", "wafi-index"),
+            source=entry.get("source", "bassera-index"),
             identifier=entry.get("identifier", ""),
             trust_level=entry.get("trust_level", "community"),
             repo=entry.get("repo"),
@@ -2927,7 +2927,7 @@ def create_source_router(auth: Optional[GitHubAuth] = None) -> List[SkillSource]
 
     sources: List[SkillSource] = [
         OptionalSkillSource(),        # Official optional skills (highest priority)
-        WafiIndexSource(auth=auth), # Centralized index (search + resolved install paths)
+        BasseraIndexSource(auth=auth), # Centralized index (search + resolved install paths)
         SkillsShSource(auth=auth),
         WellKnownSkillSource(),
         GitHubSource(auth=auth, extra_taps=extra_taps),
@@ -2979,7 +2979,7 @@ def parallel_search_sources(
                                   "claude-marketplace", "lobehub", "well-known"})
     if source_filter == "all":
         for src in sources:
-            if (src.source_id() == "wafi-index"
+            if (src.source_id() == "bassera-index"
                     and getattr(src, "is_available", False)):
                 _index_available = True
                 break

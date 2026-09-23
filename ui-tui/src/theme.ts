@@ -171,7 +171,7 @@ export const LIGHT_THEME: Theme = {
   bannerHero: ''
 }
 
-const LIGHT_MODE = /^(?:1|true|yes|on)$/i.test((process.env.HERMES_TUI_LIGHT ?? '').trim())
+const LIGHT_MODE = /^(?:1|true|yes|on)$/i.test((process.env.BASSERA_TUI_LIGHT ?? '').trim())
 
 export const DEFAULT_THEME: Theme = LIGHT_MODE ? LIGHT_THEME : DARK_THEME
 

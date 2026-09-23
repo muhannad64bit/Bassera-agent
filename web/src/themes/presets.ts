@@ -3,19 +3,19 @@ import type { DashboardTheme } from "./types";
 /**
  * Built-in dashboard themes.
  *
- * The `default` theme mirrors LENS_0 (canonical Hermes teal) exactly — the
+ * The `default` theme mirrors LENS_0 (canonical Bassera teal) exactly — the
  * same triplet `src/index.css` declares on `:root`. Applying it should be a
  * visual no-op; other themes override the triplet + warm-glow and let the DS
  * cascade handle every derived surface.
  *
  * Theme names must stay in sync with the backend's
- * `_BUILTIN_DASHBOARD_THEMES` list in `hermes_cli/web_server.py`.
+ * `_BUILTIN_DASHBOARD_THEMES` list in `bassera_cli/web_server.py`.
  */
 
 export const defaultTheme: DashboardTheme = {
   name: "default",
-  label: "Hermes Teal",
-  description: "Classic dark teal — the canonical Hermes look",
+  label: "Bassera Teal",
+  description: "Classic dark teal — the canonical Bassera look",
   palette: {
     background: { hex: "#041c1c", alpha: 1 },
     midground: { hex: "#ffe6cb", alpha: 1 },

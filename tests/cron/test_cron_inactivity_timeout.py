@@ -3,8 +3,8 @@
 Tests cover:
 - Active agent runs indefinitely (no inactivity timeout)
 - Idle agent triggers inactivity timeout with diagnostic info
-- Unlimited timeout (HERMES_CRON_TIMEOUT=0)
-- Backward compat: HERMES_CRON_TIMEOUT env var still works
+- Unlimited timeout (BASSERA_CRON_TIMEOUT=0)
+- Backward compat: BASSERA_CRON_TIMEOUT env var still works
 - Error message includes activity summary
 """
 
@@ -156,7 +156,7 @@ class TestInactivityTimeout:
         assert result is None  # Never got a result — interrupted
 
     def test_unlimited_timeout(self):
-        """HERMES_CRON_TIMEOUT=0 means no timeout at all."""
+        """BASSERA_CRON_TIMEOUT=0 means no timeout at all."""
         agent = FakeAgent(idle_seconds=0.0)
         _cron_inactivity_limit = None  # unlimited
 
@@ -170,18 +170,18 @@ class TestInactivityTimeout:
         assert result["final_response"] == "Done"
 
     def test_timeout_env_var_parsing(self, monkeypatch):
-        """HERMES_CRON_TIMEOUT env var is respected."""
-        monkeypatch.setenv("HERMES_CRON_TIMEOUT", "1200")
-        _cron_timeout = float(os.getenv("HERMES_CRON_TIMEOUT", 600))
+        """BASSERA_CRON_TIMEOUT env var is respected."""
+        monkeypatch.setenv("BASSERA_CRON_TIMEOUT", "1200")
+        _cron_timeout = float(os.getenv("BASSERA_CRON_TIMEOUT", 600))
         assert _cron_timeout == 1200.0
 
         _cron_inactivity_limit = _cron_timeout if _cron_timeout > 0 else None
         assert _cron_inactivity_limit == 1200.0
 
     def test_timeout_zero_means_unlimited(self, monkeypatch):
-        """HERMES_CRON_TIMEOUT=0 yields None (unlimited)."""
-        monkeypatch.setenv("HERMES_CRON_TIMEOUT", "0")
-        _cron_timeout = float(os.getenv("HERMES_CRON_TIMEOUT", 600))
+        """BASSERA_CRON_TIMEOUT=0 yields None (unlimited)."""
+        monkeypatch.setenv("BASSERA_CRON_TIMEOUT", "0")
+        _cron_timeout = float(os.getenv("BASSERA_CRON_TIMEOUT", 600))
         _cron_inactivity_limit = _cron_timeout if _cron_timeout > 0 else None
         assert _cron_inactivity_limit is None
 
@@ -277,13 +277,13 @@ class TestInactivityTimeout:
 class TestSysPathOrdering:
     """Test that sys.path is set before repo-level imports."""
 
-    def test_wafi_time_importable(self):
-        """wafi_time should be importable when cron.scheduler loads."""
+    def test_bassera_time_importable(self):
+        """bassera_time should be importable when cron.scheduler loads."""
         # This import would fail if sys.path.insert comes after the import
-        from cron.scheduler import _wafi_now
-        assert callable(_wafi_now)
+        from cron.scheduler import _bassera_now
+        assert callable(_bassera_now)
 
-    def test_wafi_constants_importable(self):
-        """wafi_constants should be importable from cron context."""
-        from wafi_constants import get_wafi_home
-        assert callable(get_wafi_home)
+    def test_bassera_constants_importable(self):
+        """bassera_constants should be importable from cron context."""
+        from bassera_constants import get_bassera_home
+        assert callable(get_bassera_home)

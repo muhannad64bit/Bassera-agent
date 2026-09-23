@@ -1,5 +1,5 @@
 # ============================================================================
-# Hermes Agent Installer for Windows
+# Bassera Agent Installer for Windows
 # ============================================================================
 # Installation script for Windows (PowerShell).
 # Uses uv for fast Python provisioning and package management.
@@ -16,8 +16,8 @@ param(
     [switch]$NoVenv,
     [switch]$SkipSetup,
     [string]$Branch = "main",
-    [string]$HermesHome = "$env:LOCALAPPDATA\hermes",
-    [string]$InstallDir = "$env:LOCALAPPDATA\hermes\hermes-agent"
+    [string]$BasseraHome = "$env:LOCALAPPDATA\bassera",
+    [string]$InstallDir = "$env:LOCALAPPDATA\bassera\bassera-agent"
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,7 +38,7 @@ $NodeVersion = "22"
 function Write-Banner {
     Write-Host ""
     Write-Host "┌─────────────────────────────────────────────────────────┐" -ForegroundColor Magenta
-    Write-Host "│             ⚕ Hermes Agent Installer                    │" -ForegroundColor Magenta
+    Write-Host "│             ⚕ Bassera Agent Installer                    │" -ForegroundColor Magenta
     Write-Host "├─────────────────────────────────────────────────────────┤" -ForegroundColor Magenta
     Write-Host "│  An open source AI agent by Nous Research.              │" -ForegroundColor Magenta
     Write-Host "└─────────────────────────────────────────────────────────┘" -ForegroundColor Magenta
@@ -217,11 +217,11 @@ function Test-Node {
     }
 
     # Check our own managed install from a previous run
-    $managedNode = "$HermesHome\node\node.exe"
+    $managedNode = "$BasseraHome\node\node.exe"
     if (Test-Path $managedNode) {
         $version = & $managedNode --version
-        $env:Path = "$HermesHome\node;$env:Path"
-        Write-Success "Node.js $version found (Hermes-managed)"
+        $env:Path = "$BasseraHome\node;$env:Path"
+        Write-Success "Node.js $version found (Bassera-managed)"
         $script:HasNode = $true
         return $true
     }
@@ -244,7 +244,7 @@ function Test-Node {
         } catch { }
     }
 
-    # Fallback: download binary zip to ~/.hermes/node/
+    # Fallback: download binary zip to ~/.bassera/node/
     Write-Info "Downloading Node.js $NodeVersion binary..."
     try {
         $arch = if ([Environment]::Is64BitOperatingSystem) { "x64" } else { "x86" }
@@ -255,7 +255,7 @@ function Test-Node {
         if ($zipName) {
             $downloadUrl = "${indexUrl}${zipName}"
             $tmpZip = "$env:TEMP\$zipName"
-            $tmpDir = "$env:TEMP\hermes-node-extract"
+            $tmpDir = "$env:TEMP\bassera-node-extract"
 
             Invoke-WebRequest -Uri $downloadUrl -OutFile $tmpZip -UseBasicParsing
             if (Test-Path $tmpDir) { Remove-Item -Recurse -Force $tmpDir }
@@ -263,12 +263,12 @@ function Test-Node {
 
             $extractedDir = Get-ChildItem $tmpDir -Directory | Select-Object -First 1
             if ($extractedDir) {
-                if (Test-Path "$HermesHome\node") { Remove-Item -Recurse -Force "$HermesHome\node" }
-                Move-Item $extractedDir.FullName "$HermesHome\node"
-                $env:Path = "$HermesHome\node;$env:Path"
+                if (Test-Path "$BasseraHome\node") { Remove-Item -Recurse -Force "$BasseraHome\node" }
+                Move-Item $extractedDir.FullName "$BasseraHome\node"
+                $env:Path = "$BasseraHome\node;$env:Path"
 
-                $version = & "$HermesHome\node\node.exe" --version
-                Write-Success "Node.js $version installed to ~/.hermes/node/"
+                $version = & "$BasseraHome\node\node.exe" --version
+                Write-Success "Node.js $version installed to ~/.bassera/node/"
                 $script:HasNode = $true
 
                 Remove-Item -Force $tmpZip -ErrorAction SilentlyContinue
@@ -462,8 +462,8 @@ function Install-Repository {
             Write-Warn "Git clone failed — downloading ZIP archive instead..."
             try {
                 $zipUrl = "https://github.com/NousResearch/hermes-agent/archive/refs/heads/$Branch.zip"
-                $zipPath = "$env:TEMP\hermes-agent-$Branch.zip"
-                $extractPath = "$env:TEMP\hermes-agent-extract"
+                $zipPath = "$env:TEMP\bassera-agent-$Branch.zip"
+                $extractPath = "$env:TEMP\bassera-agent-extract"
                 
                 Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing
                 if (Test-Path $extractPath) { Remove-Item -Recurse -Force $extractPath }
@@ -578,97 +578,97 @@ function Install-Dependencies {
 }
 
 function Set-PathVariable {
-    Write-Info "Setting up hermes command..."
+    Write-Info "Setting up bassera command..."
     
     if ($NoVenv) {
-        $hermesBin = "$InstallDir"
+        $basseraBin = "$InstallDir"
     } else {
-        $hermesBin = "$InstallDir\venv\Scripts"
+        $basseraBin = "$InstallDir\venv\Scripts"
     }
     
-    # Add the venv Scripts dir to user PATH so hermes is globally available
-    # On Windows, the hermes.exe in venv\Scripts\ has the venv Python baked in
+    # Add the venv Scripts dir to user PATH so bassera is globally available
+    # On Windows, the bassera.exe in venv\Scripts\ has the venv Python baked in
     $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
     
-    if ($currentPath -notlike "*$hermesBin*") {
+    if ($currentPath -notlike "*$basseraBin*") {
         [Environment]::SetEnvironmentVariable(
             "Path",
-            "$hermesBin;$currentPath",
+            "$basseraBin;$currentPath",
             "User"
         )
-        Write-Success "Added to user PATH: $hermesBin"
+        Write-Success "Added to user PATH: $basseraBin"
     } else {
         Write-Info "PATH already configured"
     }
     
-    # Set HERMES_HOME so the Python code finds config/data in the right place.
-    # Only needed on Windows where we install to %LOCALAPPDATA%\hermes instead
-    # of the Unix default ~/.hermes
-    $currentHermesHome = [Environment]::GetEnvironmentVariable("HERMES_HOME", "User")
-    if (-not $currentHermesHome -or $currentHermesHome -ne $HermesHome) {
-        [Environment]::SetEnvironmentVariable("HERMES_HOME", $HermesHome, "User")
-        Write-Success "Set HERMES_HOME=$HermesHome"
+    # Set BASSERA_HOME so the Python code finds config/data in the right place.
+    # Only needed on Windows where we install to %LOCALAPPDATA%\bassera instead
+    # of the Unix default ~/.bassera
+    $currentBasseraHome = [Environment]::GetEnvironmentVariable("BASSERA_HOME", "User")
+    if (-not $currentBasseraHome -or $currentBasseraHome -ne $BasseraHome) {
+        [Environment]::SetEnvironmentVariable("BASSERA_HOME", $BasseraHome, "User")
+        Write-Success "Set BASSERA_HOME=$BasseraHome"
     }
-    $env:HERMES_HOME = $HermesHome
+    $env:BASSERA_HOME = $BasseraHome
     
     # Update current session
-    $env:Path = "$hermesBin;$env:Path"
+    $env:Path = "$basseraBin;$env:Path"
     
-    Write-Success "hermes command ready"
+    Write-Success "bassera command ready"
 }
 
 function Copy-ConfigTemplates {
     Write-Info "Setting up configuration files..."
     
-    # Create ~/.hermes directory structure
-    New-Item -ItemType Directory -Force -Path "$HermesHome\cron" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\sessions" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\logs" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\pairing" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\hooks" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\image_cache" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\audio_cache" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\memories" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\skills" | Out-Null
-    New-Item -ItemType Directory -Force -Path "$HermesHome\whatsapp\session" | Out-Null
+    # Create ~/.bassera directory structure
+    New-Item -ItemType Directory -Force -Path "$BasseraHome\cron" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$BasseraHome\sessions" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$BasseraHome\logs" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$BasseraHome\pairing" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$BasseraHome\hooks" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$BasseraHome\image_cache" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$BasseraHome\audio_cache" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$BasseraHome\memories" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$BasseraHome\skills" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$BasseraHome\whatsapp\session" | Out-Null
     
     # Create .env
-    $envPath = "$HermesHome\.env"
+    $envPath = "$BasseraHome\.env"
     if (-not (Test-Path $envPath)) {
         $examplePath = "$InstallDir\.env.example"
         if (Test-Path $examplePath) {
             Copy-Item $examplePath $envPath
-            Write-Success "Created ~/.hermes/.env from template"
+            Write-Success "Created ~/.bassera/.env from template"
         } else {
             New-Item -ItemType File -Force -Path $envPath | Out-Null
-            Write-Success "Created ~/.hermes/.env"
+            Write-Success "Created ~/.bassera/.env"
         }
     } else {
-        Write-Info "~/.hermes/.env already exists, keeping it"
+        Write-Info "~/.bassera/.env already exists, keeping it"
     }
     
     # Create config.yaml
-    $configPath = "$HermesHome\config.yaml"
+    $configPath = "$BasseraHome\config.yaml"
     if (-not (Test-Path $configPath)) {
         $examplePath = "$InstallDir\cli-config.yaml.example"
         if (Test-Path $examplePath) {
             Copy-Item $examplePath $configPath
-            Write-Success "Created ~/.hermes/config.yaml from template"
+            Write-Success "Created ~/.bassera/config.yaml from template"
         }
     } else {
-        Write-Info "~/.hermes/config.yaml already exists, keeping it"
+        Write-Info "~/.bassera/config.yaml already exists, keeping it"
     }
     
     # Create SOUL.md if it doesn't exist (global persona file)
-    $soulPath = "$HermesHome\SOUL.md"
+    $soulPath = "$BasseraHome\SOUL.md"
     if (-not (Test-Path $soulPath)) {
         @"
-# Hermes Agent Persona
+# Bassera Agent Persona
 
 <!-- 
 This file defines the agent's personality and tone.
 The agent will embody whatever you write here.
-Edit this to customize how Hermes communicates with you.
+Edit this to customize how Bassera communicates with you.
 
 Examples:
   - "You are a warm, playful assistant who uses kaomoji occasionally."
@@ -679,25 +679,25 @@ This file is loaded fresh each message -- no restart needed.
 Delete the contents (or this file) to use the default personality.
 -->
 "@ | Set-Content -Path $soulPath -Encoding UTF8
-        Write-Success "Created ~/.hermes/SOUL.md (edit to customize personality)"
+        Write-Success "Created ~/.bassera/SOUL.md (edit to customize personality)"
     }
     
-    Write-Success "Configuration directory ready: ~/.hermes/"
+    Write-Success "Configuration directory ready: ~/.bassera/"
     
-    # Seed bundled skills into ~/.hermes/skills/ (manifest-based, one-time per skill)
-    Write-Info "Syncing bundled skills to ~/.hermes/skills/ ..."
+    # Seed bundled skills into ~/.bassera/skills/ (manifest-based, one-time per skill)
+    Write-Info "Syncing bundled skills to ~/.bassera/skills/ ..."
     $pythonExe = "$InstallDir\venv\Scripts\python.exe"
     if (Test-Path $pythonExe) {
         try {
             & $pythonExe "$InstallDir\tools\skills_sync.py" 2>$null
-            Write-Success "Skills synced to ~/.hermes/skills/"
+            Write-Success "Skills synced to ~/.bassera/skills/"
         } catch {
             # Fallback: simple directory copy
             $bundledSkills = "$InstallDir\skills"
-            $userSkills = "$HermesHome\skills"
+            $userSkills = "$BasseraHome\skills"
             if ((Test-Path $bundledSkills) -and -not (Get-ChildItem $userSkills -Exclude '.bundled_manifest' -ErrorAction SilentlyContinue)) {
                 Copy-Item -Path "$bundledSkills\*" -Destination $userSkills -Recurse -Force -ErrorAction SilentlyContinue
-                Write-Success "Skills copied to ~/.hermes/skills/"
+                Write-Success "Skills copied to ~/.bassera/skills/"
             }
         }
     }
@@ -730,7 +730,7 @@ function Install-NodeDeps {
             npm install --silent 2>&1 | Out-Null
             Write-Success "TUI dependencies installed"
         } catch {
-            Write-Warn "TUI npm install failed (hermes --tui may not work)"
+            Write-Warn "TUI npm install failed (bassera --tui may not work)"
         }
         Pop-Location
     }
@@ -764,18 +764,18 @@ function Invoke-SetupWizard {
     
     Push-Location $InstallDir
     
-    # Run hermes setup using the venv Python directly (no activation needed)
+    # Run bassera setup using the venv Python directly (no activation needed)
     if (-not $NoVenv) {
-        & ".\venv\Scripts\python.exe" -m hermes_cli.main setup
+        & ".\venv\Scripts\python.exe" -m bassera_cli.main setup
     } else {
-        python -m hermes_cli.main setup
+        python -m bassera_cli.main setup
     }
     
     Pop-Location
 }
 
 function Start-GatewayIfConfigured {
-    $envPath = "$HermesHome\.env"
+    $envPath = "$BasseraHome\.env"
     if (-not (Test-Path $envPath)) { return }
 
     $hasMessaging = $false
@@ -787,23 +787,23 @@ function Start-GatewayIfConfigured {
 
     if (-not $hasMessaging) { return }
 
-    $hermesCmd = "$InstallDir\venv\Scripts\hermes.exe"
-    if (-not (Test-Path $hermesCmd)) {
-        $hermesCmd = "hermes"
+    $basseraCmd = "$InstallDir\venv\Scripts\bassera.exe"
+    if (-not (Test-Path $basseraCmd)) {
+        $basseraCmd = "bassera"
     }
 
     # If WhatsApp is enabled but not yet paired, run foreground for QR scan
     $whatsappEnabled = $content | Where-Object { $_ -match "^WHATSAPP_ENABLED=true" }
-    $whatsappSession = "$HermesHome\whatsapp\session\creds.json"
+    $whatsappSession = "$BasseraHome\whatsapp\session\creds.json"
     if ($whatsappEnabled -and -not (Test-Path $whatsappSession)) {
         Write-Host ""
         Write-Info "WhatsApp is enabled but not yet paired."
-        Write-Info "Running 'hermes whatsapp' to pair via QR code..."
+        Write-Info "Running 'bassera whatsapp' to pair via QR code..."
         Write-Host ""
         $response = Read-Host "Pair WhatsApp now? [Y/n]"
         if ($response -eq "" -or $response -match "^[Yy]") {
             try {
-                & $hermesCmd whatsapp
+                & $basseraCmd whatsapp
             } catch {
                 # Expected after pairing completes
             }
@@ -819,19 +819,19 @@ function Start-GatewayIfConfigured {
     if ($response -eq "" -or $response -match "^[Yy]") {
         Write-Info "Starting gateway in background..."
         try {
-            $logFile = "$HermesHome\logs\gateway.log"
-            Start-Process -FilePath $hermesCmd -ArgumentList "gateway" `
+            $logFile = "$BasseraHome\logs\gateway.log"
+            Start-Process -FilePath $basseraCmd -ArgumentList "gateway" `
                 -RedirectStandardOutput $logFile `
-                -RedirectStandardError "$HermesHome\logs\gateway-error.log" `
+                -RedirectStandardError "$BasseraHome\logs\gateway-error.log" `
                 -WindowStyle Hidden
             Write-Success "Gateway started! Your bot is now online."
             Write-Info "Logs: $logFile"
             Write-Info "To stop: close the gateway process from Task Manager"
         } catch {
-            Write-Warn "Failed to start gateway. Run manually: hermes gateway"
+            Write-Warn "Failed to start gateway. Run manually: bassera gateway"
         }
     } else {
-        Write-Info "Skipped. Start the gateway later with: hermes gateway"
+        Write-Info "Skipped. Start the gateway later with: bassera gateway"
     }
 }
 
@@ -846,30 +846,30 @@ function Write-Completion {
     Write-Host "📁 Your files:" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "   Config:    " -NoNewline -ForegroundColor Yellow
-    Write-Host "$HermesHome\config.yaml"
+    Write-Host "$BasseraHome\config.yaml"
     Write-Host "   API Keys:  " -NoNewline -ForegroundColor Yellow
-    Write-Host "$HermesHome\.env"
+    Write-Host "$BasseraHome\.env"
     Write-Host "   Data:      " -NoNewline -ForegroundColor Yellow
-    Write-Host "$HermesHome\cron\, sessions\, logs\"
+    Write-Host "$BasseraHome\cron\, sessions\, logs\"
     Write-Host "   Code:      " -NoNewline -ForegroundColor Yellow
-    Write-Host "$HermesHome\hermes-agent\"
+    Write-Host "$BasseraHome\bassera-agent\"
     Write-Host ""
     
     Write-Host "─────────────────────────────────────────────────────────" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "🚀 Commands:" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "   hermes              " -NoNewline -ForegroundColor Green
+    Write-Host "   bassera              " -NoNewline -ForegroundColor Green
     Write-Host "Start chatting"
-    Write-Host "   hermes setup        " -NoNewline -ForegroundColor Green
+    Write-Host "   bassera setup        " -NoNewline -ForegroundColor Green
     Write-Host "Configure API keys & settings"
-    Write-Host "   hermes config       " -NoNewline -ForegroundColor Green
+    Write-Host "   bassera config       " -NoNewline -ForegroundColor Green
     Write-Host "View/edit configuration"
-    Write-Host "   hermes config edit  " -NoNewline -ForegroundColor Green
+    Write-Host "   bassera config edit  " -NoNewline -ForegroundColor Green
     Write-Host "Open config in editor"
-    Write-Host "   hermes gateway      " -NoNewline -ForegroundColor Green
+    Write-Host "   bassera gateway      " -NoNewline -ForegroundColor Green
     Write-Host "Start messaging gateway (Telegram, Discord, etc.)"
-    Write-Host "   hermes update       " -NoNewline -ForegroundColor Green
+    Write-Host "   bassera update       " -NoNewline -ForegroundColor Green
     Write-Host "Update to latest version"
     Write-Host ""
     

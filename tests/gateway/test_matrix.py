@@ -323,14 +323,14 @@ class TestMatrixConfigLoading:
     def test_matrix_user_id_stored_in_extra(self, monkeypatch):
         monkeypatch.setenv("MATRIX_ACCESS_TOKEN", "syt_abc123")
         monkeypatch.setenv("MATRIX_HOMESERVER", "https://matrix.example.org")
-        monkeypatch.setenv("MATRIX_USER_ID", "@wafi:example.org")
+        monkeypatch.setenv("MATRIX_USER_ID", "@bassera:example.org")
 
         from gateway.config import GatewayConfig, _apply_env_overrides
         config = GatewayConfig()
         _apply_env_overrides(config)
 
         mc = config.platforms[Platform.MATRIX]
-        assert mc.extra.get("user_id") == "@wafi:example.org"
+        assert mc.extra.get("user_id") == "@bassera:example.org"
 
 
 # ---------------------------------------------------------------------------
@@ -987,11 +987,11 @@ class TestMatrixDeviceId:
             token="syt_test",
             extra={
                 "homeserver": "https://matrix.example.org",
-                "device_id": "HERMES_BOT_STABLE",
+                "device_id": "BASSERA_BOT_STABLE",
             },
         )
         adapter = MatrixAdapter(config)
-        assert adapter._device_id == "HERMES_BOT_STABLE"
+        assert adapter._device_id == "BASSERA_BOT_STABLE"
 
     def test_device_id_from_env(self, monkeypatch):
         monkeypatch.setenv("MATRIX_DEVICE_ID", "FROM_ENV")
@@ -1142,14 +1142,14 @@ class TestMatrixDeviceIdConfig:
     def test_device_id_in_config_extra(self, monkeypatch):
         monkeypatch.setenv("MATRIX_ACCESS_TOKEN", "syt_abc123")
         monkeypatch.setenv("MATRIX_HOMESERVER", "https://matrix.example.org")
-        monkeypatch.setenv("MATRIX_DEVICE_ID", "HERMES_BOT")
+        monkeypatch.setenv("MATRIX_DEVICE_ID", "BASSERA_BOT")
 
         from gateway.config import GatewayConfig, _apply_env_overrides
         config = GatewayConfig()
         _apply_env_overrides(config)
 
         mc = config.platforms[Platform.MATRIX]
-        assert mc.extra.get("device_id") == "HERMES_BOT"
+        assert mc.extra.get("device_id") == "BASSERA_BOT"
 
     def test_device_id_not_set_when_env_empty(self, monkeypatch):
         monkeypatch.setenv("MATRIX_ACCESS_TOKEN", "syt_abc123")

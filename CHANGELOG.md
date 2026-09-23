@@ -4,8 +4,8 @@ All notable changes to Bassera Agent are documented here. Format based
 on [Keep a Changelog](https://keepachangelog.com/); the project is
 pre-1.0, so everything lives under Unreleased until a version is cut.
 
-Bassera Agent is a fork of wafi-agent (itself an evolution of
-hermes-agent). Entries below cover the production-hardening effort;
+Bassera Agent is a fork of bassera-agent (itself an evolution of
+bassera-agent). Entries below cover the production-hardening effort;
 referenced commit hashes are in this repository's history.
 
 ## [Unreleased]
@@ -13,9 +13,9 @@ referenced commit hashes are in this repository's history.
 ### Security
 
 - **Credential-file write bypass closed** (`dc64958e`): the
-  dangerous-command detector only matched `$wafi_home`, while the
-  runtime reads `HERMES_HOME` — so `echo x > $HERMES_HOME/.env` and
-  `tee $HERMES_HOME/.env` sailed past approval. The regex now covers
+  dangerous-command detector only matched `$bassera_home`, while the
+  runtime reads `BASSERA_HOME` — so `echo x > $BASSERA_HOME/.env` and
+  `tee $BASSERA_HOME/.env` sailed past approval. The regex now covers
   all home spellings; the file-tools deny list resolves the `.env`
   target at check time and denies both the active and the default
   home, so profile sessions can no longer clobber the main install.
@@ -44,7 +44,7 @@ referenced commit hashes are in this repository's history.
 - **Threat model** (`59aeb6eb`): formal entry-point inventory (env
   ingestion, file writes, subprocess spawning, network, skills/MCP,
   messaging gateway) with protected/partial status, pinning tests, and
-  a residual-risk register (`wafi_architecture/threat_model.md`).
+  a residual-risk register (`bassera_architecture/threat_model.md`).
 
 ### Fixed
 
@@ -71,7 +71,7 @@ referenced commit hashes are in this repository's history.
 - Five stale/platform-broken tests failing on a clean checkout
   (`08562e4c`): retired Gemini catalog pins, WSL/systemd test that
   could never reach its code on macOS, a win32 `sys.platform` fake
-  crashing POSIX `shutil.which`, hermes-era mention-case assumptions,
+  crashing POSIX `shutil.which`, bassera-era mention-case assumptions,
   and a macOS-unavailable mautrix crypto dependency (now
   importorskip-gated).
 
@@ -87,7 +87,7 @@ referenced commit hashes are in this repository's history.
 
 - **Hermetic suite** (`531d91ad`): full runs no longer leak state
   (state.db, processes.json, pairing/rate-limit entries, feishu dedup,
-  document caches) into the developer's real `~/.wafi`. Import-time
+  document caches) into the developer's real `~/.bassera`. Import-time
   frozen homes are captured at conftest import into a throwaway
   directory; cleared-env tests keep an isolated home; pairing state
   resolves lazily.
@@ -118,15 +118,15 @@ referenced commit hashes are in this repository's history.
 
 ### Documentation
 
-- Threat model (`wafi_architecture/threat_model.md`), secret-scan
+- Threat model (`bassera_architecture/threat_model.md`), secret-scan
   findings and decisions (`docs/SECURITY_FINDINGS.md`), TUI WebSocket
   transport design doc including its five blocking gaps
-  (`wafi_architecture/tui_websocket_transport.md`), logging and
+  (`bassera_architecture/tui_websocket_transport.md`), logging and
   audit-schema conventions (`docs/LOGGING.md`).
 
 ### Branding
 
-- Complete Bassera identity: hermes→wafi rename leftovers finished,
+- Complete Bassera identity: bassera→bassera rename leftovers finished,
   logo redrawn, SOUL persona, platform payloads, copilot User-Agent
   `BasseraAgent/1.0`, and user-facing strings
   (`cdc6ef3d`, `d335afd5`, `30e2d73e`). A prompt-mask desync in the

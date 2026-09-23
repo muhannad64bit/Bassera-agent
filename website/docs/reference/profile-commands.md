@@ -4,15 +4,15 @@ sidebar_position: 7
 
 # Profile Commands Reference
 
-This page covers all commands related to [Hermes profiles](../user-guide/profiles.md). For general CLI commands, see [CLI Commands Reference](./cli-commands.md).
+This page covers all commands related to [Bassera profiles](../user-guide/profiles.md). For general CLI commands, see [CLI Commands Reference](./cli-commands.md).
 
-## `hermes profile`
+## `bassera profile`
 
 ```bash
-hermes profile <subcommand>
+bassera profile <subcommand>
 ```
 
-Top-level command for managing profiles. Running `hermes profile` without a subcommand shows help.
+Top-level command for managing profiles. Running `bassera profile` without a subcommand shows help.
 
 | Subcommand | Description |
 |------------|-------------|
@@ -26,10 +26,10 @@ Top-level command for managing profiles. Running `hermes profile` without a subc
 | `export` | Export a profile to a tar.gz archive. |
 | `import` | Import a profile from a tar.gz archive. |
 
-## `hermes profile list`
+## `bassera profile list`
 
 ```bash
-hermes profile list
+bassera profile list
 ```
 
 Lists all profiles. The currently active profile is marked with `*`.
@@ -37,7 +37,7 @@ Lists all profiles. The currently active profile is marked with `*`.
 **Example:**
 
 ```bash
-$ hermes profile list
+$ bassera profile list
   default
 * work
   dev
@@ -46,13 +46,13 @@ $ hermes profile list
 
 No options.
 
-## `hermes profile use`
+## `bassera profile use`
 
 ```bash
-hermes profile use <name>
+bassera profile use <name>
 ```
 
-Sets `<name>` as the active profile. All subsequent `hermes` commands (without `-p`) will use this profile.
+Sets `<name>` as the active profile. All subsequent `bassera` commands (without `-p`) will use this profile.
 
 | Argument | Description |
 |----------|-------------|
@@ -61,14 +61,14 @@ Sets `<name>` as the active profile. All subsequent `hermes` commands (without `
 **Example:**
 
 ```bash
-hermes profile use work
-hermes profile use default
+bassera profile use work
+bassera profile use default
 ```
 
-## `hermes profile create`
+## `bassera profile create`
 
 ```bash
-hermes profile create <name> [options]
+bassera profile create <name> [options]
 ```
 
 Creates a new profile.
@@ -87,22 +87,22 @@ Creating a profile does **not** make that profile directory the default project/
 
 ```bash
 # Blank profile — needs full setup
-hermes profile create mybot
+bassera profile create mybot
 
 # Clone config only from current profile
-hermes profile create work --clone
+bassera profile create work --clone
 
 # Clone everything from current profile
-hermes profile create backup --clone-all
+bassera profile create backup --clone-all
 
 # Clone config from a specific profile
-hermes profile create work2 --clone --clone-from work
+bassera profile create work2 --clone --clone-from work
 ```
 
-## `hermes profile delete`
+## `bassera profile delete`
 
 ```bash
-hermes profile delete <name> [options]
+bassera profile delete <name> [options]
 ```
 
 Deletes a profile and removes its shell alias.
@@ -115,23 +115,23 @@ Deletes a profile and removes its shell alias.
 **Example:**
 
 ```bash
-hermes profile delete mybot
-hermes profile delete mybot --yes
+bassera profile delete mybot
+bassera profile delete mybot --yes
 ```
 
 :::warning
 This permanently deletes the profile's entire directory including all config, memories, sessions, and skills. Cannot delete the currently active profile.
 :::
 
-## `hermes profile show`
+## `bassera profile show`
 
 ```bash
-hermes profile show <name>
+bassera profile show <name>
 ```
 
 Displays details about a profile including its home directory, configured model, gateway status, skills count, and configuration file status.
 
-This shows the profile's Hermes home directory, not the terminal working directory. Terminal commands start from `terminal.cwd` (or the launch directory on the local backend when `cwd: "."`).
+This shows the profile's Bassera home directory, not the terminal working directory. Terminal commands start from `terminal.cwd` (or the launch directory on the local backend when `cwd: "."`).
 
 | Argument | Description |
 |----------|-------------|
@@ -140,9 +140,9 @@ This shows the profile's Hermes home directory, not the terminal working directo
 **Example:**
 
 ```bash
-$ hermes profile show work
+$ bassera profile show work
 Profile: work
-Path:    ~/.hermes/profiles/work
+Path:    ~/.bassera/profiles/work
 Model:   anthropic/claude-sonnet-4 (anthropic)
 Gateway: stopped
 Skills:  12
@@ -151,13 +151,13 @@ SOUL.md: exists
 Alias:   ~/.local/bin/work
 ```
 
-## `hermes profile alias`
+## `bassera profile alias`
 
 ```bash
-hermes profile alias <name> [options]
+bassera profile alias <name> [options]
 ```
 
-Regenerates the shell alias script at `~/.local/bin/<name>`. Useful if the alias was accidentally deleted or if you need to update it after moving your Hermes installation.
+Regenerates the shell alias script at `~/.local/bin/<name>`. Useful if the alias was accidentally deleted or if you need to update it after moving your Bassera installation.
 
 | Argument / Option | Description |
 |-------------------|-------------|
@@ -168,20 +168,20 @@ Regenerates the shell alias script at `~/.local/bin/<name>`. Useful if the alias
 **Example:**
 
 ```bash
-hermes profile alias work
+bassera profile alias work
 # Creates/updates ~/.local/bin/work
 
-hermes profile alias work --name mywork
+bassera profile alias work --name mywork
 # Creates ~/.local/bin/mywork
 
-hermes profile alias work --remove
+bassera profile alias work --remove
 # Removes the wrapper script
 ```
 
-## `hermes profile rename`
+## `bassera profile rename`
 
 ```bash
-hermes profile rename <old-name> <new-name>
+bassera profile rename <old-name> <new-name>
 ```
 
 Renames a profile. Updates the directory and shell alias.
@@ -194,15 +194,15 @@ Renames a profile. Updates the directory and shell alias.
 **Example:**
 
 ```bash
-hermes profile rename mybot assistant
-# ~/.hermes/profiles/mybot → ~/.hermes/profiles/assistant
+bassera profile rename mybot assistant
+# ~/.bassera/profiles/mybot → ~/.bassera/profiles/assistant
 # ~/.local/bin/mybot → ~/.local/bin/assistant
 ```
 
-## `hermes profile export`
+## `bassera profile export`
 
 ```bash
-hermes profile export <name> [options]
+bassera profile export <name> [options]
 ```
 
 Exports a profile as a compressed tar.gz archive.
@@ -215,16 +215,16 @@ Exports a profile as a compressed tar.gz archive.
 **Example:**
 
 ```bash
-hermes profile export work
+bassera profile export work
 # Creates work.tar.gz in the current directory
 
-hermes profile export work -o ./work-2026-03-29.tar.gz
+bassera profile export work -o ./work-2026-03-29.tar.gz
 ```
 
-## `hermes profile import`
+## `bassera profile import`
 
 ```bash
-hermes profile import <archive> [options]
+bassera profile import <archive> [options]
 ```
 
 Imports a profile from a tar.gz archive.
@@ -237,20 +237,20 @@ Imports a profile from a tar.gz archive.
 **Example:**
 
 ```bash
-hermes profile import ./work-2026-03-29.tar.gz
+bassera profile import ./work-2026-03-29.tar.gz
 # Infers profile name from the archive
 
-hermes profile import ./work-2026-03-29.tar.gz --name work-restored
+bassera profile import ./work-2026-03-29.tar.gz --name work-restored
 ```
 
-## `hermes -p` / `hermes --profile`
+## `bassera -p` / `bassera --profile`
 
 ```bash
-hermes -p <name> <command> [options]
-hermes --profile <name> <command> [options]
+bassera -p <name> <command> [options]
+bassera --profile <name> <command> [options]
 ```
 
-Global flag to run any Hermes command under a specific profile without changing the sticky default. This overrides the active profile for the duration of the command.
+Global flag to run any Bassera command under a specific profile without changing the sticky default. This overrides the active profile for the duration of the command.
 
 | Option | Description |
 |--------|-------------|
@@ -259,16 +259,16 @@ Global flag to run any Hermes command under a specific profile without changing 
 **Examples:**
 
 ```bash
-hermes -p work chat -q "Check the server status"
-hermes --profile dev gateway start
-hermes -p personal skills list
-hermes -p work config edit
+bassera -p work chat -q "Check the server status"
+bassera --profile dev gateway start
+bassera -p personal skills list
+bassera -p work config edit
 ```
 
-## `hermes completion`
+## `bassera completion`
 
 ```bash
-hermes completion <shell>
+bassera completion <shell>
 ```
 
 Generates shell completion scripts. Includes completions for profile names and profile subcommands.
@@ -281,17 +281,17 @@ Generates shell completion scripts. Includes completions for profile names and p
 
 ```bash
 # Install completions
-hermes completion bash >> ~/.bashrc
-hermes completion zsh >> ~/.zshrc
+bassera completion bash >> ~/.bashrc
+bassera completion zsh >> ~/.zshrc
 
 # Reload shell
 source ~/.bashrc
 ```
 
 After installation, tab completion works for:
-- `hermes profile <TAB>` — subcommands (list, use, create, etc.)
-- `hermes profile use <TAB>` — profile names
-- `hermes -p <TAB>` — profile names
+- `bassera profile <TAB>` — subcommands (list, use, create, etc.)
+- `bassera profile use <TAB>` — profile names
+- `bassera -p <TAB>` — profile names
 
 ## See also
 

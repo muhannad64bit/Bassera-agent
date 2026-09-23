@@ -16,7 +16,7 @@ The client entrypoint is `src/entry.tsx`. It exits early if `stdin` is not a TTY
 python -m tui_gateway.entry
 ```
 
-Interpreter resolution order is: `HERMES_PYTHON` → `PYTHON` → `$VIRTUAL_ENV/bin/python` → `./.venv/bin/python` → `./venv/bin/python` → `python3` (or `python` on Windows).
+Interpreter resolution order is: `BASSERA_PYTHON` → `PYTHON` → `$VIRTUAL_ENV/bin/python` → `./.venv/bin/python` → `./venv/bin/python` → `python3` (or `python` on Windows).
 
 The transport is newline-delimited JSON-RPC over stdio:
 
@@ -170,7 +170,7 @@ Notes:
 - Completion requests are debounced by 60 ms. Input starting with `/` uses `complete.slash`. A trailing token that starts with `./`, `../`, `~/`, `/`, or `@` uses `complete.path`.
 - Text pastes are inserted inline directly into the draft. Nothing is newline-flattened.
 - `Ctrl+G` writes the current draft, including any multiline buffer, to a temp file, temporarily swaps screen buffers, launches `$EDITOR`, then restores the TUI and submits the saved text if the editor exits cleanly.
-- Input history is stored in `~/.hermes/.hermes_history` or under `HERMES_HOME`.
+- Input history is stored in `~/.hermes/.hermes_history` or under `BASSERA_HOME`.
 
 ## Rendering
 

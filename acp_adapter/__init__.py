@@ -1,1 +1,1 @@
-"""ACP (Agent Communication Protocol) adapter for wafi-agent."""
+"""ACP (Agent Communication Protocol) adapter for bassera-agent."""

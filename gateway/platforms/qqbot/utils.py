@@ -13,11 +13,11 @@ from .constants import QQBOT_VERSION
 # User-Agent
 # ---------------------------------------------------------------------------
 
-def _get_wafi_version() -> str:
-    """Return the wafi-agent package version, or 'dev' if unavailable."""
+def _get_bassera_version() -> str:
+    """Return the bassera-agent package version, or 'dev' if unavailable."""
     try:
         from importlib.metadata import version
-        return version("wafi-agent")
+        return version("bassera-agent")
     except Exception:
         return "dev"
 
@@ -27,16 +27,16 @@ def build_user_agent() -> str:
 
     Format::
 
-        QQBotAdapter/<qqbot_version> (Python/<py_version>; <os>; Wafi/<wafi_version>)
+        QQBotAdapter/<qqbot_version> (Python/<py_version>; <os>; Bassera/<bassera_version>)
 
     Example::
 
-        QQBotAdapter/1.0.0 (Python/3.11.15; darwin; Wafi/0.9.0)
+        QQBotAdapter/1.0.0 (Python/3.11.15; darwin; Bassera/0.9.0)
     """
     py_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     os_name = platform.system().lower()
-    wafi_version = _get_wafi_version()
-    return f"QQBotAdapter/{QQBOT_VERSION} (Python/{py_version}; {os_name}; Wafi/{wafi_version})"
+    bassera_version = _get_bassera_version()
+    return f"QQBotAdapter/{QQBOT_VERSION} (Python/{py_version}; {os_name}; Bassera/{bassera_version})"
 
 
 def get_api_headers() -> Dict[str, str]:

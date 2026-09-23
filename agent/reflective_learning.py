@@ -1,4 +1,4 @@
-"""Bounded post-turn reflective learning for WAFI.
+"""Bounded post-turn reflective learning for BASSERA.
 
 This module intentionally stays deterministic and in-process. It does not
 spawn a second cognitive loop or create a second memory backend. It analyzes

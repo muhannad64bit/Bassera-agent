@@ -8,18 +8,18 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def _isolate(tmp_path, monkeypatch):
-    """Redirect HERMES_HOME and clear module caches."""
-    wafi_home = tmp_path / ".wafi"
-    wafi_home.mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
+    """Redirect BASSERA_HOME and clear module caches."""
+    bassera_home = tmp_path / ".bassera"
+    bassera_home.mkdir()
+    monkeypatch.setenv("BASSERA_HOME", str(bassera_home))
     # Write a minimal config so load_config doesn't fail
-    (wafi_home / "config.yaml").write_text("model:\n  default: test-model\n")
+    (bassera_home / "config.yaml").write_text("model:\n  default: test-model\n")
 
 
 def _write_config(tmp_path, config_dict):
-    """Write a config.yaml to the test HERMES_HOME."""
+    """Write a config.yaml to the test BASSERA_HOME."""
     import yaml
-    config_path = tmp_path / ".wafi" / "config.yaml"
+    config_path = tmp_path / ".bassera" / "config.yaml"
     config_path.write_text(yaml.dump(config_dict))
 
 
@@ -163,7 +163,7 @@ class TestResolveProviderClientModelNormalization:
             "model": {"default": "zai/glm-5.1", "provider": "zai"},
         })
         with (
-            patch("wafi_cli.auth.resolve_api_key_provider_credentials", return_value={
+            patch("bassera_cli.auth.resolve_api_key_provider_credentials", return_value={
                 "api_key": "glm-key",
                 "base_url": "https://api.z.ai/api/paas/v4",
             }),
@@ -182,7 +182,7 @@ class TestResolveProviderClientModelNormalization:
             "model": {"default": "zai/glm-5.1", "provider": "zai"},
         })
         with (
-            patch("wafi_cli.auth.resolve_api_key_provider_credentials", return_value={
+            patch("bassera_cli.auth.resolve_api_key_provider_credentials", return_value={
                 "api_key": "glm-key",
                 "base_url": "https://api.z.ai/api/paas/v4",
             }),
@@ -219,7 +219,7 @@ class TestResolveVisionProviderClientModelNormalization:
         })
         with (
             patch("agent.auxiliary_client._read_nous_auth", return_value=None),
-            patch("wafi_cli.auth.resolve_api_key_provider_credentials", return_value={
+            patch("bassera_cli.auth.resolve_api_key_provider_credentials", return_value={
                 "api_key": "glm-key",
                 "base_url": "https://api.z.ai/api/paas/v4",
             }),

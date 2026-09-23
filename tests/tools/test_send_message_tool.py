@@ -73,8 +73,8 @@ class TestSendMessageTool:
         with patch.dict(
             os.environ,
             {
-                "HERMES_CRON_AUTO_DELIVER_PLATFORM": "telegram",
-                "HERMES_CRON_AUTO_DELIVER_CHAT_ID": "-1001",
+                "BASSERA_CRON_AUTO_DELIVER_PLATFORM": "telegram",
+                "BASSERA_CRON_AUTO_DELIVER_CHAT_ID": "-1001",
             },
             clear=False,
         ), \
@@ -340,7 +340,7 @@ class TestSendToPlatformChunking:
                     Platform.SLACK,
                     SimpleNamespace(enabled=True, token="***", extra={}),
                     "C123",
-                    "**hello** from [Wafi](<https://example.com>)",
+                    "**hello** from [Bassera](<https://example.com>)",
                 )
             )
 
@@ -348,7 +348,7 @@ class TestSendToPlatformChunking:
         send.assert_awaited_once_with(
             "***",
             "C123",
-            "*hello* from <https://example.com|Wafi>",
+            "*hello* from <https://example.com|Bassera>",
         )
 
     def test_slack_bold_italic_formatted_before_send(self, monkeypatch):
@@ -569,12 +569,12 @@ class TestSendToPlatformWhatsapp:
                     Platform.WHATSAPP,
                     SimpleNamespace(enabled=True, token=None, extra={"bridge_port": 3000}),
                     chat_id,
-                    "hello from wafi",
+                    "hello from bassera",
                 )
             )
 
         assert result["success"] is True
-        async_mock.assert_awaited_once_with({"bridge_port": 3000}, chat_id, "hello from wafi")
+        async_mock.assert_awaited_once_with({"bridge_port": 3000}, chat_id, "hello from bassera")
 
 
 class TestSendTelegramHtmlDetection:
@@ -750,8 +750,8 @@ class TestParseTargetRefMatrix:
 
     def test_matrix_user_mxid_is_explicit(self):
         """Matrix user MXIDs (@) are recognized as explicit targets."""
-        chat_id, thread_id, is_explicit = _parse_target_ref("matrix", "@wafi:matrix.org")
-        assert chat_id == "@wafi:matrix.org"
+        chat_id, thread_id, is_explicit = _parse_target_ref("matrix", "@bassera:matrix.org")
+        assert chat_id == "@bassera:matrix.org"
         assert thread_id is None
         assert is_explicit is True
 

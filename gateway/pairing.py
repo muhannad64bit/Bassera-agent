@@ -15,7 +15,7 @@ Security features (based on OWASP + NIST SP 800-63-4 guidance):
   - File permissions: chmod 0600 on all data files
   - Codes are never logged to stdout
 
-Storage: ~/.wafi/pairing/
+Storage: ~/.bassera/pairing/
 """
 
 import json
@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from wafi_constants import get_wafi_dir
+from bassera_constants import get_bassera_dir
 
 
 # Unambiguous alphabet -- excludes 0/O, 1/I to prevent confusion
@@ -46,13 +46,13 @@ MAX_FAILED_ATTEMPTS = 5             # Failed approvals before lockout
 def _pairing_dir() -> Path:
     """Resolve the pairing directory lazily on each access.
 
-    get_wafi_dir() reads HERMES_HOME, which is set by the profile override
+    get_bassera_dir() reads BASSERA_HOME, which is set by the profile override
     at startup and by the hermetic test fixture per test. Computing this at
     import time would freeze the first-seen home and (in tests) leak
-    pairing state into the real ~/.wafi. In production HERMES_HOME never
+    pairing state into the real ~/.bassera. In production BASSERA_HOME never
     changes mid-process, so lazy resolution is behavior-identical.
     """
-    return get_wafi_dir("platforms/pairing", "pairing")
+    return get_bassera_dir("platforms/pairing", "pairing")
 
 
 def _secure_write(path: Path, data: str) -> None:

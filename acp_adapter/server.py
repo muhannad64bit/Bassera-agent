@@ -1,4 +1,4 @@
-"""ACP agent server — exposes Wafi Agent via the Agent Client Protocol."""
+"""ACP agent server — exposes Bassera Agent via the Agent Client Protocol."""
 
 from __future__ import annotations
 
@@ -64,9 +64,9 @@ from acp_adapter.session import SessionManager, SessionState
 logger = logging.getLogger(__name__)
 
 try:
-    from wafi_cli import __version__ as HERMES_VERSION
+    from bassera_cli import __version__ as BASSERA_VERSION
 except Exception:
-    HERMES_VERSION = "0.0.0"
+    BASSERA_VERSION = "0.0.0"
 
 # Thread pool for running AIAgent (synchronous) in parallel.
 _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="acp-agent")
@@ -92,8 +92,8 @@ def _extract_text(
     return "\n".join(parts)
 
 
-class WafiACPAgent(acp.Agent):
-    """ACP Agent implementation wrapping Wafi AIAgent."""
+class BasseraACPAgent(acp.Agent):
+    """ACP Agent implementation wrapping Bassera AIAgent."""
 
     _SLASH_COMMANDS = {
         "help": "Show available commands",
@@ -102,7 +102,7 @@ class WafiACPAgent(acp.Agent):
         "context": "Show conversation context info",
         "reset": "Clear conversation history",
         "compact": "Compress conversation context",
-        "version": "Show Wafi version",
+        "version": "Show Bassera version",
     }
 
     _ADVERTISED_COMMANDS = (
@@ -133,7 +133,7 @@ class WafiACPAgent(acp.Agent):
         },
         {
             "name": "version",
-            "description": "Show Wafi version",
+            "description": "Show Bassera version",
         },
     )
 
@@ -166,7 +166,7 @@ class WafiACPAgent(acp.Agent):
         provider = getattr(state.agent, "provider", None) or detect_provider() or "openrouter"
 
         try:
-            from wafi_cli.models import curated_models_for_provider, normalize_provider, provider_label
+            from bassera_cli.models import curated_models_for_provider, normalize_provider, provider_label
 
             normalized_provider = normalize_provider(provider)
             provider_name = provider_label(normalized_provider)
@@ -229,7 +229,7 @@ class WafiACPAgent(acp.Agent):
         new_model = raw_model.strip()
 
         try:
-            from wafi_cli.models import detect_provider_for_model, parse_model_input
+            from bassera_cli.models import detect_provider_for_model, parse_model_input
 
             target_provider, new_model = parse_model_input(new_model, current_provider)
             if target_provider == current_provider:
@@ -281,7 +281,7 @@ class WafiACPAgent(acp.Agent):
         try:
             from model_tools import get_tool_definitions
 
-            enabled_toolsets = getattr(state.agent, "enabled_toolsets", None) or ["wafi-acp"]
+            enabled_toolsets = getattr(state.agent, "enabled_toolsets", None) or ["bassera-acp"]
             disabled_toolsets = getattr(state.agent, "disabled_toolsets", None)
             state.agent.tools = get_tool_definitions(
                 enabled_toolsets=enabled_toolsets,
@@ -325,7 +325,7 @@ class WafiACPAgent(acp.Agent):
                 AuthMethodAgent(
                     id=provider,
                     name=f"{provider} runtime credentials",
-                    description=f"Authenticate Wafi using the currently configured {provider} runtime credentials.",
+                    description=f"Authenticate Bassera using the currently configured {provider} runtime credentials.",
                 )
             ]
 
@@ -338,7 +338,7 @@ class WafiACPAgent(acp.Agent):
 
         return InitializeResponse(
             protocol_version=acp.PROTOCOL_VERSION,
-            agent_info=Implementation(name="wafi-agent", version=HERMES_VERSION),
+            agent_info=Implementation(name="bassera-agent", version=BASSERA_VERSION),
             agent_capabilities=AgentCapabilities(
                 load_session=True,
                 session_capabilities=SessionCapabilities(
@@ -467,7 +467,7 @@ class WafiACPAgent(acp.Agent):
         session_id: str,
         **kwargs: Any,
     ) -> PromptResponse:
-        """Run Wafi on the user's prompt and stream events back to the editor."""
+        """Run Bassera on the user's prompt and stream events back to the editor."""
         state = self.session_manager.get_session(session_id)
         if state is None:
             logger.error("prompt: session %s not found", session_id)
@@ -694,7 +694,7 @@ class WafiACPAgent(acp.Agent):
     def _cmd_tools(self, args: str, state: SessionState) -> str:
         try:
             from model_tools import get_tool_definitions
-            toolsets = getattr(state.agent, "enabled_toolsets", None) or ["wafi-acp"]
+            toolsets = getattr(state.agent, "enabled_toolsets", None) or ["bassera-acp"]
             tools = get_tool_definitions(enabled_toolsets=toolsets, quiet_mode=True)
             if not tools:
                 return "No tools available."
@@ -776,7 +776,7 @@ class WafiACPAgent(acp.Agent):
             return f"Compression failed: {e}"
 
     def _cmd_version(self, args: str, state: SessionState) -> str:
-        return f"Wafi Agent v{HERMES_VERSION}"
+        return f"Bassera Agent v{BASSERA_VERSION}"
 
     # ---- Model switching (ACP protocol method) -------------------------------
 
@@ -830,7 +830,7 @@ class WafiACPAgent(acp.Agent):
     async def set_config_option(
         self, config_id: str, session_id: str, value: str, **kwargs: Any
     ) -> SetSessionConfigOptionResponse | None:
-        """Accept ACP config option updates even when Wafi has no typed ACP config surface yet."""
+        """Accept ACP config option updates even when Bassera has no typed ACP config surface yet."""
         state = self.session_manager.get_session(session_id)
         if state is None:
             logger.warning("Session %s: config update requested for missing session", session_id)

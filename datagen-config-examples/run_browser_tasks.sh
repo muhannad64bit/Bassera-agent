@@ -10,12 +10,12 @@
 # Distribution: browser 97%, web 20%, vision 12%, terminal 15%
 #
 # Prerequisites:
-#   - OPENROUTER_API_KEY in ~/.wafi/.env
-#   - BROWSERBASE_API_KEY in ~/.wafi/.env (for browser tools)
+#   - OPENROUTER_API_KEY in ~/.bassera/.env
+#   - BROWSERBASE_API_KEY in ~/.bassera/.env (for browser tools)
 #   - A dataset JSONL file with one {"prompt": "..."} per line
 #
 # Usage:
-#   cd ~/.wafi/wafi-agent
+#   cd ~/.bassera/bassera-agent
 #   bash datagen-config-examples/run_browser_tasks.sh
 #
 # Output: data/browser_tasks_example/trajectories.jsonl

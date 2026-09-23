@@ -32,8 +32,8 @@ class TestWriteDenyExactPaths:
         path = os.path.join(str(Path.home()), ".netrc")
         assert _is_write_denied(path) is True
 
-    def test_wafi_env(self):
-        path = os.path.join(str(Path.home()), ".wafi", ".env")
+    def test_bassera_env(self):
+        path = os.path.join(str(Path.home()), ".bassera", ".env")
         assert _is_write_denied(path) is True
 
     def test_shell_profiles(self):
@@ -78,8 +78,8 @@ class TestWriteAllowed:
     def test_project_file(self):
         assert _is_write_denied("/home/user/project/main.py") is False
 
-    def test_wafi_config_not_env(self):
-        path = os.path.join(str(Path.home()), ".wafi", "config.yaml")
+    def test_bassera_config_not_env(self):
+        path = os.path.join(str(Path.home()), ".bassera", "config.yaml")
         assert _is_write_denied(path) is False
 
 
@@ -88,7 +88,7 @@ class TestCredentialEnvDeniedUnderAnyHome:
     active home (resolved at check time) and the default home.
 
     Regression for the import-time-frozen deny set: WRITE_DENIED_PATHS
-    captured get_wafi_home() at module import, so whenever HERMES_HOME
+    captured get_bassera_home() at module import, so whenever BASSERA_HOME
     differed at check time (profiles, hermetic test fixture), neither the
     active home's .env nor the default home's .env was protected.
     """
@@ -96,11 +96,11 @@ class TestCredentialEnvDeniedUnderAnyHome:
     def test_env_denied_under_active_home(self, monkeypatch, tmp_path):
         import os
 
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         assert _is_write_denied(str(tmp_path / ".env")) is True
 
     def test_default_home_env_denied_even_with_custom_home(self, monkeypatch, tmp_path):
         from pathlib import Path
 
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-        assert _is_write_denied(str(Path.home() / ".wafi" / ".env")) is True
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
+        assert _is_write_denied(str(Path.home() / ".bassera" / ".env")) is True

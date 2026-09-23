@@ -26,7 +26,7 @@ def _clear_terminal_env(monkeypatch):
 
 
 def test_local_terminal_requirements(monkeypatch, caplog):
-    """Local backend uses Wafi' own LocalEnvironment wrapper."""
+    """Local backend uses Bassera' own LocalEnvironment wrapper."""
     _clear_terminal_env(monkeypatch)
     monkeypatch.setenv("TERMINAL_ENV", "local")
 

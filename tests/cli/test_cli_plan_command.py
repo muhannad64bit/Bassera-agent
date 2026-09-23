@@ -3,11 +3,11 @@
 from unittest.mock import MagicMock, patch
 
 from agent.skill_commands import scan_skill_commands
-from cli import WafiCLI
+from cli import BasseraCLI
 
 
 def _make_cli():
-    cli_obj = WafiCLI.__new__(WafiCLI)
+    cli_obj = BasseraCLI.__new__(BasseraCLI)
     cli_obj.config = {}
     cli_obj.console = MagicMock()
     cli_obj.agent = None
@@ -29,7 +29,7 @@ description: Plan mode skill.
 # Plan
 
 Use the current conversation context when no explicit instruction is provided.
-Save plans under the active workspace's .wafi/plans directory.
+Save plans under the active workspace's .bassera/plans directory.
 """
     )
 
@@ -48,7 +48,7 @@ class TestCLIPlanCommand:
         queued = cli_obj._pending_input.put.call_args[0][0]
         assert "Plan mode skill" in queued
         assert "Add OAuth login" in queued
-        assert ".wafi/plans" in queued
+        assert ".bassera/plans" in queued
         assert str(tmp_path / "plans") not in queued
         assert "active workspace/backend cwd" in queued
         assert "Runtime note:" in queued
@@ -63,5 +63,5 @@ class TestCLIPlanCommand:
 
         queued = cli_obj._pending_input.put.call_args[0][0]
         assert "current conversation context" in queued
-        assert ".wafi/plans/" in queued
+        assert ".bassera/plans/" in queued
         assert "conversation-plan.md" in queued

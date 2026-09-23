@@ -1,8 +1,8 @@
 """Property-based testing for the dangerous-command detector.
 
 The original vulnerability in this detector was an incomplete regex:
-writes to ``$HERMES_HOME/.env`` bypassed the approval system because the
-sensitive-write pattern only knew the ``$wafi_home`` spelling. Siblings of
+writes to ``$BASSERA_HOME/.env`` bypassed the approval system because the
+sensitive-write pattern only knew the ``$bassera_home`` spelling. Siblings of
 that hole are exactly what this suite hunts: every shell spelling of a
 credential-file write, every common write tool, case tricks, and crash or
 ReDoS resistance on arbitrary input.
@@ -46,7 +46,7 @@ def test_case_insensitive(cmd):
     """The detector lowercases input, so case must never change the verdict.
 
     This pins the property that made uppercase spellings like
-    ``echo x | tee "$HERMES_HOME/.env"`` safe even though the patterns are
+    ``echo x | tee "$BASSERA_HOME/.env"`` safe even though the patterns are
     written in lowercase.
     """
     assert detect_dangerous_command(cmd) == detect_dangerous_command(cmd.lower())
@@ -62,7 +62,7 @@ def test_idempotent(cmd):
 # Credential-file write property: every spelling must be flagged
 # ---------------------------------------------------------------------------
 
-HOME_ENV_NAMES = ["HERMES_HOME", "WAFI_HOME", "BASSERA_HOME"]
+HOME_ENV_NAMES = ["BASSERA_HOME", "HERMES_HOME", "WAFI_HOME"]
 REDIRECT_OPENERS = [
     "echo x > ",
     "echo x >> ",
@@ -108,8 +108,8 @@ def test_credential_file_writes_always_flagged(name, opener, braces, quote, pref
 
 COPY_TOOLS = ["cp", "mv", "install -m 600", "rsync -a"]
 COPY_TARGETS = [
-    "$HERMES_HOME/.env",
-    "${HERMES_HOME}/.env",
+    "$BASSERA_HOME/.env",
+    "${BASSERA_HOME}/.env",
     "~/.ssh/authorized_keys",
     "$HOME/.ssh/authorized_keys",
     "/etc/passwd",
@@ -123,8 +123,8 @@ def test_copy_tools_into_sensitive_targets_flagged(tool, target):
     """cp/mv/install/rsync writing INTO a sensitive target must be flagged.
 
     Sibling of the original vulnerability: the redirect/tee patterns were
-    completed for $HERMES_HOME/.env, but a copy into the same file
-    (`cp payload $HERMES_HOME/.env`) overwrites the credential store just
+    completed for $BASSERA_HOME/.env, but a copy into the same file
+    (`cp payload $BASSERA_HOME/.env`) overwrites the credential store just
     as effectively and was not covered.
     """
     cmd = f"{tool} /tmp/payload {target}"
@@ -135,8 +135,8 @@ def test_copy_tools_into_sensitive_targets_flagged(tool, target):
 @pytest.mark.parametrize(
     "cmd",
     [
-        "sed -i 's/x/y/' $HERMES_HOME/.env",
-        "sed --in-place s/x/y/ ${HERMES_HOME}/.env",
+        "sed -i 's/x/y/' $BASSERA_HOME/.env",
+        "sed --in-place s/x/y/ ${BASSERA_HOME}/.env",
         "sed -i s/x/y/ ~/.ssh/config",
         "sed -i s/x/y/ /etc/passwd",
     ],
@@ -160,8 +160,8 @@ BENIGN = [
     "install -m 644 a /tmp/b",
     "rsync -a /tmp/a/ /tmp/b/",
     "cat ~/.bashrc",
-    "ls $HERMES_HOME",
-    "echo $HERMES_HOME",
+    "ls $BASSERA_HOME",
+    "echo $BASSERA_HOME",
 ]
 
 
@@ -178,10 +178,10 @@ def test_benign_commands_not_flagged(cmd):
 ADVERSARIAL = [
     ("tee " * 4000) + "/tmp/out",
     "x" * 60000,
-    ("echo x > " * 3000) + "$HERMES_HOME",
+    ("echo x > " * 3000) + "$BASSERA_HOME",
     ("find . -exec " * 2000) + "rm {} ;",
     ("; " * 20000) + "echo done",
-    ("$HERMES_HOME/" * 5000) + ".env",
+    ("$BASSERA_HOME/" * 5000) + ".env",
 ]
 
 

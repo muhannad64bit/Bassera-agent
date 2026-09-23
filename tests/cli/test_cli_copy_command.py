@@ -2,11 +2,11 @@
 
 from unittest.mock import MagicMock, patch
 
-from cli import WafiCLI
+from cli import BasseraCLI
 
 
-def _make_cli() -> WafiCLI:
-    cli_obj = WafiCLI.__new__(WafiCLI)
+def _make_cli() -> BasseraCLI:
+    cli_obj = BasseraCLI.__new__(BasseraCLI)
     cli_obj.config = {}
     cli_obj.console = MagicMock()
     cli_obj.agent = None

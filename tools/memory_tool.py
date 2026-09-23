@@ -31,7 +31,7 @@ import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from wafi_constants import get_wafi_home
+from bassera_constants import get_bassera_home
 from typing import Dict, Any, List, Optional
 from agent.memory_schema import (
     MemoryRecord,
@@ -59,12 +59,12 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Where memory files live — resolved dynamically so profile overrides
-# (HERMES_HOME env var changes) are always respected.  The old module-level
+# (BASSERA_HOME env var changes) are always respected.  The old module-level
 # constant was cached at import time and could go stale if a profile switch
 # happened after the first import.
 def get_memory_dir() -> Path:
     """Return the profile-scoped memories directory."""
-    return get_wafi_home() / "memories"
+    return get_bassera_home() / "memories"
 
 ENTRY_DELIMITER = "\n§\n"
 
@@ -133,7 +133,7 @@ _MEMORY_THREAT_PATTERNS = [
     # Persistence via shell rc
     (r'authorized_keys', "ssh_backdoor"),
     (r'\$HOME/\.ssh|\~/\.ssh', "ssh_access"),
-    (r'\$HOME/\.wafi/\.env|\~/\.wafi/\.env', "wafi_env"),
+    (r'\$HOME/\.bassera/\.env|\~/\.bassera/\.env', "bassera_env"),
 ]
 
 # Subset of invisible chars for injection detection
@@ -181,7 +181,7 @@ class MemoryStore:
         self.user_entries: List[str] = []
         self.memory_char_limit = memory_char_limit
         self.user_char_limit = user_char_limit
-        # Structured records (the @wafi-memory prefixed entries written by the
+        # Structured records (the @bassera-memory prefixed entries written by the
         # reflective-learning engine) are machine-curated observations, not
         # the agent's hand-written notes. Giving them their own (generous)
         # budget prevents the self-improvement loop from being silently
@@ -834,7 +834,7 @@ class MemoryStore:
         return self.structured_memory_char_limit
 
     def _structured_entries(self, entries: List[str], target: str) -> List[str]:
-        """Return only the @wafi-memory structured entries from a list."""
+        """Return only the @bassera-memory structured entries from a list."""
         return [e for e in entries if parse_memory_record(e, default_target=target) is not None]
 
     def _structured_char_count(self, target: str) -> int:
@@ -1063,7 +1063,7 @@ class MemoryStore:
             return ""
 
         lines = [
-            "WAFI OWNER DOCTRINE",
+            "BASSERA OWNER DOCTRINE",
             "Use these as default operating preferences only.",
             "Explicit user instructions, approvals, and safety checks override doctrine.",
         ]

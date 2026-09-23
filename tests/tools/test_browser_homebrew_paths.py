@@ -255,14 +255,14 @@ class TestRunBrowserCommandPathConstruction:
             "cdp_url": None,
         }
         fake_json = json.dumps({"success": True})
-        browser_path = "/Users/test/Library/Application Support/wafi/node_modules/.bin/agent-browser"
-        wafi_home = str(tmp_path / "wafi-home")
+        browser_path = "/Users/test/Library/Application Support/bassera/node_modules/.bin/agent-browser"
+        bassera_home = str(tmp_path / "bassera-home")
 
         with patch("tools.browser_tool._find_agent_browser", return_value=browser_path), \
              patch("tools.browser_tool._get_session_info", return_value=fake_session), \
              patch("tools.browser_tool._socket_safe_tmpdir", return_value=str(tmp_path)), \
              patch("tools.browser_tool._discover_homebrew_node_dirs", return_value=[]), \
-             patch("wafi_constants.Path.home", return_value=tmp_path), \
+             patch("bassera_constants.Path.home", return_value=tmp_path), \
              patch("subprocess.Popen", side_effect=capture_popen), \
              patch("os.open", return_value=99), \
              patch("os.close"), \
@@ -272,7 +272,7 @@ class TestRunBrowserCommandPathConstruction:
                  {
                      "PATH": "/usr/bin:/bin",
                      "HOME": "/home/test",
-                     "HERMES_HOME": wafi_home,
+                     "BASSERA_HOME": bassera_home,
                  },
                  clear=True,
              ):
@@ -307,13 +307,13 @@ class TestRunBrowserCommandPathConstruction:
             "cdp_url": None,
         }
         fake_json = json.dumps({"success": True})
-        wafi_home = str(tmp_path / "wafi-home")
+        bassera_home = str(tmp_path / "bassera-home")
 
         with patch("tools.browser_tool._find_agent_browser", return_value="npx agent-browser"), \
              patch("tools.browser_tool._get_session_info", return_value=fake_session), \
              patch("tools.browser_tool._socket_safe_tmpdir", return_value=str(tmp_path)), \
              patch("tools.browser_tool._discover_homebrew_node_dirs", return_value=[]), \
-             patch("wafi_constants.Path.home", return_value=tmp_path), \
+             patch("bassera_constants.Path.home", return_value=tmp_path), \
              patch("subprocess.Popen", side_effect=capture_popen), \
              patch("os.open", return_value=99), \
              patch("os.close"), \
@@ -323,7 +323,7 @@ class TestRunBrowserCommandPathConstruction:
                  {
                      "PATH": "/usr/bin:/bin",
                      "HOME": "/home/test",
-                     "HERMES_HOME": wafi_home,
+                     "BASSERA_HOME": bassera_home,
                  },
                  clear=True,
              ):

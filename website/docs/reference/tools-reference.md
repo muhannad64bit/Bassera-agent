@@ -1,17 +1,17 @@
 ---
 sidebar_position: 3
 title: "Built-in Tools Reference"
-description: "Authoritative reference for Hermes built-in tools, grouped by toolset"
+description: "Authoritative reference for Bassera built-in tools, grouped by toolset"
 ---
 
 # Built-in Tools Reference
 
-This page documents all 53 built-in tools in the Hermes tool registry, grouped by toolset. Availability varies by platform, credentials, and enabled toolsets.
+This page documents all 53 built-in tools in the Bassera tool registry, grouped by toolset. Availability varies by platform, credentials, and enabled toolsets.
 
 **Quick counts:** 11 browser tools, 4 file tools, 10 RL tools, 4 Home Assistant tools, 2 terminal tools, 2 web tools, 5 Feishu tools, and 15 standalone tools across other toolsets.
 
 :::tip MCP Tools
-In addition to built-in tools, Hermes can load tools dynamically from MCP servers. MCP tools appear with a server-name prefix (e.g., `github_create_issue` for the `github` MCP server). See [MCP Integration](/docs/user-guide/features/mcp) for configuration.
+In addition to built-in tools, Bassera can load tools dynamically from MCP servers. MCP tools appear with a server-name prefix (e.g., `github_create_issue` for the `github` MCP server). See [MCP Integration](/docs/user-guide/features/mcp) for configuration.
 :::
 
 ## `browser` toolset
@@ -40,7 +40,7 @@ In addition to built-in tools, Hermes can load tools dynamically from MCP server
 
 | Tool | Description | Requires environment |
 |------|-------------|----------------------|
-| `execute_code` | Run a Python script that can call Hermes tools programmatically. Use this when you need 3+ tool calls with processing logic between them, need to filter/reduce large tool outputs before they enter your context, need conditional branching (… | — |
+| `execute_code` | Run a Python script that can call Bassera tools programmatically. Use this when you need 3+ tool calls with processing logic between them, need to filter/reduce large tool outputs before they enter your context, need conditional branching (… | — |
 
 ## `cronjob` toolset
 
@@ -56,7 +56,7 @@ In addition to built-in tools, Hermes can load tools dynamically from MCP server
 
 ## `feishu_doc` toolset
 
-Scoped to the Feishu document-comment intelligent-reply handler (`gateway/platforms/feishu_comment.py`). Not exposed on `hermes-cli` or the regular Feishu chat adapter.
+Scoped to the Feishu document-comment intelligent-reply handler (`gateway/platforms/feishu_comment.py`). Not exposed on `bassera-cli` or the regular Feishu chat adapter.
 
 | Tool | Description | Requires environment |
 |------|-------------|----------------------|
@@ -144,7 +144,7 @@ Scoped to the Feishu document-comment handler. Drives comment read/write operati
 
 | Tool | Description | Requires environment |
 |------|-------------|----------------------|
-| `skill_manage` | Manage skills (create, update, delete). Skills are your procedural memory — reusable approaches for recurring task types. New skills go to ~/.hermes/skills/; existing skills can be modified wherever they live. Actions: create (full SKILL.m… | — |
+| `skill_manage` | Manage skills (create, update, delete). Skills are your procedural memory — reusable approaches for recurring task types. New skills go to ~/.bassera/skills/; existing skills can be modified wherever they live. Actions: create (full SKILL.m… | — |
 | `skill_view` | Skills allow for loading information about specific tasks and workflows, as well as scripts and templates. Load a skill's full content or access its linked files (references, templates, scripts). First call returns SKILL.md content plus a… | — |
 | `skills_list` | List available skills (name + description). Use skill_view(name) to load full content. | — |
 

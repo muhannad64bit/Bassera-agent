@@ -1,4 +1,4 @@
-"""Tests for acp_adapter.server — WafiACPAgent ACP server."""
+"""Tests for acp_adapter.server — BasseraACPAgent ACP server."""
 
 import asyncio
 import os
@@ -28,9 +28,9 @@ from acp.schema import (
     TextContentBlock,
     Usage,
 )
-from acp_adapter.server import WafiACPAgent, HERMES_VERSION
+from acp_adapter.server import BasseraACPAgent, BASSERA_VERSION
 from acp_adapter.session import SessionManager
-from wafi_state import SessionDB
+from bassera_state import SessionDB
 
 
 @pytest.fixture()
@@ -41,8 +41,8 @@ def mock_manager():
 
 @pytest.fixture()
 def agent(mock_manager):
-    """WafiACPAgent backed by a mock session manager."""
-    return WafiACPAgent(session_manager=mock_manager)
+    """BasseraACPAgent backed by a mock session manager."""
+    return BasseraACPAgent(session_manager=mock_manager)
 
 
 # ---------------------------------------------------------------------------
@@ -62,8 +62,8 @@ class TestInitialize:
         resp = await agent.initialize(protocol_version=1)
         assert resp.agent_info is not None
         assert isinstance(resp.agent_info, Implementation)
-        assert resp.agent_info.name == "wafi-agent"
-        assert resp.agent_info.version == HERMES_VERSION
+        assert resp.agent_info.name == "bassera-agent"
+        assert resp.agent_info.version == BASSERA_VERSION
 
     @pytest.mark.asyncio
     async def test_initialize_returns_capabilities(self, agent):
@@ -134,10 +134,10 @@ class TestSessionOps:
         manager = SessionManager(
             agent_factory=lambda: SimpleNamespace(model="gpt-5.4", provider="openai-codex")
         )
-        acp_agent = WafiACPAgent(session_manager=manager)
+        acp_agent = BasseraACPAgent(session_manager=manager)
 
         with patch(
-            "wafi_cli.models.curated_models_for_provider",
+            "bassera_cli.models.curated_models_for_provider",
             return_value=[("gpt-5.4", "recommended"), ("gpt-5.4-mini", "")],
         ):
             resp = await acp_agent.new_session(cwd="/tmp")
@@ -329,17 +329,17 @@ class TestSessionConfiguration:
                 api_mode=kwargs.get("api_mode"),
             )
 
-        monkeypatch.setattr("wafi_cli.config.load_config", lambda: {
+        monkeypatch.setattr("bassera_cli.config.load_config", lambda: {
             "model": {"provider": "openrouter", "default": "openrouter/gpt-5"}
         })
         monkeypatch.setattr(
-            "wafi_cli.runtime_provider.resolve_runtime_provider",
+            "bassera_cli.runtime_provider.resolve_runtime_provider",
             fake_resolve_runtime_provider,
         )
         manager = SessionManager(db=SessionDB(tmp_path / "state.db"))
 
         with patch("run_agent.AIAgent", side_effect=fake_agent):
-            acp_agent = WafiACPAgent(session_manager=manager)
+            acp_agent = BasseraACPAgent(session_manager=manager)
             state = manager.create_session(cwd="/tmp")
             result = await acp_agent.set_session_model(
                 model_id="anthropic:claude-sonnet-4-6",
@@ -595,7 +595,7 @@ class TestSlashCommands:
     def test_version(self, agent, mock_manager):
         state = self._make_state(mock_manager)
         result = agent._handle_slash_command("/version", state)
-        assert HERMES_VERSION in result
+        assert BASSERA_VERSION in result
 
     def test_compact_compresses_context(self, agent, mock_manager):
         state = self._make_state(mock_manager)
@@ -709,17 +709,17 @@ class TestSlashCommands:
                 api_mode=kwargs.get("api_mode"),
             )
 
-        monkeypatch.setattr("wafi_cli.config.load_config", lambda: {
+        monkeypatch.setattr("bassera_cli.config.load_config", lambda: {
             "model": {"provider": "openrouter", "default": "openrouter/gpt-5"}
         })
         monkeypatch.setattr(
-            "wafi_cli.runtime_provider.resolve_runtime_provider",
+            "bassera_cli.runtime_provider.resolve_runtime_provider",
             fake_resolve_runtime_provider,
         )
         manager = SessionManager(db=SessionDB(tmp_path / "state.db"))
 
         with patch("run_agent.AIAgent", side_effect=fake_agent):
-            acp_agent = WafiACPAgent(session_manager=manager)
+            acp_agent = BasseraACPAgent(session_manager=manager)
             state = manager.create_session(cwd="/tmp")
             result = acp_agent._cmd_model("anthropic:claude-sonnet-4-6", state)
 
@@ -752,7 +752,7 @@ class TestRegisterSessionMcpServers:
 
         state = mock_manager.create_session(cwd="/tmp")
         # Give the mock agent the attributes _register_session_mcp_servers reads
-        state.agent.enabled_toolsets = ["wafi-acp"]
+        state.agent.enabled_toolsets = ["bassera-acp"]
         state.agent.disabled_toolsets = None
         state.agent.tools = []
         state.agent.valid_tool_names = set()
@@ -785,7 +785,7 @@ class TestRegisterSessionMcpServers:
         from acp.schema import McpServerHttp, HttpHeader
 
         state = mock_manager.create_session(cwd="/tmp")
-        state.agent.enabled_toolsets = ["wafi-acp"]
+        state.agent.enabled_toolsets = ["bassera-acp"]
         state.agent.disabled_toolsets = None
         state.agent.tools = []
         state.agent.valid_tool_names = set()
@@ -816,7 +816,7 @@ class TestRegisterSessionMcpServers:
         from acp.schema import McpServerStdio
 
         state = mock_manager.create_session(cwd="/tmp")
-        state.agent.enabled_toolsets = ["wafi-acp"]
+        state.agent.enabled_toolsets = ["bassera-acp"]
         state.agent.disabled_toolsets = None
         state.agent.tools = []
         state.agent.valid_tool_names = set()

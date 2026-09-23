@@ -1,4 +1,4 @@
-# nix/tui.nix — Hermes TUI (Ink/React) compiled with tsc and bundled
+# nix/tui.nix — Bassera TUI (Ink/React) compiled with tsc and bundled
 { pkgs, npm-lockfile-fix, ... }:
 let
   src = ../ui-tui;
@@ -13,7 +13,7 @@ let
   npmLockHash = builtins.hashString "sha256" (builtins.readFile ../ui-tui/package-lock.json);
 in
 pkgs.buildNpmPackage {
-  pname = "hermes-tui";
+  pname = "bassera-tui";
   inherit src npmDeps version;
 
   doCheck = false;
@@ -21,19 +21,19 @@ pkgs.buildNpmPackage {
   installPhase = ''
     runHook preInstall
 
-    mkdir -p $out/lib/hermes-tui
+    mkdir -p $out/lib/bassera-tui
 
-    cp -r dist $out/lib/hermes-tui/dist
+    cp -r dist $out/lib/bassera-tui/dist
 
     # runtime node_modules
-    cp -r node_modules $out/lib/hermes-tui/node_modules
+    cp -r node_modules $out/lib/bassera-tui/node_modules
 
     # @hermes/ink is a file: dependency, we need to copy it in fr
-    rm -f $out/lib/hermes-tui/node_modules/@hermes/ink
-    cp -r packages/hermes-ink $out/lib/hermes-tui/node_modules/@hermes/ink
+    rm -f $out/lib/bassera-tui/node_modules/@hermes/ink
+    cp -r packages/hermes-ink $out/lib/bassera-tui/node_modules/@hermes/ink
 
     # package.json needed for "type": "module" resolution
-    cp package.json $out/lib/hermes-tui/
+    cp package.json $out/lib/bassera-tui/
 
     runHook postInstall
   '';
@@ -65,10 +65,10 @@ pkgs.buildNpmPackage {
   ];
 
   passthru.devShellHook = ''
-    STAMP=".nix-stamps/hermes-tui"
+    STAMP=".nix-stamps/bassera-tui"
     STAMP_VALUE="${npmLockHash}"
     if [ ! -f "$STAMP" ] || [ "$(cat "$STAMP")" != "$STAMP_VALUE" ]; then
-      echo "hermes-tui: installing npm dependencies..."
+      echo "bassera-tui: installing npm dependencies..."
       cd ui-tui && CI=true npm install --silent --no-fund --no-audit 2>/dev/null && cd ..
       mkdir -p .nix-stamps
       echo "$STAMP_VALUE" > "$STAMP"

@@ -43,15 +43,15 @@ from datetime import datetime
 import fire
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.console import Console
-from wafi_constants import OPENROUTER_BASE_URL, get_wafi_home
+from bassera_constants import OPENROUTER_BASE_URL, get_bassera_home
 from agent.retry_utils import jittered_backoff
 
-# Load .env from HERMES_HOME first, then project root as a dev fallback.
-from wafi_cli.env_loader import load_wafi_dotenv
+# Load .env from BASSERA_HOME first, then project root as a dev fallback.
+from bassera_cli.env_loader import load_bassera_dotenv
 
-_wafi_home = get_wafi_home()
+_bassera_home = get_bassera_home()
 _project_env = Path(__file__).parent / ".env"
-load_wafi_dotenv(wafi_home=_wafi_home, project_env=_project_env)
+load_bassera_dotenv(bassera_home=_bassera_home, project_env=_project_env)
 
 
 def _effective_temperature_for_model(
@@ -383,7 +383,7 @@ class TrajectoryCompressor:
             if client is None:
                 raise RuntimeError(
                     f"Provider '{provider}' is not configured. "
-                    f"Check your API key or run: wafi setup")
+                    f"Check your API key or run: bassera setup")
             self.client = None  # Not used directly
             self.async_client = None  # Not used directly
         else:

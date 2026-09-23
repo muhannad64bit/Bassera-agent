@@ -163,8 +163,8 @@ class TestOneShotSSH:
         assert r["exit_code"] == 42
 
     def test_state_does_not_persist(self):
-        _run("export HERMES_ONESHOT_TEST=yes")
-        r = _run("echo $HERMES_ONESHOT_TEST")
+        _run("export BASSERA_ONESHOT_TEST=yes")
+        r = _run("echo $BASSERA_ONESHOT_TEST")
         assert r["output"].strip() == ""
 
 
@@ -183,8 +183,8 @@ class TestPersistentSSH:
         assert "hello-persistent" in r["output"]
 
     def test_env_var_persists(self):
-        _run("export HERMES_PERSIST_TEST=works")
-        r = _run("echo $HERMES_PERSIST_TEST")
+        _run("export BASSERA_PERSIST_TEST=works")
+        r = _run("echo $BASSERA_PERSIST_TEST")
         assert r["output"].strip() == "works"
 
     def test_cwd_persists(self):

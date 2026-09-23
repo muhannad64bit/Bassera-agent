@@ -11,7 +11,7 @@ which handles discovery, dynamic client registration, PKCE, token exchange,
 refresh, and step-up authorization automatically.
 
 This module provides the glue:
-    - ``WafiTokenStorage``: persists tokens/client-info to disk so they
+    - ``BasseraTokenStorage``: persists tokens/client-info to disk so they
       survive across process restarts.
     - Callback server: ephemeral localhost HTTP server to capture the OAuth
       redirect with the authorization code.
@@ -94,14 +94,14 @@ _oauth_port: int | None = None
 def _get_token_dir() -> Path:
     """Return the directory for MCP OAuth token files.
 
-    Uses HERMES_HOME so each profile gets its own OAuth tokens.
-    Layout: ``HERMES_HOME/mcp-tokens/``
+    Uses BASSERA_HOME so each profile gets its own OAuth tokens.
+    Layout: ``BASSERA_HOME/mcp-tokens/``
     """
     try:
-        from wafi_constants import get_wafi_home
-        base = Path(get_wafi_home())
+        from bassera_constants import get_bassera_home
+        base = Path(get_bassera_home())
     except ImportError:
-        base = Path(os.environ.get("HERMES_HOME", str(Path.home() / ".wafi")))
+        base = Path(os.environ.get("BASSERA_HOME", str(Path.home() / ".bassera")))
     return base / "mcp-tokens"
 
 
@@ -169,17 +169,17 @@ def _write_json(path: Path, data: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# WafiTokenStorage -- persistent token/client-info on disk
+# BasseraTokenStorage -- persistent token/client-info on disk
 # ---------------------------------------------------------------------------
 
 
-class WafiTokenStorage:
+class BasseraTokenStorage:
     """Persist OAuth tokens and client registration to JSON files.
 
     File layout::
 
-        HERMES_HOME/mcp-tokens/<server_name>.json         -- tokens
-        HERMES_HOME/mcp-tokens/<server_name>.client.json   -- client info
+        BASSERA_HOME/mcp-tokens/<server_name>.json         -- tokens
+        BASSERA_HOME/mcp-tokens/<server_name>.client.json   -- client info
     """
 
     def __init__(self, server_name: str):
@@ -197,7 +197,7 @@ class WafiTokenStorage:
         data = _read_json(self._tokens_path())
         if data is None:
             return None
-        # Wafi records an absolute wall-clock ``expires_at`` alongside the
+        # Bassera records an absolute wall-clock ``expires_at`` alongside the
         # SDK's serialized token (see ``set_tokens``). On read we rewrite
         # ``expires_in`` to the remaining seconds so the SDK's downstream
         # ``update_token_expiry`` computes the correct absolute time and
@@ -308,7 +308,7 @@ def _make_callback_handler() -> tuple[type, dict]:
 
             body = (
                 "<html><body><h2>Authorization Successful</h2>"
-                "<p>You can close this tab and return to Wafi.</p></body></html>"
+                "<p>You can close this tab and return to Bassera.</p></body></html>"
             ) if code else (
                 "<html><body><h2>Authorization Failed</h2>"
                 f"<p>Error: {error or 'unknown'}</p></body></html>"
@@ -416,7 +416,7 @@ async def _wait_for_callback() -> tuple[str, str | None]:
 
 def remove_oauth_tokens(server_name: str) -> None:
     """Delete stored OAuth tokens and client info for a server."""
-    storage = WafiTokenStorage(server_name)
+    storage = BasseraTokenStorage(server_name)
     storage.remove()
     logger.info("OAuth tokens removed for '%s'", server_name)
 
@@ -482,7 +482,7 @@ def _build_client_metadata(cfg: dict) -> "OAuthClientMetadata":
 
 
 def _maybe_preregister_client(
-    storage: "WafiTokenStorage",
+    storage: "BasseraTokenStorage",
     cfg: dict,
     client_metadata: "OAuthClientMetadata",
 ) -> None:
@@ -547,7 +547,7 @@ def build_oauth_auth(
         return None
 
     cfg = dict(oauth_config or {})  # copy — we mutate _resolved_port
-    storage = WafiTokenStorage(server_name)
+    storage = BasseraTokenStorage(server_name)
 
     if not _is_interactive() and not storage.has_cached_tokens():
         logger.warning(

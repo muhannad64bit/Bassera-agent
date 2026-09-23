@@ -1,5 +1,5 @@
 """
-Tests for mcp_serve — Wafi MCP server.
+Tests for mcp_serve — Bassera MCP server.
 
 Three layers of tests:
 1. Unit tests — helpers, content extraction, attachment parsing
@@ -25,12 +25,12 @@ import pytest
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=True)
-def _isolate_wafi_home(tmp_path, monkeypatch):
-    """Redirect HERMES_HOME to a temp directory."""
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+def _isolate_bassera_home(tmp_path, monkeypatch):
+    """Redirect BASSERA_HOME to a temp directory."""
+    monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
     try:
-        import wafi_constants
-        monkeypatch.setattr(wafi_constants, "get_wafi_home", lambda: tmp_path)
+        import bassera_constants
+        monkeypatch.setattr(bassera_constants, "get_bassera_home", lambda: tmp_path)
     except (ImportError, AttributeError):
         pass
     return tmp_path
@@ -122,7 +122,7 @@ def populated_sessions_dir(sessions_dir, sample_sessions):
 
 
 def _create_test_db(db_path, session_id, messages):
-    """Create a minimal SQLite DB mimicking wafi_state schema."""
+    """Create a minimal SQLite DB mimicking bassera_state schema."""
     conn = sqlite3.connect(str(db_path))
     conn.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
@@ -877,13 +877,13 @@ class TestCliIntegration:
         assert args.verbose is True
 
     def test_dispatcher_routes_serve(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+        monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
         mock_run = MagicMock()
         monkeypatch.setattr("mcp_serve.run_mcp_server", mock_run)
 
         import argparse
         args = argparse.Namespace(mcp_action="serve", verbose=True)
-        from wafi_cli.mcp_config import mcp_command
+        from bassera_cli.mcp_config import mcp_command
         mcp_command(args)
         mock_run.assert_called_once_with(verbose=True)
 

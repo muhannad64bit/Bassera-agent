@@ -4,9 +4,9 @@ Gateway runtime status helpers.
 Provides PID-file based detection of whether the gateway daemon is running,
 used by send_message's check_fn to gate availability in the CLI.
 
-The PID file lives at ``{HERMES_HOME}/gateway.pid``.  HERMES_HOME defaults to
-``~/.wafi`` but can be overridden via the environment variable.  This means
-separate HERMES_HOME directories naturally get separate PID files — a property
+The PID file lives at ``{BASSERA_HOME}/gateway.pid``.  BASSERA_HOME defaults to
+``~/.bassera`` but can be overridden via the environment variable.  This means
+separate BASSERA_HOME directories naturally get separate PID files — a property
 that will be useful when we add named profiles (multiple agents running
 concurrently under distinct configurations).
 """
@@ -19,10 +19,13 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from wafi_constants import get_wafi_home
+from bassera_constants import get_bassera_home
 from typing import Any, Optional
 
-_GATEWAY_KIND = "wafi-gateway"
+_GATEWAY_KIND = "bassera-gateway"
+# Kinds written by pre-rebrand installs; accepted when reading PID records
+# so an upgraded gateway still recognizes a running legacy one.
+_GATEWAY_KINDS = (_GATEWAY_KIND, "wafi-gateway", "hermes-gateway")
 _RUNTIME_STATUS_FILE = "gateway_state.json"
 _LOCKS_DIRNAME = "gateway-locks"
 _IS_WINDOWS = sys.platform == "win32"
@@ -30,8 +33,8 @@ _UNSET = object()
 
 
 def _get_pid_path() -> Path:
-    """Return the path to the gateway PID file, respecting HERMES_HOME."""
-    home = get_wafi_home()
+    """Return the path to the gateway PID file, respecting BASSERA_HOME."""
+    home = get_bassera_home()
     return home / "gateway.pid"
 
 
@@ -42,11 +45,18 @@ def _get_runtime_status_path() -> Path:
 
 def _get_lock_dir() -> Path:
     """Return the machine-local directory for token-scoped gateway locks."""
-    override = os.getenv("HERMES_GATEWAY_LOCK_DIR")
+    override = os.getenv("BASSERA_GATEWAY_LOCK_DIR")
     if override:
         return Path(override)
     state_home = Path(os.getenv("XDG_STATE_HOME", Path.home() / ".local" / "state"))
-    return state_home / "wafi" / _LOCKS_DIRNAME
+    bassera_dir = state_home / "bassera" / _LOCKS_DIRNAME
+    if bassera_dir.parent.exists():
+        return bassera_dir
+    # Pre-rebrand installs keep their existing lock directory.
+    legacy_dir = state_home / "wafi" / _LOCKS_DIRNAME
+    if legacy_dir.parent.exists():
+        return legacy_dir
+    return bassera_dir
 
 
 def _utc_now_iso() -> str:
@@ -112,15 +122,15 @@ def _read_process_cmdline(pid: int) -> Optional[str]:
 
 
 def _looks_like_gateway_process(pid: int) -> bool:
-    """Return True when the live PID still looks like the Wafi gateway."""
+    """Return True when the live PID still looks like the Bassera gateway."""
     cmdline = _read_process_cmdline(pid)
     if not cmdline:
         return False
 
     patterns = (
-        "wafi_cli.main gateway",
-        "wafi_cli/main.py gateway",
-        "wafi gateway",
+        "bassera_cli.main gateway",
+        "bassera_cli/main.py gateway",
+        "bassera gateway",
         "gateway/run.py",
     )
     return any(pattern in cmdline for pattern in patterns)
@@ -128,7 +138,7 @@ def _looks_like_gateway_process(pid: int) -> bool:
 
 def _record_looks_like_gateway(record: dict[str, Any]) -> bool:
     """Validate gateway identity from PID-file metadata when cmdline is unavailable."""
-    if record.get("kind") != _GATEWAY_KIND:
+    if record.get("kind") not in _GATEWAY_KINDS:
         return False
 
     argv = record.get("argv")
@@ -137,9 +147,9 @@ def _record_looks_like_gateway(record: dict[str, Any]) -> bool:
 
     cmdline = " ".join(str(part) for part in argv)
     patterns = (
-        "wafi_cli.main gateway",
-        "wafi_cli/main.py gateway",
-        "wafi gateway",
+        "bassera_cli.main gateway",
+        "bassera_cli/main.py gateway",
+        "bassera gateway",
         "gateway/run.py",
     )
     return any(pattern in cmdline for pattern in patterns)
@@ -305,7 +315,7 @@ def acquire_scoped_lock(scope: str, identity: str, metadata: Optional[dict[str, 
     """Acquire a machine-local lock keyed by scope + identity.
 
     Used to prevent multiple local gateways from using the same external identity
-    at once (e.g. the same Telegram bot token across different HERMES_HOME dirs).
+    at once (e.g. the same Telegram bot token across different BASSERA_HOME dirs).
     """
     lock_path = _get_scope_lock_path(scope, identity)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -433,7 +443,7 @@ def release_all_scoped_locks() -> int:
 # unexpected kills — but that also means a --replace takeover target
 # exits 1, which tricks systemd into reviving it 30 seconds later,
 # starting a flap loop against the replacer when both services are
-# enabled in the user's systemd (e.g. ``wafi.service`` + ``wafi-
+# enabled in the user's systemd (e.g. ``bassera.service`` + ``bassera-
 # gateway.service``).
 #
 # The takeover marker breaks the loop: the replacer writes a short-lived
@@ -450,7 +460,7 @@ _TAKEOVER_MARKER_TTL_S = 60  # Marker older than this is treated as stale
 
 def _get_takeover_marker_path() -> Path:
     """Return the path to the --replace takeover marker file."""
-    home = get_wafi_home()
+    home = get_bassera_home()
     return home / _TAKEOVER_MARKER_FILENAME
 
 

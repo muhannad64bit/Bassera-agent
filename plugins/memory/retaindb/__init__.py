@@ -12,7 +12,7 @@ Features:
 - Shared file store tools (upload, list, read, ingest, delete)
 - Explicit memory tools (profile, search, context, remember, forget)
 
-Config (env vars or wafi config.yaml under retaindb:):
+Config (env vars or bassera config.yaml under retaindb:):
   RETAINDB_API_KEY     — API key (required)
   RETAINDB_BASE_URL    — API endpoint (default: https://api.retaindb.com)
   RETAINDB_PROJECT     — Project identifier (optional — defaults to "default")
@@ -187,7 +187,7 @@ class _Client:
         h = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
-            "x-sdk-runtime": "wafi-plugin",
+            "x-sdk-runtime": "bassera-plugin",
         }
         if path.startswith(("/v1/memory", "/v1/context")):
             h["X-API-Key"] = token
@@ -286,7 +286,7 @@ class _Client:
         import requests
         url = f"{self.base_url}/v1/files"
         token = self.api_key.replace("Bearer ", "").strip()
-        headers = {"Authorization": f"Bearer {token}", "x-sdk-runtime": "wafi-plugin"}
+        headers = {"Authorization": f"Bearer {token}", "x-sdk-runtime": "bassera-plugin"}
         fields = {"path": remote_path, "scope": scope.upper()}
         if project_id:
             fields["project_id"] = project_id
@@ -307,7 +307,7 @@ class _Client:
         import requests
         token = self.api_key.replace("Bearer ", "").strip()
         url = f"{self.base_url}/v1/files/{quote(file_id, safe='')}/content"
-        resp = requests.get(url, headers={"Authorization": f"Bearer {token}", "x-sdk-runtime": "wafi-plugin"}, timeout=30, allow_redirects=True)
+        resp = requests.get(url, headers={"Authorization": f"Bearer {token}", "x-sdk-runtime": "bassera-plugin"}, timeout=30, allow_redirects=True)
         resp.raise_for_status()
         return resp.content
 
@@ -457,7 +457,7 @@ class RetainDBMemoryProvider(MemoryProvider):
         self._queue: _WriteQueue | None = None
         self._user_id = "default"
         self._session_id = ""
-        self._agent_id = "wafi"
+        self._agent_id = "bassera"
         self._lock = threading.Lock()
 
         # Prefetch caches
@@ -490,28 +490,28 @@ class RetainDBMemoryProvider(MemoryProvider):
         api_key = os.environ.get("RETAINDB_API_KEY", "")
         base_url = re.sub(r"/+$", "", os.environ.get("RETAINDB_BASE_URL", _DEFAULT_BASE_URL))
 
-        # Project resolution: RETAINDB_PROJECT > wafi-<profile> > "default"
+        # Project resolution: RETAINDB_PROJECT > bassera-<profile> > "default"
         # If unset, the API auto-creates and uses the "default" project — no config required.
         explicit = os.environ.get("RETAINDB_PROJECT")
         if explicit:
             project = explicit
         else:
-            wafi_home = str(kwargs.get("wafi_home", ""))
-            profile_name = os.path.basename(wafi_home) if wafi_home else ""
-            project = f"wafi-{profile_name}" if (profile_name and profile_name not in {"", ".wafi"}) else "default"
+            bassera_home = str(kwargs.get("bassera_home", ""))
+            profile_name = os.path.basename(bassera_home) if bassera_home else ""
+            project = f"bassera-{profile_name}" if (profile_name and profile_name not in {"", ".bassera"}) else "default"
 
         self._client = _Client(api_key, base_url, project)
         self._session_id = session_id
         self._user_id = kwargs.get("user_id", "default") or "default"
-        self._agent_id = kwargs.get("agent_id", "wafi") or "wafi"
+        self._agent_id = kwargs.get("agent_id", "bassera") or "bassera"
 
-        from wafi_constants import get_wafi_home
-        wafi_home_path = get_wafi_home()
-        db_path = wafi_home_path / "retaindb_queue.db"
+        from bassera_constants import get_bassera_home
+        bassera_home_path = get_bassera_home()
+        db_path = bassera_home_path / "retaindb_queue.db"
         self._queue = _WriteQueue(self._client, db_path)
 
         # Seed agent identity from SOUL.md in background
-        soul_path = wafi_home_path / "SOUL.md"
+        soul_path = bassera_home_path / "SOUL.md"
         if soul_path.exists():
             soul_content = soul_path.read_text(encoding="utf-8", errors="replace").strip()
             if soul_content:

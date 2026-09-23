@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch
 
 def test_gquota_uses_chat_console_when_tui_is_live():
     from agent.google_oauth import GoogleOAuthError
-    from cli import WafiCLI
+    from cli import BasseraCLI
 
-    cli = WafiCLI.__new__(WafiCLI)
+    cli = BasseraCLI.__new__(BasseraCLI)
     cli.console = MagicMock()
     cli._app = object()
 

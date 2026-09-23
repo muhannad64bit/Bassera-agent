@@ -23,7 +23,7 @@ def sample_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init")
-    _git(repo, "config", "user.name", "Wafi Tests")
+    _git(repo, "config", "user.name", "Bassera Tests")
     _git(repo, "config", "user.email", "tests@example.com")
 
     (repo / "src").mkdir()
@@ -283,22 +283,22 @@ def test_defaults_allowed_root_to_cwd(tmp_path: Path):
 
 
 @pytest.mark.asyncio
-async def test_blocks_sensitive_home_and_wafi_paths(tmp_path: Path, monkeypatch):
+async def test_blocks_sensitive_home_and_bassera_paths(tmp_path: Path, monkeypatch):
     from agent.context_references import preprocess_context_references_async
 
     monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".wafi"))
+    monkeypatch.setenv("BASSERA_HOME", str(tmp_path / ".bassera"))
 
-    wafi_env = tmp_path / ".wafi" / ".env"
-    wafi_env.parent.mkdir(parents=True)
-    wafi_env.write_text("API_KEY=super-secret\n", encoding="utf-8")
+    bassera_env = tmp_path / ".bassera" / ".env"
+    bassera_env.parent.mkdir(parents=True)
+    bassera_env.write_text("API_KEY=super-secret\n", encoding="utf-8")
 
     ssh_key = tmp_path / ".ssh" / "id_rsa"
     ssh_key.parent.mkdir(parents=True)
     ssh_key.write_text("PRIVATE-KEY\n", encoding="utf-8")
 
     result = await preprocess_context_references_async(
-        "read @file:.wafi/.env and @file:.ssh/id_rsa",
+        "read @file:.bassera/.env and @file:.ssh/id_rsa",
         cwd=tmp_path,
         allowed_root=tmp_path,
         context_length=100_000,

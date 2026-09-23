@@ -105,10 +105,10 @@ logger = logging.getLogger(__name__)
 MAX_MESSAGE_LENGTH = 4000
 
 # Store directory for E2EE keys and sync state.
-# Uses get_wafi_home() so each profile gets its own Matrix store.
-from wafi_constants import get_wafi_dir as _get_wafi_dir
+# Uses get_bassera_home() so each profile gets its own Matrix store.
+from bassera_constants import get_bassera_dir as _get_bassera_dir
 
-_STORE_DIR = _get_wafi_dir("platforms/matrix/store", "matrix/store")
+_STORE_DIR = _get_bassera_dir("platforms/matrix/store", "matrix/store")
 _CRYPTO_DB_PATH = _STORE_DIR / "crypto.db"
 
 # Grace period: ignore messages older than this many seconds before startup.
@@ -273,10 +273,10 @@ class MatrixAdapter(BasePlatformAdapter):
         # Text batching: merge rapid successive messages (Telegram-style).
         # Matrix clients split long messages around 4000 chars.
         self._text_batch_delay_seconds = float(
-            os.getenv("HERMES_MATRIX_TEXT_BATCH_DELAY_SECONDS", "0.6")
+            os.getenv("BASSERA_MATRIX_TEXT_BATCH_DELAY_SECONDS", "0.6")
         )
         self._text_batch_split_delay_seconds = float(
-            os.getenv("HERMES_MATRIX_TEXT_BATCH_SPLIT_DELAY_SECONDS", "2.0")
+            os.getenv("BASSERA_MATRIX_TEXT_BATCH_SPLIT_DELAY_SECONDS", "2.0")
         )
         self._pending_text_batches: Dict[str, MessageEvent] = {}
         self._pending_text_batch_tasks: Dict[str, asyncio.Task] = {}
@@ -523,7 +523,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 await crypto_db.start()
                 self._crypto_db = crypto_db
 
-                _acct_id = self._user_id or "wafi"
+                _acct_id = self._user_id or "bassera"
                 _pickle_key = f"{_acct_id}:{self._device_id or 'default'}"
                 crypto_store = PgCryptoStore(
                     account_id=_acct_id,
@@ -1999,7 +1999,7 @@ class MatrixAdapter(BasePlatformAdapter):
         """Strip the bot's full MXID (``@user:server``) from *body*.
 
         The bare localpart is intentionally *not* stripped — it would
-        mangle file paths like ``/home/wafi/media/file.png``.
+        mangle file paths like ``/home/bassera/media/file.png``.
         """
         if self._user_id:
             body = body.replace(self._user_id, "")

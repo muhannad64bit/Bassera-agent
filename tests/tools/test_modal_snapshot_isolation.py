@@ -29,25 +29,25 @@ def _reset_modules(prefixes: tuple[str, ...]):
 
 @pytest.fixture(autouse=True)
 def _restore_tool_modules():
-    original_wafi_home = os.environ.get("HERMES_HOME")
+    original_bassera_home = os.environ.get("BASSERA_HOME")
     original_modules = {
         name: module
         for name, module in sys.modules.items()
         if name == "tools"
         or name.startswith("tools.")
-        or name == "wafi_cli"
-        or name.startswith("wafi_cli.")
+        or name == "bassera_cli"
+        or name.startswith("bassera_cli.")
         or name == "modal"
         or name.startswith("modal.")
     }
     try:
         yield
     finally:
-        if original_wafi_home is None:
-            os.environ.pop("HERMES_HOME", None)
+        if original_bassera_home is None:
+            os.environ.pop("BASSERA_HOME", None)
         else:
-            os.environ["HERMES_HOME"] = original_wafi_home
-        _reset_modules(("tools", "wafi_cli", "modal"))
+            os.environ["BASSERA_HOME"] = original_bassera_home
+        _reset_modules(("tools", "bassera_cli", "modal"))
         sys.modules.update(original_modules)
 
 
@@ -57,15 +57,15 @@ def _install_modal_test_modules(
     fail_on_snapshot_ids: set[str] | None = None,
     snapshot_id: str = "im-fresh",
 ):
-    _reset_modules(("tools", "wafi_cli", "modal"))
+    _reset_modules(("tools", "bassera_cli", "modal"))
 
-    wafi_cli = types.ModuleType("wafi_cli")
-    wafi_cli.__path__ = []  # type: ignore[attr-defined]
-    sys.modules["wafi_cli"] = wafi_cli
-    wafi_home = tmp_path / "wafi-home"
-    os.environ["HERMES_HOME"] = str(wafi_home)
-    sys.modules["wafi_cli.config"] = types.SimpleNamespace(
-        get_wafi_home=lambda: wafi_home,
+    bassera_cli = types.ModuleType("bassera_cli")
+    bassera_cli.__path__ = []  # type: ignore[attr-defined]
+    sys.modules["bassera_cli"] = bassera_cli
+    bassera_home = tmp_path / "bassera-home"
+    os.environ["BASSERA_HOME"] = str(bassera_home)
+    sys.modules["bassera_cli.config"] = types.SimpleNamespace(
+        get_bassera_home=lambda: bassera_home,
     )
 
     tools_package = types.ModuleType("tools")
@@ -144,7 +144,7 @@ def _install_modal_test_modules(
             return {"kind": "registry", "image": image}
 
     async def _lookup_aio(_name: str, create_if_missing: bool = False):
-        return types.SimpleNamespace(name="wafi-agent", create_if_missing=create_if_missing)
+        return types.SimpleNamespace(name="bassera-agent", create_if_missing=create_if_missing)
 
     class _FakeSandboxInstance:
         def __init__(self, image):
@@ -190,7 +190,7 @@ def _install_modal_test_modules(
     )
 
     return {
-        "snapshot_store": wafi_home / "modal_snapshots.json",
+        "snapshot_store": bassera_home / "modal_snapshots.json",
         "create_calls": create_calls,
         "from_id_calls": from_id_calls,
         "registry_calls": registry_calls,

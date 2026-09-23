@@ -73,7 +73,7 @@ class SlackAdapter(BasePlatformAdapter):
       - DMs and channel messages (mention-gated in channels)
       - Thread support
       - File/image/audio attachments
-      - Slash commands (/wafi)
+      - Slash commands (/bassera)
       - Typing indicators (not natively supported by Slack bots)
     """
 
@@ -136,8 +136,8 @@ class SlackAdapter(BasePlatformAdapter):
         bot_tokens = [t.strip() for t in raw_token.split(",") if t.strip()]
 
         # Also load tokens from OAuth token file
-        from wafi_constants import get_wafi_home
-        tokens_file = get_wafi_home() / "slack_tokens.json"
+        from bassera_constants import get_bassera_home
+        tokens_file = get_bassera_home() / "slack_tokens.json"
         if tokens_file.exists():
             try:
                 saved = json.loads(tokens_file.read_text(encoding="utf-8"))
@@ -200,17 +200,17 @@ class SlackAdapter(BasePlatformAdapter):
                 await self._handle_assistant_thread_lifecycle_event(event)
 
             # Register slash command handler
-            @self._app.command("/wafi")
-            async def handle_wafi_command(ack, command):
+            @self._app.command("/bassera")
+            async def handle_bassera_command(ack, command):
                 await ack()
                 await self._handle_slash_command(command)
 
             # Register Block Kit action handlers for approval buttons
             for _action_id in (
-                "wafi_approve_once",
-                "wafi_approve_session",
-                "wafi_approve_always",
-                "wafi_deny",
+                "bassera_approve_once",
+                "bassera_approve_session",
+                "bassera_approve_always",
+                "bassera_deny",
             ):
                 self._app.action(_action_id)(self._handle_approval_action)
 
@@ -372,7 +372,7 @@ class SlackAdapter(BasePlatformAdapter):
         """Whether top-level Slack DMs get per-message session threads.
 
         Defaults to ``True`` so each visible DM reply thread is isolated as its
-        own Wafi session — matching the per-thread behavior channels already
+        own Bassera session — matching the per-thread behavior channels already
         have.  Set ``platforms.slack.extra.dm_top_level_threads_as_sessions``
         to ``false`` in config.yaml to revert to the legacy behavior where all
         top-level DMs share one continuous session.
@@ -1257,26 +1257,26 @@ class SlackAdapter(BasePlatformAdapter):
                             "type": "button",
                             "text": {"type": "plain_text", "text": "Allow Once"},
                             "style": "primary",
-                            "action_id": "wafi_approve_once",
+                            "action_id": "bassera_approve_once",
                             "value": session_key,
                         },
                         {
                             "type": "button",
                             "text": {"type": "plain_text", "text": "Allow Session"},
-                            "action_id": "wafi_approve_session",
+                            "action_id": "bassera_approve_session",
                             "value": session_key,
                         },
                         {
                             "type": "button",
                             "text": {"type": "plain_text", "text": "Always Allow"},
-                            "action_id": "wafi_approve_always",
+                            "action_id": "bassera_approve_always",
                             "value": session_key,
                         },
                         {
                             "type": "button",
                             "text": {"type": "plain_text", "text": "Deny"},
                             "style": "danger",
-                            "action_id": "wafi_deny",
+                            "action_id": "bassera_deny",
                             "value": session_key,
                         },
                     ],
@@ -1328,10 +1328,10 @@ class SlackAdapter(BasePlatformAdapter):
 
         # Map action_id to approval choice
         choice_map = {
-            "wafi_approve_once": "once",
-            "wafi_approve_session": "session",
-            "wafi_approve_always": "always",
-            "wafi_deny": "deny",
+            "bassera_approve_once": "once",
+            "bassera_approve_session": "session",
+            "bassera_approve_always": "always",
+            "bassera_deny": "deny",
         }
         choice = choice_map.get(action_id, "deny")
 
@@ -1506,7 +1506,7 @@ class SlackAdapter(BasePlatformAdapter):
             return ""
 
     async def _handle_slash_command(self, command: dict) -> None:
-        """Handle /wafi slash command."""
+        """Handle /bassera slash command."""
         text = command.get("text", "").strip()
         user_id = command.get("user_id", "")
         channel_id = command.get("channel_id", "")
@@ -1518,7 +1518,7 @@ class SlackAdapter(BasePlatformAdapter):
 
         # Map subcommands to gateway commands — derived from central registry.
         # Also keep "compact" as a Slack-specific alias for /compress.
-        from wafi_cli.commands import slack_subcommand_map
+        from bassera_cli.commands import slack_subcommand_map
         subcommand_map = slack_subcommand_map()
         subcommand_map["compact"] = "/compress"
         first_word = text.split()[0] if text else ""

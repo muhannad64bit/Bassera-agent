@@ -55,9 +55,9 @@ def check_sms_requirements() -> bool:
 
 class SmsAdapter(BasePlatformAdapter):
     """
-    Twilio SMS <-> Wafi gateway adapter.
+    Twilio SMS <-> Bassera gateway adapter.
 
-    Each inbound phone number gets its own Wafi session (multi-tenant).
+    Each inbound phone number gets its own Bassera session (multi-tenant).
     Replies are always sent from the configured TWILIO_PHONE_NUMBER.
     """
 

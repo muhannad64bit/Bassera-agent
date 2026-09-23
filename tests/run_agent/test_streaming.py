@@ -583,7 +583,7 @@ class TestStreamingFallback:
         with pytest.raises(httpx.ConnectError, match="socket closed"):
             agent._interruptible_streaming_api_call({})
 
-        # Should have retried 3 times (default HERMES_STREAM_RETRIES=2 → 3 attempts)
+        # Should have retried 3 times (default BASSERA_STREAM_RETRIES=2 → 3 attempts)
         assert mock_client.chat.completions.create.call_count == 3
         assert mock_close.call_count >= 1
 
@@ -627,7 +627,7 @@ class TestStreamingFallback:
         with pytest.raises(OAIAPIError):
             agent._interruptible_streaming_api_call({})
 
-        # Should retry 3 times (default HERMES_STREAM_RETRIES=2 → 3 attempts)
+        # Should retry 3 times (default BASSERA_STREAM_RETRIES=2 → 3 attempts)
         assert mock_client.chat.completions.create.call_count == 3
         # Connection cleanup should happen for each failed retry
         assert mock_close.call_count >= 2
@@ -1057,15 +1057,15 @@ class TestPartialToolCallWarning:
         agent._current_streamed_assistant_text = "Let me write the audit: "
 
         import os as _os
-        _prev = _os.environ.get("HERMES_STREAM_RETRIES")
-        _os.environ["HERMES_STREAM_RETRIES"] = "0"
+        _prev = _os.environ.get("BASSERA_STREAM_RETRIES")
+        _os.environ["BASSERA_STREAM_RETRIES"] = "0"
         try:
             response = agent._interruptible_streaming_api_call({})
         finally:
             if _prev is None:
-                _os.environ.pop("HERMES_STREAM_RETRIES", None)
+                _os.environ.pop("BASSERA_STREAM_RETRIES", None)
             else:
-                _os.environ["HERMES_STREAM_RETRIES"] = _prev
+                _os.environ["BASSERA_STREAM_RETRIES"] = _prev
 
         content = response.choices[0].message.content or ""
         assert "Let me write the audit:" in content, (
@@ -1115,15 +1115,15 @@ class TestPartialToolCallWarning:
         agent._current_streamed_assistant_text = "Here's my answer so far"
 
         import os as _os
-        _prev = _os.environ.get("HERMES_STREAM_RETRIES")
-        _os.environ["HERMES_STREAM_RETRIES"] = "0"
+        _prev = _os.environ.get("BASSERA_STREAM_RETRIES")
+        _os.environ["BASSERA_STREAM_RETRIES"] = "0"
         try:
             response = agent._interruptible_streaming_api_call({})
         finally:
             if _prev is None:
-                _os.environ.pop("HERMES_STREAM_RETRIES", None)
+                _os.environ.pop("BASSERA_STREAM_RETRIES", None)
             else:
-                _os.environ["HERMES_STREAM_RETRIES"] = _prev
+                _os.environ["BASSERA_STREAM_RETRIES"] = _prev
 
         content = response.choices[0].message.content or ""
         assert content == "Here's my answer so far", (

@@ -1,4 +1,4 @@
-"""Tests for _setup_feishu() in wafi_cli/gateway.py.
+"""Tests for _setup_feishu() in bassera_cli/gateway.py.
 
 Verifies that the interactive setup writes env vars that correctly drive the
 Feishu adapter: credentials, connection mode, DM policy, and group policy.
@@ -40,19 +40,19 @@ def _run_setup_feishu(
     def mock_get(name):
         return existing_env.get(name, "")
 
-    with patch("wafi_cli.gateway.save_env_value", side_effect=mock_save), \
-         patch("wafi_cli.gateway.get_env_value", side_effect=mock_get), \
-         patch("wafi_cli.gateway.prompt_yes_no", side_effect=prompt_yes_no_responses), \
-         patch("wafi_cli.gateway.prompt_choice", side_effect=prompt_choice_responses), \
-         patch("wafi_cli.gateway.prompt", side_effect=prompt_responses), \
-         patch("wafi_cli.gateway.print_info"), \
-         patch("wafi_cli.gateway.print_success"), \
-         patch("wafi_cli.gateway.print_warning"), \
-         patch("wafi_cli.gateway.print_error"), \
-         patch("wafi_cli.gateway.color", side_effect=lambda t, c: t), \
+    with patch("bassera_cli.gateway.save_env_value", side_effect=mock_save), \
+         patch("bassera_cli.gateway.get_env_value", side_effect=mock_get), \
+         patch("bassera_cli.gateway.prompt_yes_no", side_effect=prompt_yes_no_responses), \
+         patch("bassera_cli.gateway.prompt_choice", side_effect=prompt_choice_responses), \
+         patch("bassera_cli.gateway.prompt", side_effect=prompt_responses), \
+         patch("bassera_cli.gateway.print_info"), \
+         patch("bassera_cli.gateway.print_success"), \
+         patch("bassera_cli.gateway.print_warning"), \
+         patch("bassera_cli.gateway.print_error"), \
+         patch("bassera_cli.gateway.color", side_effect=lambda t, c: t), \
          patch("gateway.platforms.feishu.qr_register", return_value=qr_result):
 
-        from wafi_cli.gateway import _setup_feishu
+        from bassera_cli.gateway import _setup_feishu
         _setup_feishu()
 
     return saved_env

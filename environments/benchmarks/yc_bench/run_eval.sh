@@ -2,7 +2,7 @@
 
 # YC-Bench Evaluation
 #
-# Requires: pip install "wafi-agent[yc-bench]"
+# Requires: pip install "bassera-agent[yc-bench]"
 #
 # Run from repo root:
 #   bash environments/benchmarks/yc_bench/run_eval.sh

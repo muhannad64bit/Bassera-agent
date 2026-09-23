@@ -1,7 +1,7 @@
 """
-Email platform adapter for the Wafi gateway.
+Email platform adapter for the Bassera gateway.
 
-Allows users to interact with Wafi by sending emails.
+Allows users to interact with Bassera by sending emails.
 Uses IMAP to receive and SMTP to send messages.
 
 Environment variables:
@@ -504,7 +504,7 @@ class EmailAdapter(BasePlatformAdapter):
             msg["In-Reply-To"] = original_msg_id
             msg["References"] = original_msg_id
 
-        msg_id = f"<wafi-{uuid.uuid4().hex[:12]}@{self._address.split('@')[1]}>"
+        msg_id = f"<bassera-{uuid.uuid4().hex[:12]}@{self._address.split('@')[1]}>"
         msg["Message-ID"] = msg_id
 
         msg.attach(MIMEText(body, "plain", "utf-8"))
@@ -585,7 +585,7 @@ class EmailAdapter(BasePlatformAdapter):
             msg["In-Reply-To"] = original_msg_id
             msg["References"] = original_msg_id
 
-        msg_id = f"<wafi-{uuid.uuid4().hex[:12]}@{self._address.split('@')[1]}>"
+        msg_id = f"<bassera-{uuid.uuid4().hex[:12]}@{self._address.split('@')[1]}>"
         msg["Message-ID"] = msg_id
 
         if body:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Canvas LMS API CLI for Wafi Agent.
+"""Canvas LMS API CLI for Bassera Agent.
 
 A thin CLI wrapper around the Canvas REST API.
 Authenticates using a personal access token from environment variables.
@@ -30,7 +30,7 @@ def _check_config():
     if missing:
         print(
             f"Missing required environment variables: {', '.join(missing)}\n"
-            "Set them in ~/.wafi/.env or export them in your shell.\n"
+            "Set them in ~/.bassera/.env or export them in your shell.\n"
             "See the canvas skill SKILL.md for setup instructions.",
             file=sys.stderr,
         )
@@ -124,7 +124,7 @@ def list_assignments(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Canvas LMS API CLI for Wafi Agent"
+        description="Canvas LMS API CLI for Bassera Agent"
     )
     sub = parser.add_subparsers(dest="command", required=True)
 

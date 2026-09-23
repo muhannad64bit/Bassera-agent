@@ -8,7 +8,7 @@ import pytest
 # ── CLI tests ──────────────────────────────────────────────────────────────
 
 class TestCLIQuickCommands:
-    """Test quick command dispatch in WafiCLI.process_command."""
+    """Test quick command dispatch in BasseraCLI.process_command."""
 
     @staticmethod
     def _printed_plain(call_arg):
@@ -17,8 +17,8 @@ class TestCLIQuickCommands:
         return str(call_arg)
 
     def _make_cli(self, quick_commands):
-        from cli import WafiCLI
-        cli = WafiCLI.__new__(WafiCLI)
+        from cli import BasseraCLI
+        cli = BasseraCLI.__new__(BasseraCLI)
         cli.config = {"quick_commands": quick_commands}
         cli.console = MagicMock()
         cli.agent = None

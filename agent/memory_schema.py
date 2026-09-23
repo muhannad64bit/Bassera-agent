@@ -1,4 +1,4 @@
-"""Structured memory record helpers for WAFI's unified memory store.
+"""Structured memory record helpers for BASSERA's unified memory store.
 
 Structured records are still persisted as plain text entries inside the
 existing MEMORY.md / USER.md files. This keeps the built-in memory store as
@@ -29,9 +29,9 @@ MemoryCategory = Literal[
 MemoryTarget = Literal["memory", "user"]
 
 STRUCTURED_MEMORY_VERSION = "v1"
-STRUCTURED_MEMORY_PREFIX = "@wafi-memory"
+STRUCTURED_MEMORY_PREFIX = "@bassera-memory"
 STRUCTURED_MEMORY_RE = re.compile(
-    r"^\[(?P<prefix>@wafi-memory)\s+"
+    r"^\[(?P<prefix>@bassera-memory)\s+"
     r"version=(?P<version>[^\s]+)\s+"
     r"category=(?P<category>[^\s]+)\s+"
     r"key=(?P<key>[^\s]+)\s+"
@@ -107,7 +107,7 @@ class SkillCandidate:
 
 @dataclass(frozen=True)
 class OwnerDNATrait:
-    """Evidence-based owner-specific identity trait for WAFI."""
+    """Evidence-based owner-specific identity trait for BASSERA."""
 
     trait_name: str
     category: str
@@ -122,7 +122,7 @@ class OwnerDNATrait:
 
 @dataclass(frozen=True)
 class OwnerDoctrineRule:
-    """Evidence-based operating doctrine for how WAFI should default to behaving."""
+    """Evidence-based operating doctrine for how BASSERA should default to behaving."""
 
     doctrine_name: str
     category: str

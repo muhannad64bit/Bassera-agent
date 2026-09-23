@@ -21,7 +21,7 @@ class TestHonchoSession:
         return HonchoSession(
             key="telegram:12345",
             user_peer_id="user-telegram-12345",
-            assistant_peer_id="wafi-assistant",
+            assistant_peer_id="bassera-assistant",
             honcho_session_id="telegram-12345",
         )
 
@@ -197,7 +197,7 @@ class TestPeerLookupHelpers:
         session = HonchoSession(
             key="telegram:123",
             user_peer_id="robert",
-            assistant_peer_id="wafi",
+            assistant_peer_id="bassera",
             honcho_session_id="telegram-123",
         )
         mgr._cache[session.key] = session
@@ -424,11 +424,11 @@ class TestConcludeToolDispatch:
 
         result = provider.handle_tool_call(
             "honcho_profile",
-            {"peer": "wafi"},
+            {"peer": "bassera"},
         )
 
         assert "Role: Assistant" in result
-        provider._manager.get_peer_card.assert_called_once_with("telegram:123", peer="wafi")
+        provider._manager.get_peer_card.assert_called_once_with("telegram:123", peer="bassera")
 
     def test_honcho_search_can_target_explicit_peer_id(self):
         provider = HonchoMemoryProvider()
@@ -439,7 +439,7 @@ class TestConcludeToolDispatch:
 
         result = provider.handle_tool_call(
             "honcho_search",
-            {"query": "assistant", "peer": "wafi"},
+            {"query": "assistant", "peer": "bassera"},
         )
 
         assert "Assistant self context" in result
@@ -447,7 +447,7 @@ class TestConcludeToolDispatch:
             "telegram:123",
             "assistant",
             max_tokens=800,
-            peer="wafi",
+            peer="bassera",
         )
 
     def test_honcho_reasoning_can_target_explicit_peer_id(self):
@@ -459,7 +459,7 @@ class TestConcludeToolDispatch:
 
         result = provider.handle_tool_call(
             "honcho_reasoning",
-            {"query": "who are you", "peer": "wafi"},
+            {"query": "who are you", "peer": "bassera"},
         )
 
         assert "Assistant answer" in result
@@ -467,7 +467,7 @@ class TestConcludeToolDispatch:
             "telegram:123",
             "who are you",
             reasoning_level=None,
-            peer="wafi",
+            peer="bassera",
         )
 
     def test_honcho_conclude_missing_both_params_returns_error(self):
@@ -569,7 +569,7 @@ class TestToolsModeInitBehavior:
         with patch("plugins.memory.honcho.client.HonchoClientConfig.from_global_config", return_value=cfg), \
              patch("plugins.memory.honcho.client.get_honcho_client", return_value=MagicMock()), \
              patch("plugins.memory.honcho.session.HonchoSessionManager", return_value=mock_manager) as mock_manager_cls, \
-             patch("wafi_constants.get_wafi_home", return_value=MagicMock()):
+             patch("bassera_constants.get_bassera_home", return_value=MagicMock()):
             provider.initialize(session_id="test-session-001", **init_kwargs)
 
         return provider, cfg, mock_manager_cls
@@ -626,7 +626,7 @@ class TestToolsModeInitBehavior:
 class TestPerSessionMigrateGuard:
     """Verify migrate_memory_files is skipped under per-session strategy.
 
-    per-session creates a fresh Honcho session every Wafi run. Uploading
+    per-session creates a fresh Honcho session every Bassera run. Uploading
     MEMORY.md/USER.md/SOUL.md to each short-lived session floods the backend
     with duplicate content. The guard was added to prevent orphan sessions
     containing only <prior_memory_file> wrappers.
@@ -655,7 +655,7 @@ class TestPerSessionMigrateGuard:
         with patch("plugins.memory.honcho.client.HonchoClientConfig.from_global_config", return_value=cfg), \
              patch("plugins.memory.honcho.client.get_honcho_client", return_value=MagicMock()), \
              patch("plugins.memory.honcho.session.HonchoSessionManager", return_value=mock_manager), \
-             patch("wafi_constants.get_wafi_home", return_value=MagicMock()):
+             patch("bassera_constants.get_bassera_home", return_value=MagicMock()):
             provider.initialize(session_id="test-session-001")
 
         return provider, mock_manager
@@ -859,7 +859,7 @@ class TestDialecticCadenceDefaults:
         with patch("plugins.memory.honcho.client.HonchoClientConfig.from_global_config", return_value=cfg), \
              patch("plugins.memory.honcho.client.get_honcho_client", return_value=MagicMock()), \
              patch("plugins.memory.honcho.session.HonchoSessionManager", return_value=mock_manager), \
-             patch("wafi_constants.get_wafi_home", return_value=MagicMock()):
+             patch("bassera_constants.get_bassera_home", return_value=MagicMock()):
             provider.initialize(session_id="test-session-001")
 
         _settle_prewarm(provider)
@@ -930,7 +930,7 @@ class TestDialecticDepth:
         with patch("plugins.memory.honcho.client.HonchoClientConfig.from_global_config", return_value=cfg), \
              patch("plugins.memory.honcho.client.get_honcho_client", return_value=MagicMock()), \
              patch("plugins.memory.honcho.session.HonchoSessionManager", return_value=mock_manager), \
-             patch("wafi_constants.get_wafi_home", return_value=MagicMock()):
+             patch("bassera_constants.get_bassera_home", return_value=MagicMock()):
             provider.initialize(session_id="test-session-001")
 
         _settle_prewarm(provider)
@@ -1092,7 +1092,7 @@ class TestTrivialPromptHeuristic:
         with patch("plugins.memory.honcho.client.HonchoClientConfig.from_global_config", return_value=cfg), \
              patch("plugins.memory.honcho.client.get_honcho_client", return_value=MagicMock()), \
              patch("plugins.memory.honcho.session.HonchoSessionManager", return_value=mock_manager), \
-             patch("wafi_constants.get_wafi_home", return_value=MagicMock()):
+             patch("bassera_constants.get_bassera_home", return_value=MagicMock()):
             provider.initialize(session_id="test-session-trivial")
         _settle_prewarm(provider)
         return provider
@@ -1154,7 +1154,7 @@ class TestDialecticCadenceAdvancesOnSuccess:
         with patch("plugins.memory.honcho.client.HonchoClientConfig.from_global_config", return_value=cfg), \
              patch("plugins.memory.honcho.client.get_honcho_client", return_value=MagicMock()), \
              patch("plugins.memory.honcho.session.HonchoSessionManager", return_value=mock_manager), \
-             patch("wafi_constants.get_wafi_home", return_value=MagicMock()):
+             patch("bassera_constants.get_bassera_home", return_value=MagicMock()):
             provider.initialize(session_id="test-session-retry")
         _settle_prewarm(provider)
         return provider
@@ -1239,7 +1239,7 @@ class TestSessionStartDialecticPrewarm:
         with patch("plugins.memory.honcho.client.HonchoClientConfig.from_global_config", return_value=cfg), \
              patch("plugins.memory.honcho.client.get_honcho_client", return_value=MagicMock()), \
              patch("plugins.memory.honcho.session.HonchoSessionManager", return_value=mock_manager), \
-             patch("wafi_constants.get_wafi_home", return_value=MagicMock()):
+             patch("bassera_constants.get_bassera_home", return_value=MagicMock()):
             provider.initialize(session_id="test-prewarm")
         return provider
 
@@ -1311,7 +1311,7 @@ class TestDialecticLiveness:
         with patch("plugins.memory.honcho.client.HonchoClientConfig.from_global_config", return_value=cfg), \
              patch("plugins.memory.honcho.client.get_honcho_client", return_value=MagicMock()), \
              patch("plugins.memory.honcho.session.HonchoSessionManager", return_value=mock_manager), \
-             patch("wafi_constants.get_wafi_home", return_value=MagicMock()):
+             patch("bassera_constants.get_bassera_home", return_value=MagicMock()):
             provider.initialize(session_id="test-liveness")
         _settle_prewarm(provider)
         return provider
@@ -1458,7 +1458,7 @@ class TestDialecticLifecycleSmoke:
         with patch("plugins.memory.honcho.client.HonchoClientConfig.from_global_config", return_value=cfg), \
              patch("plugins.memory.honcho.client.get_honcho_client", return_value=MagicMock()), \
              patch("plugins.memory.honcho.session.HonchoSessionManager", return_value=mock_manager), \
-             patch("wafi_constants.get_wafi_home", return_value=MagicMock()):
+             patch("bassera_constants.get_bassera_home", return_value=MagicMock()):
             return provider, mock_manager, cfg
 
     def _await_thread(self, provider):
@@ -1481,7 +1481,7 @@ class TestDialecticLifecycleSmoke:
         # Program the dialectic responses in the exact order they'll be requested.
         # An extra or missing call fails the test — strong smoke signal.
         responses = iter([
-            "prewarm: user is eri, works on wafi",      # session-start prewarm
+            "prewarm: user is eri, works on bassera",      # session-start prewarm
             "cadence fire: long query synthesis",         # turn 4 queue_prefetch
             "",                                           # turn 7 fire: silent failure
             "retry success: fresh synthesis",             # turn 8 queue_prefetch retry
@@ -1492,7 +1492,7 @@ class TestDialecticLifecycleSmoke:
         with patch("plugins.memory.honcho.client.HonchoClientConfig.from_global_config", return_value=cfg), \
              patch("plugins.memory.honcho.client.get_honcho_client", return_value=MagicMock()), \
              patch("plugins.memory.honcho.session.HonchoSessionManager", return_value=mgr), \
-             patch("wafi_constants.get_wafi_home", return_value=MagicMock()):
+             patch("bassera_constants.get_bassera_home", return_value=MagicMock()):
             provider.initialize(session_id="smoke-test")
 
         self._await_thread(provider)
@@ -1592,7 +1592,7 @@ class TestReasoningHeuristic:
         with patch("plugins.memory.honcho.client.HonchoClientConfig.from_global_config", return_value=cfg), \
              patch("plugins.memory.honcho.client.get_honcho_client", return_value=MagicMock()), \
              patch("plugins.memory.honcho.session.HonchoSessionManager", return_value=mock_manager), \
-             patch("wafi_constants.get_wafi_home", return_value=MagicMock()):
+             patch("bassera_constants.get_bassera_home", return_value=MagicMock()):
             provider.initialize(session_id="test-heuristic")
         _settle_prewarm(provider)
         return provider

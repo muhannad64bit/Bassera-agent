@@ -65,8 +65,8 @@ class MemoryProvider(ABC):
         establish connections, start background threads, etc.
 
         kwargs always include:
-          - wafi_home (str): The active HERMES_HOME directory path. Use this
-            for profile-scoped storage instead of hardcoding ``~/.wafi``.
+          - bassera_home (str): The active BASSERA_HOME directory path. Use this
+            for profile-scoped storage instead of hardcoding ``~/.bassera``.
           - platform (str): "cli", "telegram", "discord", "cron", etc.
 
         kwargs may also include:
@@ -75,7 +75,7 @@ class MemoryProvider(ABC):
             prompts would corrupt user representations).
           - agent_identity (str): Profile name (e.g. "coder"). Use for
             per-profile provider identity scoping.
-          - agent_workspace (str): Shared workspace name (e.g. "wafi").
+          - agent_workspace (str): Shared workspace name (e.g. "bassera").
           - parent_session_id (str): For subagents, the parent's session_id.
           - user_id (str): Platform user identifier (gateway sessions).
         """
@@ -188,7 +188,7 @@ class MemoryProvider(ABC):
     def get_config_schema(self) -> List[Dict[str, Any]]:
         """Return config fields this provider needs for setup.
 
-        Used by 'wafi memory setup' to walk the user through configuration.
+        Used by 'bassera memory setup' to walk the user through configuration.
         Each field is a dict with:
           key:         config key name (e.g. 'api_key', 'mode')
           description: human-readable description
@@ -203,12 +203,12 @@ class MemoryProvider(ABC):
         """
         return []
 
-    def save_config(self, values: Dict[str, Any], wafi_home: str) -> None:
+    def save_config(self, values: Dict[str, Any], bassera_home: str) -> None:
         """Write non-secret config to the provider's native location.
 
-        Called by 'wafi memory setup' after collecting user inputs.
+        Called by 'bassera memory setup' after collecting user inputs.
         ``values`` contains only non-secret fields (secrets go to .env).
-        ``wafi_home`` is the active HERMES_HOME directory path.
+        ``bassera_home`` is the active BASSERA_HOME directory path.
 
         Providers with native config files (JSON, YAML) should override
         this to write to their expected location. Providers that use only

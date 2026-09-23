@@ -94,9 +94,9 @@ def extract_local_skills():
             tags = []
             metadata = fm.get("metadata")
             if isinstance(metadata, dict):
-                wafi_meta = metadata.get("wafi", {})
-                if isinstance(wafi_meta, dict):
-                    tags = wafi_meta.get("tags", [])
+                bassera_meta = metadata.get("bassera", {})
+                if isinstance(bassera_meta, dict):
+                    tags = bassera_meta.get("tags", [])
             if not tags:
                 tags = fm.get("tags", [])
             if isinstance(tags, str):

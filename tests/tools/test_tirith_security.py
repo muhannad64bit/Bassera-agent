@@ -304,7 +304,7 @@ class TestEnsureInstalled:
                                  "tirith_timeout": 5, "tirith_fail_open": True}
         _tirith_mod._resolved_path = None
         with patch("tools.tirith_security.shutil.which", return_value=None), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value="/nonexistent"), \
+             patch("tools.tirith_security._bassera_bin_dir", return_value="/nonexistent"), \
              patch("tools.tirith_security._is_install_failed_on_disk", return_value=False), \
              patch("tools.tirith_security.threading.Thread") as MockThread:
             mock_thread = MagicMock()
@@ -321,7 +321,7 @@ class TestEnsureInstalled:
                                  "tirith_timeout": 5, "tirith_fail_open": True}
         _tirith_mod._resolved_path = None
         with patch("tools.tirith_security.shutil.which", return_value=None), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value="/nonexistent"), \
+             patch("tools.tirith_security._bassera_bin_dir", return_value="/nonexistent"), \
              patch("tools.tirith_security._is_install_failed_on_disk", return_value=False), \
              patch("tools.tirith_security.threading.Thread") as MockThread:
             mock_thread = MagicMock()
@@ -632,7 +632,7 @@ class TestBackgroundInstall:
                    return_value={"tirith_enabled": True, "tirith_path": "tirith",
                                  "tirith_timeout": 5, "tirith_fail_open": True}), \
              patch("tools.tirith_security.shutil.which", return_value=None), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value="/nonexistent"), \
+             patch("tools.tirith_security._bassera_bin_dir", return_value="/nonexistent"), \
              patch("tools.tirith_security._is_install_failed_on_disk", return_value=False), \
              patch("tools.tirith_security.threading.Thread") as MockThread:
             mock_thread = MagicMock()
@@ -654,7 +654,7 @@ class TestBackgroundInstall:
                    return_value={"tirith_enabled": True, "tirith_path": "tirith",
                                  "tirith_timeout": 5, "tirith_fail_open": True}), \
              patch("tools.tirith_security.shutil.which", return_value=None), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value="/nonexistent"), \
+             patch("tools.tirith_security._bassera_bin_dir", return_value="/nonexistent"), \
              patch("tools.tirith_security._read_failure_reason", return_value="download_failed"), \
              patch("tools.tirith_security._is_install_failed_on_disk", return_value=True):
 
@@ -674,7 +674,7 @@ class TestBackgroundInstall:
         _tirith_mod._install_thread = mock_thread
 
         with patch("tools.tirith_security.shutil.which", return_value=None), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value="/nonexistent"):
+             patch("tools.tirith_security._bassera_bin_dir", return_value="/nonexistent"):
             result = _resolve_tirith_path("tirith")
             assert result == "tirith"  # returns configured default, doesn't block
 
@@ -801,7 +801,7 @@ class TestDiskFailureMarker:
         _tirith_mod._resolved_path = None
 
         with patch("tools.tirith_security.shutil.which", return_value=None), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value="/nonexistent"), \
+             patch("tools.tirith_security._bassera_bin_dir", return_value="/nonexistent"), \
              patch("tools.tirith_security._read_failure_reason", return_value="download_failed"), \
              patch("tools.tirith_security._is_install_failed_on_disk", return_value=True), \
              patch("tools.tirith_security._install_tirith") as mock_install:
@@ -826,25 +826,25 @@ class TestDiskFailureMarker:
 
         _tirith_mod._resolved_path = None
 
-    def test_install_failed_recovers_from_wafi_bin(self):
-        """After _INSTALL_FAILED, manual install in HERMES_HOME/bin is picked up."""
+    def test_install_failed_recovers_from_bassera_bin(self):
+        """After _INSTALL_FAILED, manual install in BASSERA_HOME/bin is picked up."""
         from tools.tirith_security import _resolve_tirith_path, _INSTALL_FAILED
         import tempfile
         tmpdir = tempfile.mkdtemp()
-        wafi_bin = os.path.join(tmpdir, "tirith")
+        bassera_bin = os.path.join(tmpdir, "tirith")
         # Create a fake executable
-        with open(wafi_bin, "w") as f:
+        with open(bassera_bin, "w") as f:
             f.write("#!/bin/sh\n")
-        os.chmod(wafi_bin, 0o755)
+        os.chmod(bassera_bin, 0o755)
 
         _tirith_mod._resolved_path = _INSTALL_FAILED
 
         with patch("tools.tirith_security.shutil.which", return_value=None), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value=tmpdir), \
+             patch("tools.tirith_security._bassera_bin_dir", return_value=tmpdir), \
              patch("tools.tirith_security._clear_install_failed") as mock_clear:
             result = _resolve_tirith_path("tirith")
-            assert result == wafi_bin
-            assert _tirith_mod._resolved_path == wafi_bin
+            assert result == bassera_bin
+            assert _tirith_mod._resolved_path == bassera_bin
             mock_clear.assert_called_once()
 
         _tirith_mod._resolved_path = None
@@ -855,7 +855,7 @@ class TestDiskFailureMarker:
         _tirith_mod._resolved_path = _INSTALL_FAILED
 
         with patch("tools.tirith_security.shutil.which", return_value=None), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value="/nonexistent"), \
+             patch("tools.tirith_security._bassera_bin_dir", return_value="/nonexistent"), \
              patch("tools.tirith_security._install_tirith") as mock_install:
             result = _resolve_tirith_path("tirith")
             assert result == "tirith"  # fallback to configured path
@@ -870,7 +870,7 @@ class TestDiskFailureMarker:
 
         # _is_install_failed_on_disk sees "cosign_missing" + cosign on PATH → returns False
         with patch("tools.tirith_security.shutil.which", return_value=None), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value="/nonexistent"), \
+             patch("tools.tirith_security._bassera_bin_dir", return_value="/nonexistent"), \
              patch("tools.tirith_security._is_install_failed_on_disk", return_value=False), \
              patch("tools.tirith_security._install_tirith", return_value=("/new/tirith", "")) as mock_install, \
              patch("tools.tirith_security._clear_install_failed"):
@@ -894,7 +894,7 @@ class TestDiskFailureMarker:
             return None
 
         with patch("tools.tirith_security.shutil.which", side_effect=_which_side_effect), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value="/nonexistent"), \
+             patch("tools.tirith_security._bassera_bin_dir", return_value="/nonexistent"), \
              patch("tools.tirith_security._is_install_failed_on_disk", return_value=False), \
              patch("tools.tirith_security._install_tirith", return_value=("/new/tirith", "")) as mock_install, \
              patch("tools.tirith_security._clear_install_failed"):
@@ -911,7 +911,7 @@ class TestDiskFailureMarker:
         _tirith_mod._install_failure_reason = "cosign_exec_failed"
 
         with patch("tools.tirith_security.shutil.which", return_value=None), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value="/nonexistent"), \
+             patch("tools.tirith_security._bassera_bin_dir", return_value="/nonexistent"), \
              patch("tools.tirith_security._install_tirith") as mock_install:
             result = _resolve_tirith_path("tirith")
             assert result == "tirith"  # fallback
@@ -926,7 +926,7 @@ class TestDiskFailureMarker:
         _tirith_mod._install_failure_reason = "cosign_missing"
 
         with patch("tools.tirith_security.shutil.which", return_value=None), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value="/nonexistent"), \
+             patch("tools.tirith_security._bassera_bin_dir", return_value="/nonexistent"), \
              patch("tools.tirith_security._install_tirith") as mock_install:
             result = _resolve_tirith_path("tirith")
             assert result == "tirith"  # fallback
@@ -941,7 +941,7 @@ class TestDiskFailureMarker:
 
         # First call: disk marker with cosign_missing is active, cosign still absent
         with patch("tools.tirith_security.shutil.which", return_value=None), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value="/nonexistent"), \
+             patch("tools.tirith_security._bassera_bin_dir", return_value="/nonexistent"), \
              patch("tools.tirith_security._read_failure_reason", return_value="cosign_missing"), \
              patch("tools.tirith_security._is_install_failed_on_disk", return_value=True):
             _resolve_tirith_path("tirith")
@@ -957,7 +957,7 @@ class TestDiskFailureMarker:
             return None
 
         with patch("tools.tirith_security.shutil.which", side_effect=_which_side_effect), \
-             patch("tools.tirith_security._wafi_bin_dir", return_value="/nonexistent"), \
+             patch("tools.tirith_security._bassera_bin_dir", return_value="/nonexistent"), \
              patch("tools.tirith_security._is_install_failed_on_disk", return_value=False), \
              patch("tools.tirith_security._install_tirith", return_value=("/new/tirith", "")) as mock_install, \
              patch("tools.tirith_security._clear_install_failed"):
@@ -969,38 +969,40 @@ class TestDiskFailureMarker:
 
 
 # ---------------------------------------------------------------------------
-# HERMES_HOME isolation
+# BASSERA_HOME isolation
 # ---------------------------------------------------------------------------
 
-class TestWafiHomeIsolation:
-    def test_wafi_bin_dir_respects_wafi_home(self):
-        """_wafi_bin_dir must use HERMES_HOME, not hardcoded ~/.wafi."""
-        from tools.tirith_security import _wafi_bin_dir
+class TestBasseraHomeIsolation:
+    def test_bassera_bin_dir_respects_bassera_home(self):
+        """_bassera_bin_dir must use BASSERA_HOME, not hardcoded ~/.bassera."""
+        from tools.tirith_security import _bassera_bin_dir
         import tempfile
         tmpdir = tempfile.mkdtemp()
-        with patch.dict(os.environ, {"HERMES_HOME": tmpdir}):
-            result = _wafi_bin_dir()
+        with patch.dict(os.environ, {"BASSERA_HOME": tmpdir}):
+            result = _bassera_bin_dir()
         assert result == os.path.join(tmpdir, "bin")
         assert os.path.isdir(result)
 
-    def test_failure_marker_respects_wafi_home(self):
-        """_failure_marker_path must use HERMES_HOME, not hardcoded ~/.wafi."""
+    def test_failure_marker_respects_bassera_home(self):
+        """_failure_marker_path must use BASSERA_HOME, not hardcoded ~/.bassera."""
         from tools.tirith_security import _failure_marker_path
-        with patch.dict(os.environ, {"HERMES_HOME": "/custom/wafi"}):
+        with patch.dict(os.environ, {"BASSERA_HOME": "/custom/bassera"}):
             result = _failure_marker_path()
-        assert result == "/custom/wafi/.tirith-install-failed"
+        assert result == "/custom/bassera/.tirith-install-failed"
 
     def test_conftest_isolation_prevents_real_home_writes(self):
-        """The conftest autouse fixture sets HERMES_HOME; verify it's active."""
-        wafi_home = os.getenv("HERMES_HOME")
-        assert wafi_home is not None, "HERMES_HOME should be set by conftest"
-        assert "wafi_test" in wafi_home, "Should point to test temp dir"
+        """The conftest autouse fixture sets BASSERA_HOME; verify it's active."""
+        bassera_home = os.getenv("BASSERA_HOME")
+        assert bassera_home is not None, "BASSERA_HOME should be set by conftest"
+        assert "bassera_test" in bassera_home, "Should point to test temp dir"
 
-    def test_get_wafi_home_fallback(self):
-        """Without HERMES_HOME set, falls back to ~/.wafi."""
-        from tools.tirith_security import _get_wafi_home
+    def test_get_bassera_home_fallback(self, tmp_path):
+        """Without BASSERA_HOME set, a fresh install falls back to ~/.bassera."""
+        from tools.tirith_security import _get_bassera_home
         with patch.dict(os.environ, {}, clear=True):
-            # Remove HERMES_HOME entirely
-            os.environ.pop("HERMES_HOME", None)
-            result = _get_wafi_home()
-        assert result == os.path.join(os.path.expanduser("~"), ".wafi")
+            # Remove BASSERA_HOME entirely
+            os.environ.pop("BASSERA_HOME", None)
+            from pathlib import Path as _Path
+            with patch.object(_Path, "home", lambda: tmp_path):
+                result = _get_bassera_home()
+        assert result == str(tmp_path / ".bassera")

@@ -86,7 +86,7 @@ def test_check_website_access_supports_wildcard_subdomains_only(tmp_path):
 
 
 def test_default_config_exposes_website_blocklist_shape():
-    from wafi_cli.config import DEFAULT_CONFIG
+    from bassera_cli.config import DEFAULT_CONFIG
 
     website_blocklist = DEFAULT_CONFIG["security"]["website_blocklist"]
     assert website_blocklist["enabled"] is False
@@ -239,10 +239,10 @@ def test_load_website_blocklist_wraps_shared_file_read_errors(tmp_path, monkeypa
     assert result["rules"] == []  # shared file rules skipped
 
 
-def test_check_website_access_uses_dynamic_wafi_home(monkeypatch, tmp_path):
-    wafi_home = tmp_path / "wafi-home"
-    wafi_home.mkdir()
-    (wafi_home / "config.yaml").write_text(
+def test_check_website_access_uses_dynamic_bassera_home(monkeypatch, tmp_path):
+    bassera_home = tmp_path / "bassera-home"
+    bassera_home.mkdir()
+    (bassera_home / "config.yaml").write_text(
         yaml.safe_dump(
             {
                 "security": {
@@ -257,11 +257,11 @@ def test_check_website_access_uses_dynamic_wafi_home(monkeypatch, tmp_path):
         encoding="utf-8",
     )
 
-    monkeypatch.setenv("HERMES_HOME", str(wafi_home))
+    monkeypatch.setenv("BASSERA_HOME", str(bassera_home))
 
-    # Invalidate the module-level cache so the new HERMES_HOME is picked up.
+    # Invalidate the module-level cache so the new BASSERA_HOME is picked up.
     # A prior test may have cached a default policy (enabled=False) under the
-    # old HERMES_HOME set by the autouse _isolate_wafi_home fixture.
+    # old BASSERA_HOME set by the autouse _isolate_bassera_home fixture.
     from tools.website_policy import invalidate_cache
     invalidate_cache()
 
@@ -385,8 +385,8 @@ def test_check_website_access_fails_open_on_malformed_config(tmp_path, monkeypat
     with pytest.raises(WebsitePolicyError):
         check_website_access("https://example.com", config_path=config_path)
 
-    # Simulate default path by pointing HERMES_HOME to tmp_path
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    # Simulate default path by pointing BASSERA_HOME to tmp_path
+    monkeypatch.setenv("BASSERA_HOME", str(tmp_path))
     from tools import website_policy
     website_policy.invalidate_cache()
 

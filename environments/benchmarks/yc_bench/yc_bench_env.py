@@ -21,7 +21,7 @@ The evaluate flow:
     2. evaluate()  -- Iterates over all runs sequentially through:
         a. rollout_and_score_eval()  -- Per-run agent loop
             - Initialises a fresh yc-bench simulation via `sim init` (NOT `run`)
-            - Runs WafiAgentLoop with terminal tool only
+            - Runs BasseraAgentLoop with terminal tool only
             - Reads final SQLite DB to extract score
             - Returns survival (0/1) + normalised funds score
         b. Aggregates per-preset and overall metrics
@@ -34,7 +34,7 @@ Key features:
   - Per-preset difficulty breakdown in results
   - Isolated SQLite DB per run (no cross-run state leakage)
 
-Requires: pip install wafi-agent[yc-bench]
+Requires: pip install bassera-agent[yc-bench]
 """
 
 import asyncio
@@ -62,8 +62,8 @@ from pydantic import Field
 from atroposlib.envs.base import EvalHandlingEnum
 from atroposlib.envs.server_handling.server_manager import APIServerConfig
 
-from environments.agent_loop import WafiAgentLoop
-from environments.wafi_base_env import WafiAgentBaseEnv, WafiAgentEnvConfig
+from environments.agent_loop import BasseraAgentLoop
+from environments.bassera_base_env import BasseraAgentBaseEnv, BasseraAgentEnvConfig
 
 logger = logging.getLogger(__name__)
 
@@ -176,11 +176,11 @@ _PRESET_HORIZONS = {
 # Configuration
 # =============================================================================
 
-class YCBenchEvalConfig(WafiAgentEnvConfig):
+class YCBenchEvalConfig(BasseraAgentEnvConfig):
     """
     Configuration for the YC-Bench evaluation environment.
 
-    Extends WafiAgentEnvConfig with YC-Bench-specific settings for
+    Extends BasseraAgentEnvConfig with YC-Bench-specific settings for
     preset selection, seed control, scoring, and simulation parameters.
     """
 
@@ -326,13 +326,13 @@ def _compute_composite_score(
 # Main Environment
 # =============================================================================
 
-class YCBenchEvalEnv(WafiAgentBaseEnv):
+class YCBenchEvalEnv(BasseraAgentBaseEnv):
     """
     YC-Bench long-horizon agent benchmark environment (eval-only).
 
     Each eval item is a (preset, seed) pair. The environment initialises the
     simulation via ``yc-bench sim init`` (NOT ``yc-bench run`` which would start
-    a competing built-in agent loop). The WafiAgentLoop then drives the
+    a competing built-in agent loop). The BasseraAgentLoop then drives the
     interaction by calling individual yc-bench CLI commands via the terminal tool.
 
     After the agent loop ends, the SQLite DB is read to extract the final score.
@@ -366,7 +366,7 @@ class YCBenchEvalEnv(WafiAgentBaseEnv):
             group_size=1,
             steps_per_eval=1,
             total_steps=1,
-            tokenizer_name="NousResearch/Wafi-3-Llama-3.1-8B",
+            tokenizer_name="NousResearch/Bassera-3-Llama-3.1-8B",
             use_wandb=True,
             wandb_name="yc-bench",
             ensure_scores_are_not_same=False,
@@ -400,7 +400,7 @@ class YCBenchEvalEnv(WafiAgentBaseEnv):
         except (FileNotFoundError, subprocess.TimeoutExpired):
             raise RuntimeError(
                 "yc-bench CLI not found. Install with:\n"
-                '  pip install "wafi-agent[yc-bench]"\n'
+                '  pip install "bassera-agent[yc-bench]"\n'
                 "Or: git clone https://github.com/collinear-ai/yc-bench "
                 "&& cd yc-bench && pip install -e ."
             )
@@ -485,7 +485,7 @@ class YCBenchEvalEnv(WafiAgentBaseEnv):
 
         1. Sets DATABASE_URL and YC_BENCH_EXPERIMENT env vars
         2. Initialises the simulation via ``yc-bench sim init`` (NOT ``run``)
-        3. Runs WafiAgentLoop with terminal tool
+        3. Runs BasseraAgentLoop with terminal tool
         4. Reads SQLite DB to compute final score
         5. Returns result dict with survival, funds, and composite score
         """
@@ -511,7 +511,7 @@ class YCBenchEvalEnv(WafiAgentBaseEnv):
             # Step 1: Initialise the simulation via CLI
             # IMPORTANT: We use `sim init`, NOT `yc-bench run`.
             # `yc-bench run` starts yc-bench's own LLM agent loop (via
-            # LiteLLM), which would compete with our WafiAgentLoop.
+            # LiteLLM), which would compete with our BasseraAgentLoop.
             # `sim init` just sets up the world and returns.
             # ----------------------------------------------------------
             init_cmd = [
@@ -531,7 +531,7 @@ class YCBenchEvalEnv(WafiAgentBaseEnv):
             tqdm.write(f"    Simulation initialized (horizon={horizon}yr)")
 
             # ----------------------------------------------------------
-            # Step 2: Run the WafiAgentLoop
+            # Step 2: Run the BasseraAgentLoop
             # ----------------------------------------------------------
             tools, valid_names = self._resolve_tools_for_group()
 
@@ -540,7 +540,7 @@ class YCBenchEvalEnv(WafiAgentBaseEnv):
                 {"role": "user", "content": self.format_prompt(eval_item)},
             ]
 
-            agent = WafiAgentLoop(
+            agent = BasseraAgentLoop(
                 server=self.server,
                 tool_schemas=tools,
                 valid_tool_names=valid_names,

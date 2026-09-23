@@ -22,7 +22,7 @@ HOOK="$REPO_ROOT/.git/hooks/pre-commit"
 
 # Locate the venv the same way scripts/run_tests.sh does.
 VENV=""
-for candidate in "$REPO_ROOT/.venv" "$REPO_ROOT/venv" "$HOME/.wafi/wafi-agent/venv"; do
+for candidate in "$REPO_ROOT/.venv" "$REPO_ROOT/venv" "$HOME/.bassera/bassera-agent/venv"; do
   if [ -f "$candidate/bin/activate" ]; then
     VENV="$candidate"
     break

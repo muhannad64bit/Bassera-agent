@@ -44,7 +44,7 @@ IGNORED_PATTERNS = [
     re.compile(r"^GitHub\s*Actions?$", re.IGNORECASE),
     re.compile(r"^dependabot", re.IGNORECASE),
     re.compile(r"^renovate", re.IGNORECASE),
-    re.compile(r"^Wafi\s+(Agent|Audit)$", re.IGNORECASE),
+    re.compile(r"^Bassera\s+(Agent|Audit)$", re.IGNORECASE),
     re.compile(r"^Ubuntu$", re.IGNORECASE),
 ]
 
@@ -52,9 +52,9 @@ IGNORED_EMAILS = {
     "noreply@anthropic.com",
     "noreply@github.com",
     "cursoragent@cursor.com",
-    "wafi@nousresearch.com",
-    "wafi-audit@example.com",
-    "wafi@habibilabs.dev",
+    "bassera@nousresearch.com",
+    "bassera-audit@example.com",
+    "bassera@habibilabs.dev",
 }
 
 
@@ -96,7 +96,7 @@ def gh_pr_list():
         result = subprocess.run(
             [
                 "gh", "pr", "list",
-                "--repo", "NousResearch/wafi-agent",
+                "--repo", "NousResearch/bassera-agent",
                 "--state", "merged",
                 "--json", "number,title,body,author,mergedAt",
                 "--limit", "300",

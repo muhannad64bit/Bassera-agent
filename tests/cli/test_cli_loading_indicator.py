@@ -2,12 +2,12 @@
 
 from unittest.mock import patch
 
-from cli import WafiCLI
+from cli import BasseraCLI
 
 
 class TestCLILoadingIndicator:
     def _make_cli(self):
-        cli_obj = WafiCLI.__new__(WafiCLI)
+        cli_obj = BasseraCLI.__new__(BasseraCLI)
         cli_obj._app = None
         cli_obj._last_invalidate = 0.0
         cli_obj._command_running = False

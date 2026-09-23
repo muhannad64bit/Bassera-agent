@@ -39,12 +39,12 @@ DELEGATE_BLOCKED_TOOLS = frozenset([
 
 # Build a description fragment listing toolsets available for subagents.
 # Excludes toolsets where ALL tools are blocked, composite/platform toolsets
-# (wafi-* prefixed), and scenario toolsets.
+# (bassera-* prefixed), and scenario toolsets.
 _EXCLUDED_TOOLSET_NAMES = frozenset({"debugging", "safe", "delegation", "moa", "rl"})
 _SUBAGENT_TOOLSETS = sorted(
     name for name, defn in TOOLSETS.items()
     if name not in _EXCLUDED_TOOLSET_NAMES
-    and not name.startswith("wafi-")
+    and not name.startswith("bassera-")
     and not all(t in DELEGATE_BLOCKED_TOOLS for t in defn.get("tools", []))
 )
 _TOOLSET_LIST_STR = ", ".join(f"'{n}'" for n in _SUBAGENT_TOOLSETS)
@@ -361,7 +361,7 @@ def _build_child_agent(
         delegation_cfg = _load_config()
         delegation_effort = str(delegation_cfg.get("reasoning_effort") or "").strip()
         if delegation_effort:
-            from wafi_constants import parse_reasoning_effort
+            from bassera_constants import parse_reasoning_effort
             parsed = parse_reasoning_effort(delegation_effort)
             if parsed is not None:
                 child_reasoning = parsed
@@ -1003,7 +1003,7 @@ def _resolve_delegation_credentials(cfg: dict, parent_agent) -> dict:
 
     # Provider is configured — resolve full credentials
     try:
-        from wafi_cli.runtime_provider import resolve_runtime_provider
+        from bassera_cli.runtime_provider import resolve_runtime_provider
         runtime = resolve_runtime_provider(requested=configured_provider)
     except Exception as exc:
         raise ValueError(
@@ -1017,7 +1017,7 @@ def _resolve_delegation_credentials(cfg: dict, parent_agent) -> dict:
     if not api_key:
         raise ValueError(
             f"Delegation provider '{configured_provider}' resolved but has no API key. "
-            f"Set the appropriate environment variable or run 'wafi auth'."
+            f"Set the appropriate environment variable or run 'bassera auth'."
         )
 
     return {
@@ -1035,7 +1035,7 @@ def _load_config() -> dict:
     """Load delegation config from CLI_CONFIG or persistent config.
 
     Checks the runtime config (cli.py CLI_CONFIG) first, then falls back
-    to the persistent config (wafi_cli/config.py load_config()) so that
+    to the persistent config (bassera_cli/config.py load_config()) so that
     ``delegation.model`` / ``delegation.provider`` are picked up regardless
     of the entry point (CLI, gateway, cron).
     """
@@ -1047,7 +1047,7 @@ def _load_config() -> dict:
     except Exception:
         pass
     try:
-        from wafi_cli.config import load_config
+        from bassera_cli.config import load_config
         full = load_config()
         return full.get("delegation", {})
     except Exception:

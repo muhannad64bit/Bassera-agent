@@ -5,9 +5,9 @@
 { inputs, ... }: {
   perSystem = { pkgs, system, ... }:
     let
-      hermes-agent = inputs.self.packages.${system}.default;
-      hermes-tui = inputs.self.packages.${system}.tui;
-      packages = [ hermes-agent hermes-tui ];
+      bassera-agent = inputs.self.packages.${system}.default;
+      bassera-tui = inputs.self.packages.${system}.tui;
+      packages = [ bassera-agent bassera-tui ];
     in {
       devShells.default = pkgs.mkShell {
         inputsFrom = packages;
@@ -19,9 +19,9 @@
           hooks = map (p: p.passthru.devShellHook or "") packages;
           combined = pkgs.lib.concatStringsSep "\n" (builtins.filter (h: h != "") hooks);
         in ''
-          echo "Hermes Agent dev shell"
+          echo "Bassera Agent dev shell"
           ${combined}
-          echo "Ready. Run 'hermes' to start."
+          echo "Ready. Run 'bassera' to start."
         '';
       };
     };

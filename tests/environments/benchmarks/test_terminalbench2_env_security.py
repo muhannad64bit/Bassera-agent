@@ -29,13 +29,13 @@ def _load_terminalbench_module(monkeypatch):
     class _AgentResult:
         pass
 
-    class _WafiAgentLoop:
+    class _BasseraAgentLoop:
         pass
 
-    class _WafiAgentBaseEnv:
+    class _BasseraAgentBaseEnv:
         pass
 
-    class _WafiAgentEnvConfig:
+    class _BasseraAgentEnvConfig:
         pass
 
     class _ToolContext:
@@ -56,12 +56,12 @@ def _load_terminalbench_module(monkeypatch):
         "environments.agent_loop": _stub_module(
             "environments.agent_loop",
             AgentResult=_AgentResult,
-            WafiAgentLoop=_WafiAgentLoop,
+            BasseraAgentLoop=_BasseraAgentLoop,
         ),
-        "environments.wafi_base_env": _stub_module(
-            "environments.wafi_base_env",
-            WafiAgentBaseEnv=_WafiAgentBaseEnv,
-            WafiAgentEnvConfig=_WafiAgentEnvConfig,
+        "environments.bassera_base_env": _stub_module(
+            "environments.bassera_base_env",
+            BasseraAgentBaseEnv=_BasseraAgentBaseEnv,
+            BasseraAgentEnvConfig=_BasseraAgentEnvConfig,
         ),
         "environments.tool_context": _stub_module(
             "environments.tool_context",

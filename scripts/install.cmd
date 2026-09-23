@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================================
-REM Hermes Agent Installer for Windows (CMD wrapper)
+REM Bassera Agent Installer for Windows (CMD wrapper)
 REM ============================================================================
 REM This batch file launches the PowerShell installer for users running CMD.
 REM
@@ -12,7 +12,7 @@ REM   irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scrip
 REM ============================================================================
 
 echo.
-echo  Hermes Agent Installer
+echo  Bassera Agent Installer
 echo  Launching PowerShell installer...
 echo.
 

@@ -261,9 +261,9 @@ class WebhookAdapter(BasePlatformAdapter):
 
     def _reload_dynamic_routes(self) -> None:
         """Reload agent-created subscriptions from disk if the file changed."""
-        from wafi_constants import get_wafi_home
-        wafi_home = get_wafi_home()
-        subs_path = wafi_home / _DYNAMIC_ROUTES_FILENAME
+        from bassera_constants import get_bassera_home
+        bassera_home = get_bassera_home()
+        subs_path = bassera_home / _DYNAMIC_ROUTES_FILENAME
         if not subs_path.exists():
             if self._dynamic_routes:
                 self._dynamic_routes = {}
