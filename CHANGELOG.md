@@ -91,6 +91,20 @@ referenced commit hashes are in this repository's history.
   frozen homes are captured at conftest import into a throwaway
   directory; cleared-env tests keep an isolated home; pairing state
   resolves lazily.
+- **Machine-local gateway lock isolation** (`722aa96e`): gateway scoped
+  locks live outside the agent home by design, so the home isolation
+  did not cover them — xdist workers collided on identical test
+  identities (the whatsapp connect tests failed "session already in
+  use" under 4 workers) and the suite left lock files in the
+  developer's real `~/.local/state`. Now isolated per worker.
+- **One shared platform-mock decision point per worker** (`8acb5ee0`):
+  the e2e and gateway conftests each installed their own
+  discord/telegram mocks gated on import state, so whichever ran first
+  in an xdist worker decided the binding — a bare MagicMock baked into
+  the production modules failed 50 gateway Discord tests in mixed
+  workers. The comprehensive shared mocks now install once, in the root
+  conftest, before any platform module import; conftest contracts are
+  pinned by `tests/test_conftest_hygiene.py`.
 - **Hermetic e2e agent-loop coverage** (`ee2fadbb`): drives
   `AIAgent.run_conversation()` end to end with the LLM client as the
   only seam — a real `write_file` tool call executes through the
