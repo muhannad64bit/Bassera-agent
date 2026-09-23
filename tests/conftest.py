@@ -21,6 +21,7 @@ test runner at ``scripts/run_tests.sh``.
 
 import asyncio
 import atexit
+import importlib.util
 import os
 import re
 import shutil
@@ -74,6 +75,38 @@ for _sub in ("sessions", "cron", "memories", "skills", "logs", "plugins", "cache
     os.makedirs(os.path.join(_TEST_HOME_ROOT, _sub), exist_ok=True)
 
 atexit.register(shutil.rmtree, _TEST_HOME_ROOT, ignore_errors=True)
+
+
+# ── Platform-library mocks (discord / telegram / slack) ─────────────────────
+#
+# The gateway platform tests are written against comprehensive mocks of the
+# discord/telegram libraries (they assert on fake classes like
+# discord.ForumChannel / telegram ChatType constants). Those mocks must be
+# installed ONCE PER WORKER, BEFORE any test module or directory conftest can
+# import gateway.platforms.* — this conftest is the only file pytest
+# guarantees to import first in every worker.
+#
+# History: the e2e and gateway conftests each used to install their own
+# mocks, gated on IMPORT STATE ("x" in sys.modules) rather than
+# installation — so whichever ran first in an xdist worker decided the
+# binding, and the e2e conftest's bare MagicMock, installed over the real
+# (installed) discord.py, got baked into gateway.platforms.discord at
+# import time. Every gateway Discord test in those workers then failed
+# (the 50-failure full-suite regression). Rebinding cached modules
+# mid-worker (reload/purge) is NOT a fix: it splits class identities
+# across two generations (two MessageType enums compare unequal). The
+# mocks therefore live in tests/platform_mocks.py and are installed
+# here, exactly once, idempotently (sentinel-checked).
+def _load_platform_mocks():
+    _path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "platform_mocks.py")
+    _spec = importlib.util.spec_from_file_location("bassera_platform_mocks", _path)
+    _mod = importlib.util.module_from_spec(_spec)
+    sys.modules["bassera_platform_mocks"] = _mod
+    _spec.loader.exec_module(_mod)
+    return _mod
+
+
+_load_platform_mocks().install_platform_mocks()
 
 
 # ── Credential env-var filter ──────────────────────────────────────────────
