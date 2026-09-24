@@ -45,7 +45,7 @@ change to a security-relevant surface.
 | `BASSERA_HOME` / `BASSERA_HOME` | path indirection; per-profile isolation | Protected | `tests/test_bassera_home_alias.py` |
 | `-p <value>` argv (profile pre-parser) | shape-check before claim — foreign programs' `-p` flags (pytest) can no longer hijack the home at import | Protected | `stability` commit 6e6125c5 (regression: import smoke under `-p no:cacheprovider`) |
 | Secrets in tool results/logs | `agent/redact.py` redaction; audit log redacts before write | Protected | `tests/agent/test_redact.py`, `tests/tools/test_approval_audit.py` (secret-in-command test) |
-| Subprocess env leakage | HOME isolation for subprocesses; blocklist of credential vars for `execute_code` children | Partial | `tests/tools/test_local_env_blocklist.py`, `tests/tools/test_code_execution.py` — blocklist is pattern-based; new exotic credential var names can slip through |
+| Subprocess env leakage | HOME isolation for subprocesses; ALLOWLIST for `execute_code` children (only granted vars pass — `_BASSERA_FORCE_` prefix or env_passthrough config); blocklist for terminal (user) commands | Protected | `tests/tools/test_local_env_blocklist.py` (`TestCodeExecEnvAllowlist`), `tests/tools/test_code_execution.py` |
 
 ### 2.2 File writes
 
@@ -56,7 +56,7 @@ change to a security-relevant surface.
 | Same paths via **file tools** (not shell) | static deny list `WRITE_DENIED_PATHS` + prefixes, checked at write time | Protected | `tests/tools/test_write_deny.py`, `test_file_write_safety.py` |
 | macOS user temp dir | exempted from sensitive-path prefix (realpath TMPDIR under `/private/var/`) — the exemption is root-scoped to OS temp dirs only | Protected | `tests/tools/test_file_staleness.py` |
 | Memory files (prompt-injected content) | `_scan_memory_content` blocks injection/exfiltration patterns + invisible Unicode before an entry is accepted | Protected | memory tool tests (security-scan paths in `test_memory_tool.py`) |
-| Workspace escape (skills, MCP downloads) | `tools/path_security.py` `validate_within_dir` + traversal checks | Partial | applied at the listed call sites (skill manager, cron, credential files); any NEW download path must adopt it — no central choke point | 
+| Workspace escape (skills, MCP downloads) | `tools/path_security.py` `validate_within_dir` + `secure_download_destination` central choke point (adopted by vision downloads and tirith release installs; every surface writing remote bytes to disk must pass through it) | Protected | `tests/tools/test_path_security_choke.py` | 
 
 ### 2.3 Subprocess spawning (terminal)
 
@@ -96,15 +96,29 @@ change to a security-relevant surface.
 | Weak credential guard (obviously-invalid tokens) | startup rejection of placeholder/short tokens | Protected | `tests/gateway/test_weak_credential_guard.py` |
 | Session-key confusion (approval scoped to wrong session) | per-thread approval state + contextvar hygiene (stale ident guard, `_UNSET` sentinel reset) | Protected | `tests/tools/test_interrupt.py`, `test_command_guards.py` |
 
+### 2.7 TUI WebSocket gateway
+
+| Entry | Protection | Status | Pinned by |
+|---|---|---|---|
+| WS handshake (browser/remote TUI frontends) | per-launch session token (query param or `X-Bassera-Token` header), checked before accept; mismatch closes 1008; the mounted app ALWAYS has a token; default bind 127.0.0.1 | Protected | `tests/test_tui_gateway_ws.py` (auth gate + app factory) |
+| Oversized frames | 1 MiB limit; one `-32701` error then close | Protected | `tests/test_tui_gateway_ws.py`, live-verified |
+| Handler crash text in `-32000` responses | raw exception text embedded — fine for localhost; sanitize before any non-localhost bind | Partial | design doc §6.2 |
+| Events during detached sessions (between disconnect and resume) | unspecified placeholder transport | Partial | design doc §6.3 |
+
 ## 3. Residual risks (accepted / open)
 
-1. **Tirith fail-open**: with no network and no cached runtime, the
-   semantic command layer is absent; the regex layer remains. Accepted
-   (deliberate: fail-closed would brick offline installs).
-2. **Credential-env blocklist is pattern-based**: exotic env var names
-   for new tools could leak into `execute_code` children until added.
-3. **No central choke point for path validation of downloads**: each
-   download surface must adopt `validate_within_dir` itself.
+1. **Tirith fail-open (default)**: with no network and no cached runtime,
+   the semantic command layer is absent; the regex layer remains. Default
+   is deliberate (fail-closed would brick offline installs), but strict
+   deployments can set `tirith_fail_open: false` in config.yaml — the
+   fail-closed behavior is pinned by `TestTirithScan` fail-closed tests.
+2. ~~Credential-env blocklist is pattern-based~~ **CLOSED**:
+   `execute_code` children now run under an explicit allowlist
+   (`_CODE_EXEC_ENV_ALLOWLIST` in `tools/environments/local.py`);
+   exotic credential var names cannot reach model-written code at all.
+3. ~~No central choke point for path validation of downloads~~ **CLOSED**:
+   `secure_download_destination` in `tools/path_security.py`; vision and
+   tirith adoptions are pinned by `tests/tools/test_path_security_choke.py`.
 4. **Prompt-injection into the LLM itself** can still cause *proposals*
    of dangerous actions — that is accepted by design; ADR-003 requires
    policy-before-execution, the audit trail records what ran, and the

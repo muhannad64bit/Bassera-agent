@@ -142,7 +142,16 @@ async def _download_image(image_url: str, destination: Path, max_retries: int = 
         Exception: If download fails after all retries
     """
     import asyncio
-    
+
+    from tools.path_security import secure_download_destination
+
+    # Central choke point: the destination must live under the OS temp dir —
+    # enforces the "never the process CWD" invariant even if a future caller
+    # derives the filename from URL or header content.
+    secure_download_destination(
+        destination, Path(tempfile.gettempdir()), label="vision image"
+    )
+
     # Create parent directories if they don't exist
     destination.parent.mkdir(parents=True, exist_ok=True)
     

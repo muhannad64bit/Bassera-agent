@@ -33,6 +33,7 @@ import tempfile
 import threading
 import time
 import urllib.request
+from pathlib import Path
 
 from bassera_constants import get_bassera_home
 
@@ -306,6 +307,15 @@ def _install_tirith(*, log_failures: bool = True) -> tuple[str | None, str]:
 
         logger.info("tirith not found — downloading latest release for %s...", target)
 
+        # Central download choke point: release artifacts must stay inside
+        # the install tmpdir even if a future change derives a filename from
+        # remote content.
+        from tools.path_security import secure_download_destination
+        for _dest in (archive_path, checksums_path, sig_path, cert_path):
+            secure_download_destination(
+                Path(_dest), Path(tmpdir), label="tirith release"
+            )
+
         try:
             _download_file(f"{base_url}/{archive_name}", archive_path)
             _download_file(f"{base_url}/checksums.txt", checksums_path)
@@ -352,7 +362,13 @@ def _install_tirith(*, log_failures: bool = True) -> tuple[str | None, str]:
                     if ".." in member.name:
                         continue
                     member.name = "tirith"
-                    tar.extract(member, tmpdir)
+                    # filter="data" blocks absolute paths, parent-dir
+                    # traversal, device/special files, and unsafe
+                    # permissions inside the archive — belt-and-suspenders
+                    # on top of the single-member allowlist, and the
+                    # Python 3.14+ required form (bare extracts start
+                    # being rejected there).
+                    tar.extract(member, tmpdir, filter="data")
                     break
             else:
                 log("tirith binary not found in archive")
