@@ -743,8 +743,11 @@ def run_job(job: dict) -> tuple[bool, str, str, Optional[str]]:
     logger.info("Prompt: %s", prompt[:100])
 
     # Mark this as a cron session so the approval system can apply cron_mode.
-    # This env var is process-wide and persists for the lifetime of the
-    # scheduler process — every job this process runs is a cron job.
+    # Scoped to THIS job run: the scheduler may share a process with the
+    # gateway, and a process-wide value would apply cron approval rules to
+    # every later non-cron agent run in the same process. The finally block
+    # below restores the previous value.
+    _prior_cron_session = os.environ.get("BASSERA_CRON_SESSION")
     os.environ["BASSERA_CRON_SESSION"] = "1"
 
     try:
@@ -1013,6 +1016,10 @@ def run_job(job: dict) -> tuple[bool, str, str, Optional[str]]:
 
     finally:
         # Clean up injected env vars so they don't leak to other jobs
+        if _prior_cron_session is None:
+            os.environ.pop("BASSERA_CRON_SESSION", None)
+        else:
+            os.environ["BASSERA_CRON_SESSION"] = _prior_cron_session
         for key in (
             "BASSERA_SESSION_PLATFORM",
             "BASSERA_SESSION_CHAT_ID",

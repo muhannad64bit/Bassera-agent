@@ -673,6 +673,49 @@ class TestRunJobSessionPersistence:
         assert call_args[0][1] == "cron_complete"
         fake_db.close.assert_called_once()
 
+    def test_run_job_cron_session_env_scoped_to_job(self, tmp_path):
+        """BASSERA_CRON_SESSION is set while the job runs and removed after.
+
+        The scheduler may share a process with the gateway; a leaked value
+        would apply cron approval rules (deny dangerous commands) to every
+        later NON-cron agent run in the same process.
+        """
+        job = {"id": "test-job", "name": "test", "prompt": "hello"}
+        seen_during_run = []
+
+        with patch("cron.scheduler._bassera_home", tmp_path), \
+             patch("cron.scheduler._resolve_origin", return_value=None), \
+             patch("dotenv.load_dotenv"), \
+             patch("bassera_state.SessionDB", return_value=MagicMock()), \
+             patch(
+                 "bassera_cli.runtime_provider.resolve_runtime_provider",
+                 return_value={
+                     "api_key": "test-key",
+                     "base_url": "https://example.invalid/v1",
+                     "provider": "openrouter",
+                     "api_mode": "chat_completions",
+                 },
+             ), \
+             patch("run_agent.AIAgent") as mock_agent_cls:
+            mock_agent = MagicMock()
+
+            def _capture_run(*args, **kwargs):
+                seen_during_run.append(os.environ.get("BASSERA_CRON_SESSION"))
+                return {"final_response": "ok"}
+
+            mock_agent.run_conversation.side_effect = _capture_run
+            mock_agent_cls.return_value = mock_agent
+
+            import os as _os
+            _os.environ.pop("BASSERA_CRON_SESSION", None)
+            success, output, final_response, error = run_job(job)
+
+        assert success is True
+        assert seen_during_run == ["1"], "cron session flag must be set during the job"
+        assert "BASSERA_CRON_SESSION" not in os.environ, (
+            "run_job leaked BASSERA_CRON_SESSION into the process environment"
+        )
+
     def test_run_job_empty_response_returns_empty_not_placeholder(self, tmp_path):
         """Empty final_response should stay empty for delivery logic (issue #2234).
 
