@@ -878,7 +878,7 @@ def _workspace_root(dir: Path) -> Path:
 
 
 def _tui_need_npm_install(root: Path) -> bool:
-    """True when @hermes/ink is missing or installed deps differ from the lockfile."""
+    """True when @bassera/ink is missing or installed deps differ from the lockfile."""
     entry = root / "dist" / "entry.js"
     ws_root = _workspace_root(root)
     lock = ws_root / "package-lock.json"
@@ -952,7 +952,7 @@ def _tui_build_needed(tui_dir: Path) -> bool:
 
 
 def _bassera_ink_bundle_stale(tui_dir: Path) -> bool:
-    ink_root = tui_dir / "packages" / "hermes-ink"
+    ink_root = tui_dir / "packages" / "bassera-ink"
     bundle = ink_root / "dist" / "ink-bundle.js"
     if not bundle.exists():
         return True
@@ -1092,7 +1092,7 @@ def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
         if _bassera_ink_bundle_stale(tui_dir):
             result = subprocess.run(
                 [npm, "run", "build"],
-                cwd=str(tui_dir / "packages" / "hermes-ink"),
+                cwd=str(tui_dir / "packages" / "bassera-ink"),
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
@@ -4336,6 +4336,18 @@ def cmd_doctor(args):
     run_doctor(args)
 
 
+def cmd_tui_gateway(args):
+    """Serve the TUI gateway over an authenticated WebSocket."""
+    try:
+        from tui_gateway.app import run_ws_gateway
+    except ImportError as exc:
+        print(f"tui-gateway requires starlette/uvicorn: {exc}")
+        print(f"Install them with:  {sys.executable} -m pip install 'starlette' 'uvicorn[standard]'")
+        raise SystemExit(1)
+
+    run_ws_gateway(host=args.host, port=args.port)
+
+
 def cmd_dump(args):
     """Dump setup summary for support/debugging."""
     from bassera_cli.dump import run_dump
@@ -7338,6 +7350,29 @@ For more help on a command:
         "--fix", action="store_true", help="Attempt to fix issues automatically"
     )
     doctor_parser.set_defaults(func=cmd_doctor)
+
+    # =========================================================================
+    # tui-gateway command — WebSocket transport for browser/remote TUI clients
+    # =========================================================================
+    tui_ws_parser = subparsers.add_parser(
+        "tui-gateway",
+        help="Serve the TUI gateway over an authenticated WebSocket",
+        description=(
+            "Run the TUI gateway JSON-RPC server over WebSocket (browser/"
+            "remote TUI frontends). Binds 127.0.0.1 by default and REQUIRES "
+            "a per-launch session token: set BASSERA_TUI_GATEWAY_TOKEN or "
+            "one is generated and printed at startup."
+        ),
+    )
+    tui_ws_parser.add_argument(
+        "--host", default="127.0.0.1",
+        help="Bind address (default 127.0.0.1 — local interface only)",
+    )
+    tui_ws_parser.add_argument(
+        "--port", type=int, default=None,
+        help="Bind port (default: pick a free port)",
+    )
+    tui_ws_parser.set_defaults(func=cmd_tui_gateway)
 
     # =========================================================================
     # dump command

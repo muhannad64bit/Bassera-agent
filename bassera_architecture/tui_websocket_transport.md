@@ -85,7 +85,14 @@ detached, socket closed, and one summary log line with counters
 (messages / parse_errors / dispatch_crashes / send_failures and the
 disconnect reason) capped to a 240-char preview.
 
-## 5. Current integration state (WIP)
+## 5. Current integration state
+
+**MOUNTED (2026-09).** The transport is now reachable in production via
+`tui_gateway/app.py` (`bassera tui-gateway`): a Starlette app exposing
+`/ws` (the authenticated transport) and `/health`, bound to 127.0.0.1
+by default. The auth gate and frame size limit from §6 are implemented
+and live-verified; `handle_ws(ws, token=None)` without a token remains
+available for process-internal use only.
 
 - `handle_ws` is implemented and unit-tested
   (`tests/test_tui_gateway_ws.py`) but **no production route mounts
@@ -100,21 +107,19 @@ disconnect reason) capped to a 240-char preview.
 
 ## 6. Open questions / gaps (must resolve before mounting)
 
-1. **No authentication on the WS handler.** `handle_ws` accepts any
-   connection and immediately enters the JSON-RPC loop. Before this is
-   reachable in production it needs at minimum the pairing/token
-   discipline used by the messaging gateway (see the threat model,
-   §2.6), or binding to localhost with a per-launch session token in
-   the ready handshake.
+1. ~~No authentication on the WS handler~~ **CLOSED**: per-launch session
+   token (query param or `X-Bassera-Token` header) checked BEFORE the
+   handshake is accepted; mismatch closes with 1008. The mounted app
+   always enforces a token (explicit, `BASSERA_TUI_GATEWAY_TOKEN`, or
+   generated at startup).
 2. **Error text disclosure**: `-32000` embeds raw exception text into
    frames sent to the peer. For a localhost TUI this is fine; for a
    remotely reachable socket it leaks internals.
 3. **Detached-session buffering**: what happens to events emitted
    between disconnect and resume is unspecified in the placeholder
    transport.
-4. **No frame size limit** on `receive_text()` — a client can send an
-   arbitrarily large line. A max-frame-size guard (respond with an
-   error, then close) is needed before mounting.
+4. ~~No frame size limit~~ **CLOSED**: frames over 1 MiB receive one
+   `-32701` ("request too large") error and the connection closes.
 5. **Backpressure**: off-loop `write` blocks the calling thread up to
    10 s per frame. Emitters in hot loops should treat `False` as
    stop-signaling (they do today), but a slow client can still stall

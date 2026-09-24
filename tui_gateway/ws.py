@@ -96,7 +96,51 @@ def _disable_nagle(ws: Any) -> None:
         pass
 
 
-async def handle_ws(ws: Any) -> None:
+# Maximum accepted JSON-RPC frame. A client can send an arbitrarily large
+# line otherwise; anything bigger than this gets a -32701 error and the
+# connection is closed (tui_websocket_transport.md §6.4).
+_MAX_FRAME_BYTES = 1024 * 1024
+
+
+def _extract_ws_token(ws: Any) -> str | None:
+    """Pull the session token from the handshake (query param or header)."""
+    scope = getattr(ws, "scope", None) or {}
+    query = (scope.get("query_string") or b"").decode("utf-8", "replace")
+    for part in query.split("&"):
+        if part.startswith("token="):
+            from urllib.parse import unquote
+            return unquote(part[len("token="):])
+    headers = scope.get("headers") or {}
+    try:
+        for name, value in headers.items() if isinstance(headers, dict) else headers:
+            if bytes(name).lower() == b"x-bassera-token":
+                return bytes(value).decode("utf-8", "replace")
+    except Exception:
+        pass
+    return None
+
+
+async def handle_ws(ws: Any, *, token: str | None = None) -> None:
+    """Serve one WebSocket client.
+
+    ``token`` enables the auth gate (tui_websocket_transport.md §6.1): a
+    per-launch session token that the client must present in the
+    handshake (``?token=...`` or the ``X-Bassera-Token`` header). Without
+    a token the handler is unauthenticated — acceptable ONLY for
+    process-internal use (tests) or when the socket is otherwise
+    protected; the ASGI app in tui_gateway/app.py always enforces one.
+    A mismatched token rejects the handshake before any JSON-RPC traffic.
+    """
+    if token is not None:
+        presented = _extract_ws_token(ws)
+        if presented != token:
+            try:
+                await ws.close(code=1008)  # policy violation
+            except Exception:
+                pass
+            _log.info("ws auth rejected peer=%s (bad or missing token)", _ws_peer_label(ws))
+            return
+
     peer = _ws_peer_label(ws)
     transport: WSTransport | None = None
     messages = 0
@@ -139,6 +183,24 @@ async def handle_ws(ws: Any) -> None:
                 break
 
             messages += 1
+
+            if len(raw) > _MAX_FRAME_BYTES:
+                # Oversized frame: answer once with a JSON-RPC error and
+                # close — a client must not be able to buffer unbounded
+                # input (tui_websocket_transport.md §6.4).
+                try:
+                    await transport.write_async(
+                        {
+                            "jsonrpc": "2.0",
+                            "error": {"code": -32701, "message": "request too large"},
+                            "id": None,
+                        }
+                    )
+                except Exception:
+                    pass
+                disconnect_reason = "frame_too_large"
+                break
+
             try:
                 req = json.loads(raw.strip())
             except json.JSONDecodeError:
