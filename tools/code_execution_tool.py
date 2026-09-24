@@ -791,12 +791,16 @@ def _execute_remote(
         if tz:
             env_prefix += f" TZ={tz}"
 
-        # Execute the script on the remote backend
+        # Execute the script on the remote backend. env_policy="code_exec"
+        # gives MODEL-WRITTEN code an allowlist environment on the local
+        # backend: shell-inherited credential vars (any name the blocklist
+        # never anticipated) cannot be read by untrusted code.
         logger.info("Executing code on %s backend (task %s)...",
                      env_type, effective_task_id[:8])
         script_result = env.execute(
             f"cd {quoted_sandbox_dir} && {env_prefix} python3 script.py",
             timeout=timeout,
+            env_policy="code_exec",
         )
 
         stdout_text = script_result.get("output", "")

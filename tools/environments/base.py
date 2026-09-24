@@ -700,9 +700,21 @@ class BaseEnvironment(ABC):
         *,
         timeout: int | None = None,
         stdin_data: str | None = None,
+        env_policy: str = "default",
     ) -> dict:
-        """Execute a command, return {"output": str, "returncode": int}."""
+        """Execute a command, return {"output": str, "returncode": int}.
+
+        ``env_policy="code_exec"`` asks the backend to give the child an
+        ALLOWLIST environment instead of the default blocklist one — used by
+        execute_code, where the command is MODEL-WRITTEN code that must not
+        see shell-inherited credential vars. Backends that don't implement
+        the policy ignore it (docker/ssh containers don't inherit the
+        agent's shell environment in the first place).
+        """
         self._before_execute()
+
+        prior_policy = getattr(self, "_env_policy", "default")
+        self._env_policy = env_policy
 
         exec_command, sudo_stdin = self._prepare_command(command)
         # Guard against the `A && B &` subshell-wait trap: bash forks a
@@ -733,28 +745,34 @@ class BaseEnvironment(ABC):
         # Use login shell if snapshot failed (so user's profile still loads)
         login = not self._snapshot_ready
 
-        proc = self._run_bash(
-            wrapped, login=login, timeout=effective_timeout, stdin_data=effective_stdin
-        )
         try:
-            result = self._wait_for_process(proc, timeout=effective_timeout)
-        except (KeyboardInterrupt, SystemExit):
-            # An interrupt landing between the subprocess spawn (above) and
-            # the poll loop's own except-block would orphan the process
-            # group: python exits, the child is reparented to init, and it
-            # keeps running (the sleep-300-survives-SIGTERM scenario). Kill
-            # the group before letting the interrupt propagate. When the
-            # interrupt already hit inside _wait_for_process, this is an
-            # idempotent second kill (dead groups raise ProcessLookupError,
-            # which _kill_process swallows).
+            proc = self._run_bash(
+                wrapped, login=login, timeout=effective_timeout, stdin_data=effective_stdin
+            )
             try:
-                self._kill_process(proc)
-            except Exception:
-                pass  # cleanup is best-effort
-            raise
-        self._update_cwd(result)
+                result = self._wait_for_process(proc, timeout=effective_timeout)
+            except (KeyboardInterrupt, SystemExit):
+                # An interrupt landing between the subprocess spawn (above) and
+                # the poll loop's own except-block would orphan the process
+                # group: python exits, the child is reparented to init, and it
+                # keeps running (the sleep-300-survives-SIGTERM scenario). Kill
+                # the group before letting the interrupt propagate. When the
+                # interrupt already hit inside _wait_for_process, this is an
+                # idempotent second kill (dead groups raise ProcessLookupError,
+                # which _kill_process swallows).
+                try:
+                    self._kill_process(proc)
+                except Exception:
+                    pass  # cleanup is best-effort
+                raise
+            self._update_cwd(result)
 
-        return result
+            return result
+        finally:
+            if prior_policy == "default":
+                self.__dict__.pop("_env_policy", None)
+            else:
+                self._env_policy = prior_policy
 
     # ------------------------------------------------------------------
     # Shared helpers

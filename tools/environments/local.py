@@ -15,6 +15,45 @@ _IS_WINDOWS = platform.system() == "Windows"
 # Bassera-internal env vars that should NOT leak into terminal subprocesses.
 _BASSERA_PROVIDER_ENV_FORCE_PREFIX = "_BASSERA_FORCE_"
 
+# ---------------------------------------------------------------------------
+# Code-execution env allowlist
+#
+# The terminal tool runs USER commands: they keep (nearly) the full
+# environment, minus the provider blocklist. execute_code runs MODEL-WRITTEN
+# code: it gets an explicit ALLOWLIST instead — a credential var with a name
+# the blocklist never anticipated (a new tool, an exotic spelling) cannot leak
+# into untrusted code. Users can grant specific vars via the
+# ``_BASSERA_FORCE_<NAME>`` prefix or the env_passthrough config.
+# ---------------------------------------------------------------------------
+_CODE_EXEC_ENV_ALLOWLIST = frozenset({
+    # process basics
+    "PATH", "HOME", "TMPDIR", "TMP", "TEMP", "PWD", "SHELL",
+    "USER", "LOGNAME", "TERM", "TZ",
+    # locale/encoding
+    "LANG", "LC_ALL",
+    # python behavior
+    "PYTHONUNBUFFERED", "PYTHONIOENCODING", "PYTHONDONTWRITEBYTECODE",
+    # TLS/corporate proxies
+    "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE",
+    # XDG (system tools in the sandbox read these)
+    "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME",
+    # the generated sandbox-tools module needs these to reach the RPC bridge
+    "BASSERA_RPC_DIR", "BASSERA_RPC_SOCKET",
+})
+
+
+def _is_code_exec_env_allowed(key: str) -> bool:
+    """True when *key* may pass into an execute_code child process."""
+    if key in _CODE_EXEC_ENV_ALLOWLIST or key.startswith("LC_"):
+        return True
+    if key.startswith(_BASSERA_PROVIDER_ENV_FORCE_PREFIX):
+        return True  # explicit user grant
+    try:
+        from tools.env_passthrough import is_env_passthrough
+        return is_env_passthrough(key)
+    except Exception:
+        return False
+
 
 def _build_provider_env_blocklist() -> frozenset:
     """Derive the blocklist from provider, tool, and gateway config."""
@@ -183,20 +222,38 @@ _SANE_PATH = (
 )
 
 
-def _make_run_env(env: dict) -> dict:
-    """Build a run environment with a sane PATH and provider-var stripping."""
+def _make_run_env(env: dict, policy: str = "default") -> dict:
+    """Build a run environment with a sane PATH and provider-var stripping.
+
+    ``policy="code_exec"`` inverts the filter for the base environment:
+    only explicitly allowed vars pass (see _CODE_EXEC_ENV_ALLOWLIST).
+    The per-instance ``env`` overrides always pass — they are set by
+    Bassera code, not inherited from the user's shell.
+    """
     try:
         from tools.env_passthrough import is_env_passthrough as _is_passthrough
     except Exception:
         _is_passthrough = lambda _: False  # noqa: E731
 
-    merged = dict(os.environ | env)
+    merged = dict(os.environ)
     run_env = {}
     for k, v in merged.items():
         if k.startswith(_BASSERA_PROVIDER_ENV_FORCE_PREFIX):
             real_key = k[len(_BASSERA_PROVIDER_ENV_FORCE_PREFIX):]
             run_env[real_key] = v
+        elif policy == "code_exec":
+            if _is_code_exec_env_allowed(k):
+                run_env[k] = v
         elif k not in _BASSERA_PROVIDER_ENV_BLOCKLIST or _is_passthrough(k):
+            run_env[k] = v
+    # Per-instance overrides are set by Bassera code (docker/ssh env
+    # passthrough, task overrides), not inherited from the user's shell —
+    # they always pass, under the default blocklist filter.
+    for k, v in dict(env).items():
+        if k.startswith(_BASSERA_PROVIDER_ENV_FORCE_PREFIX):
+            real_key = k[len(_BASSERA_PROVIDER_ENV_FORCE_PREFIX):]
+            run_env[real_key] = v
+        elif k not in _BASSERA_PROVIDER_ENV_BLOCKLIST:
             run_env[k] = v
     existing_path = run_env.get("PATH", "")
     if "/usr/bin" not in existing_path.split(":"):
@@ -256,7 +313,7 @@ class LocalEnvironment(BaseEnvironment):
                   stdin_data: str | None = None) -> subprocess.Popen:
         bash = _find_bash()
         args = [bash, "-l", "-c", cmd_string] if login else [bash, "-c", cmd_string]
-        run_env = _make_run_env(self.env)
+        run_env = _make_run_env(self.env, policy=getattr(self, "_env_policy", "default"))
 
         proc = subprocess.Popen(
             args,

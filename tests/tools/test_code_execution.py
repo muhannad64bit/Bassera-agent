@@ -132,8 +132,11 @@ class TestExecuteCodeRemoteTempDir(unittest.TestCase):
             def get_temp_dir(self):
                 return "/data/data/com.termux/files/usr/tmp"
 
-            def execute(self, command, cwd=None, timeout=None):
-                self.commands.append((command, cwd, timeout))
+            def execute(self, command, cwd=None, timeout=None, env_policy="default"):
+                # The sandbox launch passes env_policy="code_exec" (the
+                # allowlist env for model-written code); a fake env accepts
+                # it like the real base class does.
+                self.commands.append((command, cwd, timeout, env_policy))
                 if "command -v python3" in command:
                     return {"output": "OK\n"}
                 if "python3 script.py" in command:
@@ -151,8 +154,14 @@ class TestExecuteCodeRemoteTempDir(unittest.TestCase):
 
         self.assertEqual(result["status"], "success")
         mkdir_cmd = env.commands[1][0]
-        run_cmd = next(cmd for cmd, _, _ in env.commands if "python3 script.py" in cmd)
+        run_cmd = next(cmd for cmd, _, _, _ in env.commands if "python3 script.py" in cmd)
         cleanup_cmd = env.commands[-1][0]
+        # The sandbox launch must request the allowlist env policy for
+        # model-written code (see TestCodeExecEnvAllowlist).
+        run_policy = next(
+            policy for cmd, _, _, policy in env.commands if "python3 script.py" in cmd
+        )
+        self.assertEqual(run_policy, "code_exec")
         self.assertIn("mkdir -p /data/data/com.termux/files/usr/tmp/bassera_exec_", mkdir_cmd)
         self.assertIn("BASSERA_RPC_DIR=/data/data/com.termux/files/usr/tmp/bassera_exec_", run_cmd)
         self.assertIn("rm -rf /data/data/com.termux/files/usr/tmp/bassera_exec_", cleanup_cmd)

@@ -320,3 +320,85 @@ class TestSanePathIncludesHomebrew:
             result = _make_run_env({})
         # Should keep existing PATH unchanged
         assert result["PATH"] == "/usr/bin:/bin"
+
+
+class TestCodeExecEnvAllowlist:
+    """execute_code children get an ALLOWLIST env, not a blocklist env.
+
+    The blocklist can never anticipate every credential-var name a user's
+    shell exports (a new tool, an exotic spelling). Model-written code is
+    untrusted: it must only see vars explicitly granted — the allowlist,
+    the _BASSERA_FORCE_ prefix, or the env_passthrough config.
+    """
+
+    @staticmethod
+    def _run_code_exec(extra_os_env=None):
+        captured = {}
+        fake_interrupt = threading.Event()
+        test_environ = {
+            "PATH": "/usr/bin:/bin",
+            "HOME": "/home/user",
+            "USER": "testuser",
+        }
+        if extra_os_env:
+            test_environ.update(extra_os_env)
+
+        env = LocalEnvironment(cwd="/tmp", timeout=10, env={})
+
+        with patch("tools.environments.local._find_bash", return_value="/bin/bash"), \
+             patch("subprocess.Popen", side_effect=_make_fake_popen(captured)), \
+             patch("tools.terminal_tool._interrupt_event", fake_interrupt), \
+             patch.dict(os.environ, test_environ, clear=True):
+            env.execute("echo hello", env_policy="code_exec")
+
+        return captured.get("env", {})
+
+    def test_unknown_credential_var_does_not_leak(self):
+        """A var the blocklist never knew (EXOTIC_NEW_TOOL_API_KEY) must
+        not reach model-written code — the failure mode the blocklist
+        design could never fix."""
+        result_env = self._run_code_exec(
+            extra_os_env={"EXOTIC_NEW_TOOL_API_KEY": "sk-exotic-123"}
+        )
+        assert "EXOTIC_NEW_TOOL_API_KEY" not in result_env
+
+    def test_known_provider_var_still_blocked(self):
+        result_env = self._run_code_exec(extra_os_env={"OPENAI_API_KEY": "sk-x"})
+        assert "OPENAI_API_KEY" not in result_env
+
+    def test_basics_pass_through(self):
+        result_env = self._run_code_exec(
+            extra_os_env={"TMPDIR": "/tmp/ok", "LANG": "C.UTF-8"}
+        )
+        assert result_env.get("PATH")
+        assert result_env.get("HOME") == "/home/user"
+        assert result_env.get("TMPDIR") == "/tmp/ok"
+        assert result_env.get("LANG") == "C.UTF-8"
+
+    def test_rpc_bridge_vars_pass(self):
+        """The generated sandbox-tools module needs the RPC bridge vars —
+        dropping them would break every tool call from sandboxed code."""
+        result_env = self._run_code_exec(
+            extra_os_env={"BASSERA_RPC_DIR": "/tmp/rpc"}
+        )
+        assert result_env.get("BASSERA_RPC_DIR") == "/tmp/rpc"
+
+    def test_force_prefix_grants_vars(self):
+        result_env = self._run_code_exec(
+            extra_os_env={"_BASSERA_FORCE_MY_CUSTOM_TOKEN": "tok"}
+        )
+        assert result_env.get("MY_CUSTOM_TOKEN") == "tok"
+
+    def test_terminal_policy_unaffected(self):
+        """The default (terminal) policy still passes non-blocklisted vars —
+        user commands like `aws` keep working with the user's own env."""
+        result_env = _run_with_env(
+            extra_os_env={"MY_HARMLESS_USER_VAR": "visible"}
+        )
+        assert result_env.get("MY_HARMLESS_USER_VAR") == "visible"
+
+    def test_lc_category_vars_pass(self):
+        result_env = self._run_code_exec(
+            extra_os_env={"LC_MESSAGES": "en_US.UTF-8"}
+        )
+        assert result_env.get("LC_MESSAGES") == "en_US.UTF-8"
