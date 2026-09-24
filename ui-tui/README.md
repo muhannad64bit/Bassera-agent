@@ -1,9 +1,9 @@
-# Hermes TUI
+# Bassera TUI
 
-React + Ink terminal UI for Hermes. TypeScript owns the screen. Python owns sessions, tools, model calls, and most command logic.
+React + Ink terminal UI for Bassera. TypeScript owns the screen. Python owns sessions, tools, model calls, and most command logic.
 
 ```bash
-hermes --tui
+bassera --tui
 ```
 
 ## What runs
@@ -38,7 +38,7 @@ Malformed stdout lines are treated as protocol noise and surfaced as `gateway.pr
 From the repo root, the normal path is:
 
 ```bash
-hermes --tui
+bassera --tui
 ```
 
 The CLI expects `ui-tui/node_modules` to exist. If the TUI deps are missing:
@@ -170,7 +170,7 @@ Notes:
 - Completion requests are debounced by 60 ms. Input starting with `/` uses `complete.slash`. A trailing token that starts with `./`, `../`, `~/`, `/`, or `@` uses `complete.path`.
 - Text pastes are inserted inline directly into the draft. Nothing is newline-flattened.
 - `Ctrl+G` writes the current draft, including any multiline buffer, to a temp file, temporarily swaps screen buffers, launches `$EDITOR`, then restores the TUI and submits the saved text if the editor exits cleanly.
-- Input history is stored in `~/.hermes/.hermes_history` or under `BASSERA_HOME`.
+- Input history is stored in `~/.bassera/.bassera_history` or under `BASSERA_HOME`.
 
 ## Rendering
 
@@ -279,7 +279,7 @@ Current color overrides:
 
 ```text
 ui-tui/
-  packages/hermes-ink/   forked Ink renderer (local dep)
+  packages/bassera-ink/   forked Ink renderer (local dep)
   src/
     entry.tsx            TTY gate + render()
     app.tsx              top-level Ink tree, composes src/app/*
@@ -331,7 +331,7 @@ ui-tui/
       text.ts            text helpers, ANSI detection, previews
 
     types/
-      hermes-ink.d.ts    type declarations for @hermes/ink
+      bassera-ink.d.ts    type declarations for @bassera/ink
 
     __tests__/           vitest suite
 ```
@@ -343,5 +343,5 @@ tui_gateway/
   entry.py               stdio entrypoint
   server.py              RPC handlers and session logic
   render.py              optional rich/ANSI bridge
-  slash_worker.py        persistent HermesCLI subprocess for slash commands
+  slash_worker.py        persistent BasseraCLI subprocess for slash commands
 ```

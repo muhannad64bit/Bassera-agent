@@ -1,4 +1,4 @@
-import { Box, type ScrollBoxHandle, Text } from '@hermes/ink'
+import { Box, type ScrollBoxHandle, Text } from '@bassera/ink'
 import { type ReactNode, type RefObject, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 
 import { FACES } from '../content/faces.js'

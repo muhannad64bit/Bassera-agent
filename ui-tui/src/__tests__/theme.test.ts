@@ -4,7 +4,7 @@ import { DARK_THEME, DEFAULT_THEME, fromSkin, LIGHT_THEME } from '../theme.js'
 
 describe('DEFAULT_THEME', () => {
   it('has brand defaults', () => {
-    expect(DEFAULT_THEME.brand.name).toBe('Hermes Agent')
+    expect(DEFAULT_THEME.brand.name).toBe('Bassera Agent')
     expect(DEFAULT_THEME.brand.prompt).toBe('❯')
     expect(DEFAULT_THEME.brand.tool).toBe('┊')
   })

@@ -1,4 +1,4 @@
-import { Box, Text, useInput } from '@hermes/ink'
+import { Box, Text, useInput } from '@bassera/ink'
 import { useState } from 'react'
 
 import type { Theme } from '../theme.js'

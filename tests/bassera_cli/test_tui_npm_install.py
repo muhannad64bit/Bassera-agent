@@ -15,8 +15,8 @@ def main_mod():
 
 def _touch_ink(root: Path) -> None:
     # The TUI's ink dependency ships as the @bassera scope
-    # (ui-tui/package.json: "@hermes/ink": "file:./packages/hermes-ink"),
-    # matching _tui_need_npm_install's node_modules/@hermes/ink probe.
+    # (ui-tui/package.json: "@bassera/ink": "file:./packages/bassera-ink"),
+    # matching _tui_need_npm_install's node_modules/@bassera/ink probe.
     ink = root / "node_modules" / "@bassera" / "ink" / "package.json"
     ink.parent.mkdir(parents=True, exist_ok=True)
     ink.write_text("{}")

@@ -116,7 +116,7 @@ export function useComposerState({ gw, onClipboardPaste, submitRef }: UseCompose
 
   const openEditor = useCallback(() => {
     const editor = process.env.EDITOR || process.env.VISUAL || 'vi'
-    const file = join(mkdtempSync(join(tmpdir(), 'hermes-')), 'prompt.md')
+    const file = join(mkdtempSync(join(tmpdir(), 'bassera-')), 'prompt.md')
 
     writeFileSync(file, [...inputBuf, input].join('\n'))
     process.stdout.write('\x1b[?1049l')

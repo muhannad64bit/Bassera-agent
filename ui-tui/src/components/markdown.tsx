@@ -1,4 +1,4 @@
-import { Box, Link, Text } from '@hermes/ink'
+import { Box, Link, Text } from '@bassera/ink'
 import { memo, type ReactNode, useMemo } from 'react'
 
 import { highlightLine, isHighlightable } from '../lib/syntax.js'

@@ -1,4 +1,4 @@
-import { Box, Text, useStdout } from '@hermes/ink'
+import { Box, Text, useStdout } from '@bassera/ink'
 
 import { artWidth, caduceus, CADUCEUS_WIDTH, logo, LOGO_WIDTH } from '../banner.js'
 import { flat } from '../lib/text.js'
@@ -27,7 +27,7 @@ export function Banner({ t }: { t: Theme }) {
         <ArtLines lines={logoLines} />
       ) : (
         <Text bold color={t.color.gold}>
-          {t.brand.icon} NOUS HERMES
+          {t.brand.icon} NOUS BASSERA
         </Text>
       )}
 
@@ -168,7 +168,7 @@ export function SessionPanel({ info, sid, t }: SessionPanelProps) {
               - run{' '}
             </Text>
             <Text bold color="yellow">
-              {info.update_command || 'hermes update'}
+              {info.update_command || 'bassera update'}
             </Text>
             <Text bold={false} color="yellow" dimColor>
               {' '}

@@ -1,4 +1,4 @@
-import { Ansi, Box, NoSelect, Text } from '@hermes/ink'
+import { Ansi, Box, NoSelect, Text } from '@bassera/ink'
 import { memo } from 'react'
 
 import { LONG_MSG } from '../config/limits.js'

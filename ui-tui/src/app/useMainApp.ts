@@ -1,4 +1,4 @@
-import { type ScrollBoxHandle, useApp, useHasSelection, useSelection, useStdout, useTerminalTitle } from '@hermes/ink'
+import { type ScrollBoxHandle, useApp, useHasSelection, useSelection, useStdout, useTerminalTitle } from '@bassera/ink'
 import { useStore } from '@nanostores/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -286,10 +286,10 @@ export function useMainApp(gw: GatewayClient) {
   useConfigSync({ gw, setBellOnComplete, setVoiceEnabled, sid: ui.sid })
 
   // ── Terminal tab title ─────────────────────────────────────────────
-  // Show model name + status so users can identify the Hermes tab.
+  // Show model name + status so users can identify the Bassera tab.
   const shortModel = ui.info?.model?.replace(/^.*\//, '') ?? ''
   const titleStatus = ui.busy ? '⏳' : '✓'
-  const terminalTitle = shortModel ? `${titleStatus} ${shortModel} — Hermes` : 'Hermes'
+  const terminalTitle = shortModel ? `${titleStatus} ${shortModel} — Bassera` : 'Bassera'
   useTerminalTitle(terminalTitle)
 
   useEffect(() => {

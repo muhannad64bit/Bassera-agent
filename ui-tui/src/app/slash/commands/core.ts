@@ -69,7 +69,7 @@ export const coreCommands: SlashCommand[] = [
 
   {
     aliases: ['exit', 'q'],
-    help: 'exit hermes',
+    help: 'exit bassera',
     name: 'quit',
     run: (_arg, ctx) => ctx.session.die()
   },
