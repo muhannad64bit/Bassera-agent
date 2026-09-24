@@ -837,3 +837,129 @@ class TestChmodExecuteCombo:
         dangerous, _, _ = detect_dangerous_command(cmd)
         assert dangerous is False
 
+
+
+class TestInteractivePromptPaths:
+    """Cover the human-in-the-loop decision branches of
+    check_all_command_guards: the gateway submit_pending hand-off and
+    every prompt choice (deny / session / always / once). These are the
+    paths an attacker's prompt-injected command actually travels."""
+
+    CMD = "rm -rf /home/user/data"
+
+    @staticmethod
+    def _interactive_env(monkeypatch):
+        monkeypatch.setenv("BASSERA_INTERACTIVE", "1")
+        monkeypatch.delenv("BASSERA_GATEWAY_SESSION", raising=False)
+        monkeypatch.delenv("BASSERA_EXEC_ASK", raising=False)
+        monkeypatch.delenv("BASSERA_CRON_SESSION", raising=False)
+        monkeypatch.delenv("BASSERA_YOLO_MODE", raising=False)
+        approval_module._permanent_approved.clear()
+
+    def test_gateway_session_submits_pending_approval(self, monkeypatch):
+        """A dangerous command in a gateway session must hand off to the
+        messaging approval flow (submit_pending) instead of prompting a
+        TTY that does not exist."""
+        monkeypatch.setenv("BASSERA_GATEWAY_SESSION", "1")
+        monkeypatch.delenv("BASSERA_INTERACTIVE", raising=False)
+        monkeypatch.delenv("BASSERA_EXEC_ASK", raising=False)
+        monkeypatch.delenv("BASSERA_CRON_SESSION", raising=False)
+        with mock_patch("tools.approval.submit_pending") as mock_submit, \
+             mock_patch("bassera_cli.config.load_config", return_value={}), \
+             mock_patch("tools.approval.is_current_session_yolo_enabled", return_value=False):
+            result = approval_module.check_all_command_guards(self.CMD, "local")
+        assert result["approved"] is False
+        assert result["status"] == "approval_required"
+        assert result["pattern_key"] is not None
+        payload = mock_submit.call_args[0][1]
+        assert payload["command"] == self.CMD
+        assert payload["pattern_key"] == result["pattern_key"]
+        assert payload["description"]
+
+    def test_exec_ask_uses_same_pending_handoff(self, monkeypatch):
+        monkeypatch.delenv("BASSERA_GATEWAY_SESSION", raising=False)
+        monkeypatch.setenv("BASSERA_EXEC_ASK", "1")
+        monkeypatch.delenv("BASSERA_INTERACTIVE", raising=False)
+        with mock_patch("tools.approval.submit_pending") as mock_submit, \
+             mock_patch("bassera_cli.config.load_config", return_value={}), \
+             mock_patch("tools.approval.is_current_session_yolo_enabled", return_value=False):
+            result = approval_module.check_all_command_guards(self.CMD, "local")
+        assert result["approved"] is False
+        assert result["status"] == "approval_required"
+        mock_submit.assert_called_once()
+
+    def test_prompt_deny_blocks_with_no_retry_message(self, monkeypatch):
+        self._interactive_env(monkeypatch)
+        token = approval_module.set_current_session_key("prompt-deny-test")
+        try:
+            with mock_patch("bassera_cli.config.load_config", return_value={}), \
+                 mock_patch.object(
+                     approval_module, "prompt_dangerous_approval", return_value="deny"
+                 ) as mock_prompt:
+                result = approval_module.check_all_command_guards(self.CMD, "local")
+        finally:
+            approval_module.reset_current_session_key(token)
+        assert result["approved"] is False
+        assert "Do NOT retry" in result["message"]
+        mock_prompt.assert_called_once()
+
+    def test_prompt_session_approves_rest_of_session(self, monkeypatch):
+        self._interactive_env(monkeypatch)
+        token = approval_module.set_current_session_key("prompt-session-test")
+        try:
+            approval_module._session_approved.pop("prompt-session-test", None)
+            with mock_patch("bassera_cli.config.load_config", return_value={}), \
+                 mock_patch.object(
+                     approval_module, "prompt_dangerous_approval", return_value="session"
+                 ) as mock_prompt:
+                first = approval_module.check_all_command_guards(self.CMD, "local")
+                # Second call in the same session must NOT prompt again.
+                second = approval_module.check_all_command_guards(self.CMD, "local")
+        finally:
+            approval_module._session_approved.pop("prompt-session-test", None)
+            approval_module.reset_current_session_key(token)
+        assert first["approved"] is True
+        assert second["approved"] is True
+        assert mock_prompt.call_count == 1
+
+    def test_prompt_always_persists_and_reapproves(self, monkeypatch):
+        self._interactive_env(monkeypatch)
+        token = approval_module.set_current_session_key("prompt-always-test")
+        try:
+            with mock_patch("bassera_cli.config.load_config", return_value={}), \
+                 mock_patch.object(
+                     approval_module, "prompt_dangerous_approval", return_value="always"
+                 ), \
+                 mock_patch("tools.approval.save_permanent_allowlist") as mock_save:
+                first = approval_module.check_all_command_guards(self.CMD, "local")
+            # A NEW session must stay approved via the permanent allowlist.
+            with mock_patch("bassera_cli.config.load_config", return_value={}), \
+                 mock_patch.object(
+                     approval_module, "prompt_dangerous_approval", return_value="deny"
+                 ) as mock_prompt:
+                second = approval_module.check_all_command_guards(self.CMD, "local")
+        finally:
+            approval_module.reset_current_session_key(token)
+            approval_module._permanent_approved.clear()
+        assert first["approved"] is True
+        assert second["approved"] is True
+        mock_save.assert_called_once()
+        mock_prompt.assert_not_called()
+
+    def test_prompt_once_approves_without_persisting(self, monkeypatch):
+        self._interactive_env(monkeypatch)
+        token = approval_module.set_current_session_key("prompt-once-test")
+        try:
+            with mock_patch("bassera_cli.config.load_config", return_value={}), \
+                 mock_patch.object(
+                     approval_module, "prompt_dangerous_approval", return_value="once"
+                 ) as mock_prompt:
+                first = approval_module.check_all_command_guards(self.CMD, "local")
+                second = approval_module.check_all_command_guards(self.CMD, "local")
+        finally:
+            approval_module._session_approved.pop("prompt-once-test", None)
+            approval_module.reset_current_session_key(token)
+        assert first["approved"] is True
+        # "once" must not record anything: the next call prompts again.
+        assert second["approved"] is True
+        assert mock_prompt.call_count == 2

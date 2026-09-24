@@ -65,3 +65,49 @@ jobs:
           OPENROUTER_API_KEY: ""
           OPENAI_API_KEY: ""
           NOUS_API_KEY: ""
+
+  # Enforces the security-code coverage baseline (docs/COVERAGE_BASELINE.md)
+  # as a hard floor instead of a snapshot. The measured baseline is 78%
+  # over the seven security-critical modules; the gate sits at 75% to
+  # absorb platform variance while still catching a regression that
+  # rips out a chunk of guard logic.
+  security-coverage:
+    name: security-code coverage gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
+
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: |
+          uv venv .venv --python 3.11
+          VIRTUAL_ENV="$(pwd)/.venv" uv pip install -e ".[all,dev]"
+
+      - name: Run security subset with coverage gate
+        run: |
+          source .venv/bin/activate
+          TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0 python -m pytest -o "addopts=" -q \
+            tests/tools/test_approval.py tests/tools/test_approval_fuzz.py \
+            tests/tools/test_approval_audit.py tests/tools/test_approval_heartbeat.py \
+            tests/tools/test_write_deny.py tests/tools/test_file_write_safety.py \
+            tests/tools/test_url_safety.py tests/tools/test_website_policy.py \
+            tests/tools/test_credential_files.py tests/tools/test_cron_approval_mode.py \
+            tests/tools/test_local_env_blocklist.py tests/tools/test_path_security_choke.py \
+            tests/agent/test_redact.py tests/gateway/test_pairing.py \
+            tests/tools/test_file_operations.py tests/tools/test_file_operations_edge_cases.py \
+            tests/tools/test_file_tools.py tests/tools/test_file_tools_live.py \
+            tests/tools/test_file_ops_cwd_tracking.py tests/tools/test_file_staleness.py \
+            tests/tools/test_file_sync.py tests/tools/test_file_sync_back.py tests/tools/test_file_read_guards.py \
+            --cov=tools.approval --cov=tools.file_operations --cov=tools.url_safety \
+            --cov=tools.website_policy --cov=tools.credential_files --cov=agent.redact \
+            --cov=gateway.pairing --cov-report=term --cov-fail-under=75
