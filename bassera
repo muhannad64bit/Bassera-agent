@@ -1,11 +1,40 @@
 #!/usr/bin/env python3
 """
-Bassera/Bassera Agent CLI launcher.
+Bassera Agent CLI launcher (dev checkout).
 
-This wrapper should behave like the installed `bassera` command, including
-subcommands such as `gateway`, `cron`, and `doctor`.
+Runs the CLI from this checkout regardless of which python3 resolves the
+shebang. The codebase requires Python 3.11+; on a machine whose default
+python3 is older (e.g. macOS ships 3.9), importing bassera_cli crashes
+with a confusing ``TypeError: unsupported operand type(s) for |`` from a
+PEP-604 type annotation. When the checkout has a venv, re-exec into its
+interpreter before importing anything heavy.
 """
 
+import os
+import sys
+from pathlib import Path
+
+_REPO = Path(__file__).resolve().parent
+
 if __name__ == "__main__":
+    for _candidate in (
+        _REPO / "venv" / "bin" / "python",
+        _REPO / ".venv" / "bin" / "python",
+    ):
+        if not _candidate.exists():
+            continue
+        try:
+            _same = os.path.samefile(sys.executable, _candidate)
+        except OSError:
+            _same = False
+        if not _same:
+            os.execv(
+                str(_candidate),
+                [str(_candidate), str(Path(__file__).resolve()), *sys.argv[1:]],
+            )
+        break
+
+    sys.path.insert(0, str(_REPO))
     from bassera_cli.main import main
+
     main()
