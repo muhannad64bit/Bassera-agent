@@ -76,7 +76,15 @@ class _Waiter:
 
 
 @pytest.fixture(autouse=True)
-def _clean_approval_state():
+def _clean_approval_state(monkeypatch):
+    # Under the full-suite run another worker can leave the live Tirith
+    # detector initialized with real on-disk marker state; its verdicts
+    # must not leak into these gateway-resolution tests, so pin it to
+    # an unconditional "allow" with no findings.
+    monkeypatch.setattr(
+        "tools.tirith_security.check_command_security",
+        lambda *a, **kw: {"action": "allow", "findings": [], "summary": ""},
+    )
     approval_module._gateway_queues.clear()
     approval_module._gateway_notify_cbs.clear()
     approval_module._session_approved.clear()

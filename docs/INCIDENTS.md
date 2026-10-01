@@ -36,3 +36,33 @@ test, config — would have been silent.
 `git diff <file>` to see the drift and `git checkout HEAD -- <file>` to
 restore. Check the IDE's local-history and any AI-assistant plugins with
 file-write access before reopening the repo.
+
+## 2026-10-01/02: strikes 4 and 5 — run.py revert + untracked file deletion
+
+**Strike 4 (run.py).** The verified working-tree edits to
+`gateway/run.py` (delegating stubs + `self_update` import for the
+item-6 extraction) were found reverted to HEAD between two tool calls,
+minutes after they had passed the 82-test update characterization
+suite. The untracked `gateway/self_update.py` survived; only the
+tracked file was reverted.
+
+**Strike 5 (self_update.py).** During the re-verification run,
+`gateway/self_update.py` was deleted mid-session — first observed as
+13 `NameError` test failures (a partially-mangled copy was in place at
+collection time), then confirmed gone by a direct `grep` seconds
+later. This is the first observed strike against an *untracked* file,
+which `git status` cannot flag (it only ever showed `??`).
+
+**Response.** The extraction was rebuilt deterministically from
+`HEAD:gateway/run.py` by a transformation script
+(`/tmp/rebuild_self_update.py`) applying the documented verbatim-move
+rules, re-verified (all 82 update tests green), and committed in the
+same session step rather than left in the working tree.
+
+**Mitigation update (now deployed).**
+- Commit immediately after each verified step — never leave a green
+  state sitting in the working tree across a long test run.
+- For untracked files, keep a `/tmp` copy (`cp <file> /tmp/<file>.bak`)
+  so a deletion is a one-command restore.
+- Prefer regenerating extracted files from a script over hand-restoring:
+  a script is idempotent, auditable, and immune to buffer restore.

@@ -116,6 +116,13 @@ class TestAuditTrail:
         """A broken audit sink must not turn into a deny/allow change."""
         monkeypatch.setenv("BASSERA_INTERACTIVE", "1")
         monkeypatch.setenv("BASSERA_HOME", "/dev/null/impossible/path")
+        # Pin the live Tirith detector: another worker may have
+        # initialized it, and its verdicts would break this test's
+        # premise (the audit sink fails, the approval decision does not).
+        monkeypatch.setattr(
+            "tools.tirith_security.check_command_security",
+            lambda *a, **kw: {"action": "allow", "findings": [], "summary": ""},
+        )
         cb = lambda *a, **kw: "once"
         result = check_all_command_guards(
             "echo x > $BASSERA_HOME/.env", "local", approval_callback=cb

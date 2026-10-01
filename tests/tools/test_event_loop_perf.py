@@ -56,12 +56,18 @@ class TestInstallBehavior:
         monkeypatch.setitem(sys.modules, "uvloop", None)  # import raises
         assert maybe_install_uvloop() is False
 
-    def test_explicit_uvloop_missing_warns(self, monkeypatch, caplog):
+    def test_explicit_uvloop_missing_warns(self, monkeypatch):
         monkeypatch.setenv("BASSERA_EVENT_LOOP", "uvloop")
         monkeypatch.setitem(sys.modules, "uvloop", None)
-        with caplog.at_level(logging.WARNING):
-            assert maybe_install_uvloop() is False
-        assert any("uvloop is not installed" in r.message for r in caplog.records)
+        # caplog is order-fragile here (other workers reconfigure logging);
+        # capture the logger call directly instead.
+        recorded = []
+        monkeypatch.setattr(
+            "tools.event_loop_perf.logger.warning",
+            lambda *a, **kw: recorded.append(a[0]),
+        )
+        assert maybe_install_uvloop() is False
+        assert any("uvloop is not installed" in str(w) for w in recorded)
 
     def test_default_mode_never_imports(self, monkeypatch):
         monkeypatch.setenv("BASSERA_EVENT_LOOP", "default")
