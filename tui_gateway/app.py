@@ -90,4 +90,6 @@ def run_ws_gateway(
     out = print_url_to if print_url_to is not None else sys.stderr
     print(f"ws://{host}:{port}/ws?token={app.state.tui_gateway_token}", file=out)
 
-    uvicorn.run(app, host=host, port=port, log_level="warning")
+    # loop="auto" lets uvicorn pick uvloop when installed — same
+    # policy as the messaging gateway (performance.event_loop).
+    uvicorn.run(app, host=host, port=port, log_level="warning", loop="auto")

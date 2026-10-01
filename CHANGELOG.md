@@ -46,6 +46,14 @@ referenced commit hashes are in this repository's history.
   messaging gateway) with protected/partial status, pinning tests, and
   a residual-risk register (`bassera_architecture/threat_model.md`).
 
+### Performance
+
+- **uvloop for the async gateways** (NEW): auto-enabled when installed
+  (new `perf` extra; config `performance.event_loop`, env
+  `BASSERA_EVENT_LOOP`). Measured on gateway-like load: 1.77x task
+  churn, 2.1x TCP round-trips vs the default loop. Full performance
+  lever catalog: `docs/PERFORMANCE.md`.
+
 ### Fixed
 
 - Subprocess orphan race: an interrupt between spawn and the poll loop

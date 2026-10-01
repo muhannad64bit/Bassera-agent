@@ -10961,6 +10961,14 @@ def main():
     
     # Run the gateway - exit with code 1 if no platforms connected,
     # so systemd Restart=on-failure will retry on transient errors (e.g. DNS)
+    #
+    # Performance: install the uvloop event loop policy (when available)
+    # BEFORE the loop is created — busy multi-platform gateways get a
+    # materially faster event loop. Controlled by performance.event_loop /
+    # BASSERA_EVENT_LOOP; silently no-ops when uvloop is absent.
+    from tools.event_loop_perf import maybe_install_uvloop
+
+    maybe_install_uvloop()
     success = asyncio.run(start_gateway(config))
     if not success:
         sys.exit(1)
