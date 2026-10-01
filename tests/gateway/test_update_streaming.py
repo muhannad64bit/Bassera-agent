@@ -220,6 +220,7 @@ class TestUpdateCommandGatewayFlag:
         mock_popen = MagicMock()
         with patch("gateway.run._bassera_home", bassera_home), \
              patch("gateway.run.__file__", fake_file), \
+             patch("gateway.self_update.__file__", fake_file), \
              patch("shutil.which", side_effect=lambda x: f"/usr/bin/{x}"), \
              patch("subprocess.Popen", mock_popen):
             result = await runner._handle_update_command(event)

@@ -92,7 +92,8 @@ class TestHandleUpdateCommand:
             (fake_root / "gateway").mkdir(parents=True)
             (fake_root / "gateway" / "run.py").touch()
 
-            with patch("gateway.run.__file__", fake_file):
+            with patch("gateway.run.__file__", fake_file), \
+                 patch("gateway.self_update.__file__", fake_file):
                 result = await runner._handle_update_command(event)
 
         assert "Not a git repository" in result
@@ -113,6 +114,7 @@ class TestHandleUpdateCommand:
 
         with patch("gateway.run._bassera_home", tmp_path), \
              patch("gateway.run.__file__", fake_file), \
+             patch("gateway.self_update.__file__", fake_file), \
              patch("shutil.which", return_value=None), \
              patch("importlib.util.find_spec", return_value=None):
             result = await runner._handle_update_command(event)
@@ -140,6 +142,7 @@ class TestHandleUpdateCommand:
 
         with patch("gateway.run._bassera_home", bassera_home), \
              patch("gateway.run.__file__", fake_file), \
+             patch("gateway.self_update.__file__", fake_file), \
              patch("shutil.which", return_value=None), \
              patch("importlib.util.find_spec", return_value=fake_spec), \
              patch("subprocess.Popen", mock_popen):
@@ -202,6 +205,7 @@ class TestHandleUpdateCommand:
 
         with patch("gateway.run._bassera_home", bassera_home), \
              patch("gateway.run.__file__", fake_file), \
+             patch("gateway.self_update.__file__", fake_file), \
              patch("shutil.which", side_effect=lambda x: "/usr/bin/bassera" if x == "bassera" else "/usr/bin/setsid"), \
              patch("subprocess.Popen"):
             result = await runner._handle_update_command(event)
@@ -232,6 +236,7 @@ class TestHandleUpdateCommand:
         mock_popen = MagicMock()
         with patch("gateway.run._bassera_home", bassera_home), \
              patch("gateway.run.__file__", fake_file), \
+             patch("gateway.self_update.__file__", fake_file), \
              patch("shutil.which", side_effect=lambda x: f"/usr/bin/{x}"), \
              patch("subprocess.Popen", mock_popen):
             result = await runner._handle_update_command(event)
@@ -269,6 +274,7 @@ class TestHandleUpdateCommand:
 
         with patch("gateway.run._bassera_home", bassera_home), \
              patch("gateway.run.__file__", fake_file), \
+             patch("gateway.self_update.__file__", fake_file), \
              patch("shutil.which", side_effect=which_no_setsid), \
              patch("subprocess.Popen", mock_popen):
             result = await runner._handle_update_command(event)
@@ -300,6 +306,7 @@ class TestHandleUpdateCommand:
 
         with patch("gateway.run._bassera_home", bassera_home), \
              patch("gateway.run.__file__", fake_file), \
+             patch("gateway.self_update.__file__", fake_file), \
              patch("shutil.which", side_effect=lambda x: f"/usr/bin/{x}"), \
              patch("subprocess.Popen", side_effect=OSError("spawn failed")):
             result = await runner._handle_update_command(event)
@@ -326,6 +333,7 @@ class TestHandleUpdateCommand:
 
         with patch("gateway.run._bassera_home", bassera_home), \
              patch("gateway.run.__file__", fake_file), \
+             patch("gateway.self_update.__file__", fake_file), \
              patch("shutil.which", side_effect=lambda x: f"/usr/bin/{x}"), \
              patch("subprocess.Popen"):
             result = await runner._handle_update_command(event)
