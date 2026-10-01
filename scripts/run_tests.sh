@@ -26,9 +26,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # ── Activate venv ───────────────────────────────────────────────────────────
 # Prefer a .venv in the current tree, fall back to the main checkout's venv
 # (useful for worktrees where we don't always duplicate the venv).
+# Windows venvs use Scripts/ instead of bin/ — accept both layouts.
 VENV=""
 for candidate in "$REPO_ROOT/.venv" "$REPO_ROOT/venv" "$HOME/.bassera/bassera-agent/venv" "$HOME/.wafi/wafi-agent/venv"; do
-  if [ -f "$candidate/bin/activate" ]; then
+  if [ -f "$candidate/bin/activate" ] || [ -f "$candidate/Scripts/python.exe" ] || [ -f "$candidate/Scripts/python" ]; then
     VENV="$candidate"
     break
   fi
@@ -39,7 +40,14 @@ if [ -z "$VENV" ]; then
   exit 1
 fi
 
-PYTHON="$VENV/bin/python"
+# Interpreter path inside the venv differs by platform.
+if [ -f "$VENV/Scripts/python.exe" ]; then
+  PYTHON="$VENV/Scripts/python.exe"
+elif [ -f "$VENV/Scripts/python" ]; then
+  PYTHON="$VENV/Scripts/python"
+else
+  PYTHON="$VENV/bin/python"
+fi
 
 # ── Ensure pytest-split is installed (required for shard-equivalent runs) ──
 if ! "$PYTHON" -c "import pytest_split" 2>/dev/null; then
