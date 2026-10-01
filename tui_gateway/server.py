@@ -75,8 +75,80 @@ class _DropTransport:
         return None
 
 
+class _BufferingTransport:
+    """Detached-session transport: retains events for later delivery.
+
+    When a WebSocket disconnects without ``close_on_disconnect``, the
+    session survives but its socket is gone. Events emitted during the
+    detached window are buffered here (bounded — oldest frames are
+    dropped first) and flushed to the next connection that talks to the
+    session (see ``_reattach_session_transport``). Previously the
+    placeholder silently dropped everything (design doc §6.3).
+    """
+
+    _MAX_FRAMES = 256
+
+    def __init__(self) -> None:
+        import collections
+
+        self._frames: "collections.deque" = collections.deque(maxlen=self._MAX_FRAMES)
+        self._dropped = 0
+
+    def write(self, obj: dict) -> bool:
+        if len(self._frames) == self._frames.maxlen:
+            self._dropped += 1
+        self._frames.append(obj)
+        return True  # retained for later delivery
+
+    def close(self) -> None:
+        return None
+
+    def drain(self) -> list:
+        frames = list(self._frames)
+        self._frames.clear()
+        return frames
+
+
 _stdio_transport = StdioTransport(lambda: _real_stdout, _stdout_lock)
-_detached_ws_transport = _DropTransport()
+_detached_ws_transport = _BufferingTransport()
+
+
+def _new_detached_transport() -> "_BufferingTransport":
+    """Fresh per-session buffer — detached sessions must not share state."""
+    return _BufferingTransport()
+
+
+def _reattach_session_transport(req: dict) -> None:
+    """Resume a detached session on the connection now talking to it.
+
+    A request carrying ``session_id`` whose session still points at a
+    buffering (detached) transport rebinds the session to the live
+    transport and flushes the buffered frames to it — the reconnecting
+    client sees the backlog before the response to its request.
+    """
+    try:
+        sid = ((req.get("params") or {}).get("session_id"))
+        if not sid:
+            return
+        session = _sessions.get(str(sid))
+        if not session:
+            return
+        buf = session.get("transport")
+        if not isinstance(buf, _BufferingTransport):
+            return
+        live = current_transport()
+        if live is None or live is buf:
+            return
+        session["transport"] = live
+        for frame in buf.drain():
+            try:
+                live.write(frame)
+            except Exception:
+                break
+    except Exception:
+        # Reattach is best-effort: a failure here must never block the
+        # request itself.
+        pass
 
 
 class _SlashWorker:
@@ -229,6 +301,7 @@ def method(name: str):
 
 
 def handle_request(req: dict) -> dict | None:
+    _reattach_session_transport(req)
     fn = _methods.get(req.get("method", ""))
     if not fn:
         return _err(req.get("id"), -32601, f"unknown method: {req.get('method')}")

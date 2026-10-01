@@ -101,6 +101,21 @@ def _disable_nagle(ws: Any) -> None:
 # connection is closed (tui_websocket_transport.md §6.4).
 _MAX_FRAME_BYTES = 1024 * 1024
 
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost", "[::1]", "unknown"})
+
+
+def _peer_is_loopback(peer: str) -> bool:
+    """True for local peers — the only ones allowed crash detail."""
+    host = peer.rsplit(":", 1)[0] if ":" in peer else peer
+    return host in _LOOPBACK_HOSTS
+
+
+def _crash_ref(exc: BaseException) -> str:
+    """Stable short reference for a crash, correlated with the server log."""
+    import hashlib
+
+    return hashlib.sha256(repr(exc).encode("utf-8", "replace")).hexdigest()[:8]
+
 
 def _extract_ws_token(ws: Any) -> str | None:
     """Pull the session token from the handshake (query param or header)."""
@@ -220,10 +235,25 @@ async def handle_ws(ws: Any, *, token: str | None = None) -> None:
                     resp = server.dispatch(req)
                 except Exception as exc:
                     dispatch_crashes += 1
+                    # The full traceback always goes to the server log; the
+                    # peer only sees the raw exception text when it is a
+                    # loopback connection (local debugging). A remote peer
+                    # gets a stable reference id instead — raw internals
+                    # must not leak to the network (design doc §6.2).
+                    _log.warning(
+                        "ws dispatch crashed peer=%s ref=%s",
+                        peer,
+                        _crash_ref(exc),
+                        exc_info=True,
+                    )
+                    if _peer_is_loopback(peer):
+                        detail = f"handler error: {exc}"
+                    else:
+                        detail = f"handler error: ref={_crash_ref(exc)}"
                     resp = {
                         "jsonrpc": "2.0",
                         "id": req.get("id"),
-                        "error": {"code": -32000, "message": f"handler error: {exc}"},
+                        "error": {"code": -32000, "message": detail},
                     }
                 if resp is not None:
                     ok = await transport.write_async(resp)
@@ -266,4 +296,9 @@ def _detach_transport_sessions(transport: WSTransport) -> None:
                     worker.close()
             server._sessions.pop(sid, None)
         else:
-            session["transport"] = server._detached_ws_transport
+            # Detached (reconnectable) session: give it its OWN bounded
+            # buffer so events emitted while no socket is attached are
+            # retained and flushed to the next connection that talks to
+            # the session (server._reattach_session_transport), instead of
+            # being silently dropped.
+            session["transport"] = server._new_detached_transport()

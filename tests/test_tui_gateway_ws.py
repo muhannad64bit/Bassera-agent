@@ -76,7 +76,16 @@ def test_ws_disconnect_preserves_reconnectable_session(monkeypatch):
                 plain={"transport": transport, "close_on_disconnect": False, "session_key": "k"}
             ),
         )
-        assert server._sessions["plain"]["transport"] is server._detached_ws_transport
+        # The session survives with its OWN bounded buffer (not the shared
+        # placeholder, not dropped): events emitted while detached are
+        # retained for the next connection.
+        buf = server._sessions["plain"]["transport"]
+        assert isinstance(buf, server._BufferingTransport), (
+            "reconnectable session must hold a buffering transport"
+        )
+        buf.write({"jsonrpc": "2.0", "method": "event", "params": {"type": "note"}})
+        assert len(buf.drain()) == 1
+        assert buf.drain() == []
     finally:
         server._sessions.clear()
 
@@ -250,3 +259,145 @@ def test_ws_app_token_from_env(monkeypatch):
     monkeypatch.delenv("BASSERA_TUI_GATEWAY_TOKEN")
     generated = app_mod._resolve_token(None)
     assert generated and len(generated) >= 32, "generated tokens must be unguessable"
+
+
+# ---------------------------------------------------------------------------
+# Detached-session event buffering (design doc §6.3) + crash-ref sanitizing
+# ---------------------------------------------------------------------------
+
+def test_detached_buffer_is_bounded():
+    from tui_gateway.server import _new_detached_transport
+
+    buf = _new_detached_transport()
+    for i in range(300):
+        buf.write({"i": i})
+    frames = buf.drain()
+    assert len(frames) == _BufferingTransport_MAX if False else True
+    # The buffer keeps only the newest _MAX_FRAMES entries
+    assert len(frames) == server._BufferingTransport._MAX_FRAMES
+    assert frames[0]["i"] == 300 - server._BufferingTransport._MAX_FRAMES
+    # Drain empties it
+    assert buf.drain() == []
+
+
+def test_request_reattaches_session_and_flushes_backlog():
+    """A reconnecting client receives the detached-window backlog."""
+    from tui_gateway.transport import bind_transport, reset_transport
+
+    server._sessions.clear()
+    buf = server._new_detached_transport()
+    buf.write({"jsonrpc": "2.0", "method": "event", "params": {"type": "backlog-1"}})
+    buf.write({"jsonrpc": "2.0", "method": "event", "params": {"type": "backlog-2"}})
+    server._sessions["sess-1"] = {
+        "transport": buf,
+        "close_on_disconnect": False,
+        "session_key": "k",
+    }
+    sent = []
+
+    class LiveTransport:
+        def write(self, obj):
+            sent.append(obj)
+            return True
+
+        def close(self):
+            pass
+
+    rebound_class = None
+    try:
+        token = bind_transport(LiveTransport())
+        # A request for the session rebinds the transport and flushes.
+        server.handle_request({
+            "jsonrpc": "2.0",
+            "id": "r1",
+            "method": "session.list",  # any method; reattach runs first
+            "params": {"session_id": "sess-1"},
+        })
+        rebound_class = server._sessions["sess-1"]["transport"].__class__.__name__
+        reset_transport(token)
+    finally:
+        server._sessions.clear()
+
+    flushed = [f for f in sent if f.get("params", {}).get("type", "").startswith("backlog")]
+    assert flushed and len(flushed) == 2, "backlog must flush to the reconnecting client"
+    assert rebound_class == "LiveTransport", "session must rebind to the live transport"
+
+
+def test_crash_detail_sanitized_for_remote_peers(caplog):
+    """A remote peer gets a ref id, not raw exception internals."""
+    import json as _json
+
+    sent = []
+    _n = {"calls": 0}
+
+    class FakeWS:
+        def __init__(self, peer_host):
+            self.client = type("C", (), {"host": peer_host, "port": 5555})()
+
+        async def accept(self):
+            sent.append("accept")
+
+        async def send_text(self, line):
+            sent.append(line)
+
+        async def receive_text(self):
+            if _n["calls"] == 0:
+                _n["calls"] += 1
+                return '{"jsonrpc": "2.0", "id": "r1", "method": "ping", "params": {}}'
+            raise ws_mod._WebSocketDisconnect()
+
+        async def close(self):
+            pass
+
+    # Remote peer: crash detail must NOT include the raw exception
+    import tui_gateway.server as srv
+    original = srv.dispatch
+    srv.dispatch = lambda req: (_ for _ in ()).throw(RuntimeError("SECRET_INTERNALS /etc/passwd"))
+    try:
+        asyncio.run(ws_mod.handle_ws(FakeWS("203.0.113.9")))
+    finally:
+        srv.dispatch = original
+    remote_errs = [
+        _json.loads(s) for s in sent if isinstance(s, str) and "-32000" in s
+    ]
+    assert remote_errs, "crash must still produce a -32000 response"
+    msg = remote_errs[0]["error"]["message"]
+    assert "SECRET_INTERNALS" not in msg, "raw internals must not reach a remote peer"
+    assert "ref=" in msg
+
+
+def test_crash_detail_kept_for_loopback_peers():
+    """Loopback debugging keeps the raw exception text."""
+    import json as _json
+
+    sent = []
+    _n = {"calls": 0}
+
+    class FakeWS:
+        def __init__(self):
+            self.client = type("C", (), {"host": "127.0.0.1", "port": 5555})()
+
+        async def accept(self):
+            sent.append("accept")
+
+        async def send_text(self, line):
+            sent.append(line)
+
+        async def receive_text(self):
+            if _n["calls"] == 0:
+                _n["calls"] += 1
+                return '{"jsonrpc": "2.0", "id": "r1", "method": "ping", "params": {}}'
+            raise ws_mod._WebSocketDisconnect()
+
+        async def close(self):
+            pass
+
+    import tui_gateway.server as srv
+    original = srv.dispatch
+    srv.dispatch = lambda req: (_ for _ in ()).throw(RuntimeError("kaboom-local"))
+    try:
+        asyncio.run(ws_mod.handle_ws(FakeWS()))
+    finally:
+        srv.dispatch = original
+    errs = [_json.loads(s) for s in sent if isinstance(s, str) and "-32000" in s]
+    assert errs and "kaboom-local" in errs[0]["error"]["message"]

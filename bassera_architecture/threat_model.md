@@ -102,8 +102,8 @@ change to a security-relevant surface.
 |---|---|---|---|
 | WS handshake (browser/remote TUI frontends) | per-launch session token (query param or `X-Bassera-Token` header), checked before accept; mismatch closes 1008; the mounted app ALWAYS has a token; default bind 127.0.0.1 | Protected | `tests/test_tui_gateway_ws.py` (auth gate + app factory) |
 | Oversized frames | 1 MiB limit; one `-32701` error then close | Protected | `tests/test_tui_gateway_ws.py`, live-verified |
-| Handler crash text in `-32000` responses | raw exception text embedded — fine for localhost; sanitize before any non-localhost bind | Partial | design doc §6.2 |
-| Events during detached sessions (between disconnect and resume) | unspecified placeholder transport | Partial | design doc §6.3 |
+| Handler crash text in `-32000` responses | full traceback server-side with a stable ref id; loopback peers keep raw detail (local debugging), remote peers get `ref=<id>` only | Protected | `tests/test_tui_gateway_ws.py` (loopback + remote crash tests) |
+| Events during detached sessions (between disconnect and resume) | per-session bounded `_BufferingTransport` (256 frames), flushed to the reconnecting connection on the next request for that session | Protected | `tests/test_tui_gateway_ws.py` (bounded-buffer + flush tests) |
 
 ## 3. Residual risks (accepted / open)
 

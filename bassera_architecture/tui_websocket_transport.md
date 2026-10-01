@@ -112,12 +112,15 @@ available for process-internal use only.
    handshake is accepted; mismatch closes with 1008. The mounted app
    always enforces a token (explicit, `BASSERA_TUI_GATEWAY_TOKEN`, or
    generated at startup).
-2. **Error text disclosure**: `-32000` embeds raw exception text into
-   frames sent to the peer. For a localhost TUI this is fine; for a
-   remotely reachable socket it leaks internals.
-3. **Detached-session buffering**: what happens to events emitted
-   between disconnect and resume is unspecified in the placeholder
-   transport.
+2. ~~Error text disclosure~~ **CLOSED**: the full traceback always goes
+   to the server log with a stable 8-char ref; loopback peers keep the
+   raw exception text (local debugging), remote peers get
+   `handler error: ref=<id>` only.
+3. ~~Detached-session buffering~~ **CLOSED**: each detached session
+   gets its OWN bounded `_BufferingTransport` (256 frames, oldest
+   dropped); the next request carrying that session_id rebinds the
+   session to the live transport and flushes the backlog to the
+   reconnecting client (`_reattach_session_transport`).
 4. ~~No frame size limit~~ **CLOSED**: frames over 1 MiB receive one
    `-32701` ("request too large") error and the connection closes.
 5. **Backpressure**: off-loop `write` blocks the calling thread up to
