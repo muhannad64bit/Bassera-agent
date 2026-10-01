@@ -163,3 +163,86 @@ class TestCmdUpdateBranchFallback:
             mock_input.assert_not_called()
             captured = capsys.readouterr()
             assert "Non-interactive session" in captured.out
+
+
+class TestUpdateRefusesToDiscardLocalCommits:
+    """The updater must NEVER `git reset --hard` away unpushed commits.
+
+    Found as a live data-loss bug: a fork checkout 36 commits ahead / 64
+    behind its origin (diverged history) gets `bassera update` -> ff-only
+    fails -> reset --hard origin/main -> every local commit destroyed,
+    silently. The guard aborts before the reset whenever the local side
+    has commits the remote lacks.
+    """
+
+    @staticmethod
+    def _git_sim(local_only="3", behind="64"):
+        def side_effect(cmd, **kwargs):
+            joined = " ".join(str(c) for c in cmd)
+            if "rev-parse" in joined and "--abbrev-ref" in joined:
+                return subprocess.CompletedProcess(cmd, 0, stdout="main\n", stderr="")
+            if "rev-parse" in joined and "--verify" in joined:
+                return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+            if "rev-list" in joined and f"HEAD..origin/main" in joined:
+                return subprocess.CompletedProcess(cmd, 0, stdout=f"{behind}\n", stderr="")
+            if "rev-list" in joined and "origin/main..HEAD" in joined:
+                return subprocess.CompletedProcess(cmd, 0, stdout=f"{local_only}\n", stderr="")
+            if "pull" in joined and "--ff-only" in joined:
+                # Simulated divergence: fast-forward impossible.
+                return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="diverged")
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+        return side_effect
+
+    @patch("shutil.which", return_value=None)
+    @patch("subprocess.run")
+    def test_diverged_with_local_commits_aborts_without_reset(
+        self, mock_run, _mock_which, mock_args, capsys
+    ):
+        mock_run.side_effect = self._git_sim(local_only="36")
+        with pytest.raises(SystemExit) as exc_info:
+            cmd_update(mock_args)
+        assert exc_info.value.code == 1
+
+        commands = [" ".join(str(a) for a in c.args[0]) for c in mock_run.call_args_list]
+        assert not any("reset" in c and "--hard" in c for c in commands), (
+            "the updater must not reset when local commits would be destroyed"
+        )
+        out = capsys.readouterr().out
+        assert "ABORTED" in out
+        assert "git push origin main" in out
+
+    @patch("shutil.which", return_value=None)
+    @patch("subprocess.run")
+    def test_diverged_without_local_commits_still_resets(
+        self, mock_run, _mock_which, mock_args, capsys
+    ):
+        """When the local side has NOTHING the remote lacks, the diverged
+        fallback keeps working (force-push replay: nothing is lost)."""
+        mock_run.side_effect = self._git_sim(local_only="0")
+        cmd_update(mock_args)
+
+        commands = [" ".join(str(a) for a in c.args[0]) for c in mock_run.call_args_list]
+        assert any("reset" in c and "--hard" in c for c in commands)
+
+    @patch("shutil.which", return_value=None)
+    @patch("subprocess.run")
+    def test_rev_list_failure_refuses_reset(
+        self, mock_run, _mock_which, mock_args, capsys
+    ):
+        """If the local-only count cannot be determined, assume the worst:
+        refuse to reset rather than risk destroying commits."""
+
+        def side_effect(cmd, **kwargs):
+            joined = " ".join(str(c) for c in cmd)
+            if "rev-list" in joined and "origin/main..HEAD" in joined:
+                return subprocess.CompletedProcess(cmd, 128, stdout="", stderr="boom")
+            return self._git_sim(local_only="0")(cmd, **kwargs)
+
+        mock_run.side_effect = side_effect
+        with pytest.raises(SystemExit) as exc_info:
+            cmd_update(mock_args)
+        assert exc_info.value.code == 1
+
+        commands = [" ".join(str(a) for a in c.args[0]) for c in mock_run.call_args_list]
+        assert not any("reset" in c and "--hard" in c for c in commands)

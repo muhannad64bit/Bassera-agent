@@ -408,6 +408,13 @@ def _make_update_side_effect(
         if "checkout" in joined and "main" in joined:
             return SimpleNamespace(stdout="", stderr="", returncode=0)
         if "rev-list" in joined:
+            # The local-only-commit guard (origin/<branch>..HEAD) always
+            # sees ZERO here: these tests simulate a checkout with nothing
+            # the remote lacks, where the diverged reset is safe. The
+            # abort-on-local-commits contract has its own tests in
+            # test_cmd_update.py::TestUpdateRefusesToDiscardLocalCommits.
+            if "..HEAD" in joined:
+                return SimpleNamespace(stdout="0\n", stderr="", returncode=0)
             return SimpleNamespace(stdout=f"{commit_count}\n", stderr="", returncode=0)
         if "--ff-only" in joined:
             if ff_only_fails:

@@ -4588,7 +4588,7 @@ def _update_via_zip(args):
 
     branch = "main"
     zip_url = (
-        f"https://github.com/NousResearch/bassera-agent/archive/refs/heads/{branch}.zip"
+        f"https://github.com/NousResearch/hermes-agent/archive/refs/heads/{branch}.zip"
     )
 
     print("→ Downloading latest version...")
@@ -4903,13 +4903,17 @@ def _restore_stashed_changes(
 # Fork detection and upstream management for `bassera update`
 # =========================================================================
 
+# The upstream project this fork derives from. NOTE: this is the
+# UPSTREAM repository (it exists); Bassera's own git updates come
+# from the checkout's origin remote, which is the fork's source of
+# truth.
 OFFICIAL_REPO_URLS = {
-    "https://github.com/NousResearch/bassera-agent.git",
-    "git@github.com:NousResearch/bassera-agent.git",
-    "https://github.com/NousResearch/bassera-agent",
-    "git@github.com:NousResearch/bassera-agent",
+    "https://github.com/NousResearch/hermes-agent.git",
+    "git@github.com:NousResearch/hermes-agent.git",
+    "https://github.com/NousResearch/hermes-agent",
+    "git@github.com:NousResearch/hermes-agent",
 }
-OFFICIAL_REPO_URL = "https://github.com/NousResearch/bassera-agent.git"
+OFFICIAL_REPO_URL = "https://github.com/NousResearch/hermes-agent.git"
 SKIP_UPSTREAM_PROMPT_FILE = ".skip_upstream_prompt"
 
 
@@ -5043,7 +5047,7 @@ def _sync_with_upstream_if_needed(git_cmd: list[str], cwd: Path) -> None:
         # Ask user if they want to add upstream
         print()
         print("ℹ Your fork is not tracking the official Bassera repository.")
-        print("  This means you may miss updates from NousResearch/bassera-agent.")
+        print("  This means you may miss updates from the upstream repository.")
         print()
         try:
             response = (
@@ -5057,7 +5061,7 @@ def _sync_with_upstream_if_needed(git_cmd: list[str], cwd: Path) -> None:
             print("→ Adding upstream remote...")
             if _add_upstream_remote(git_cmd, cwd):
                 print(
-                    "  ✓ Added upstream: https://github.com/NousResearch/bassera-agent.git"
+                    "  ✓ Added upstream: https://github.com/NousResearch/hermes-agent.git"
                 )
                 has_upstream = True
             else:
@@ -5065,7 +5069,7 @@ def _sync_with_upstream_if_needed(git_cmd: list[str], cwd: Path) -> None:
                 return
         else:
             print(
-                "  Skipped. Run 'git remote add upstream https://github.com/NousResearch/bassera-agent.git' to add later."
+                "  Skipped. Run 'git remote add upstream https://github.com/NousResearch/hermes-agent.git' to add later."
             )
             _mark_skip_upstream_prompt()
             return
@@ -5654,9 +5658,44 @@ def _cmd_update_impl(args, gateway_mode: bool):
                 text=True,
             )
             if pull_result.returncode != 0:
-                # ff-only failed — local and remote have diverged (e.g. upstream
-                # force-pushed or rebase).  Since local changes are already
-                # stashed, reset to match the remote exactly.
+                # ff-only failed — local and remote have diverged. Before
+                # resetting ANYTHING, count the commits that exist ONLY
+                # locally: `git reset --hard origin/<branch>` would destroy
+                # them permanently. A checkout with unpushed local commits
+                # must NEVER be silently reset — abort and tell the user.
+                local_only = subprocess.run(
+                    git_cmd + ["rev-list", "--count", f"origin/{branch}..HEAD"],
+                    cwd=PROJECT_ROOT,
+                    capture_output=True,
+                    text=True,
+                )
+                local_only_count = 0
+                stdout = (local_only.stdout or "").strip()
+                if local_only.returncode == 0 and stdout.isdigit():
+                    local_only_count = int(stdout)
+                else:
+                    # rev-list failed — assume the worst and refuse.
+                    local_only_count = -1
+                if local_only_count != 0:
+                    print()
+                    print(
+                        f"  ✗ ABORTED: this checkout has "
+                        f"{local_only_count if local_only_count > 0 else 'unknown'} "
+                        f"commit(s) that do not exist on origin/{branch}."
+                    )
+                    print(
+                        "    Resetting to the remote would PERMANENTLY DELETE them."
+                    )
+                    print()
+                    print("    To keep your work, push it first:")
+                    print(f"      git push origin {branch}")
+                    print()
+                    print(
+                        "    If you truly intend to discard the local commits,"
+                    )
+                    print(f"      run it yourself: git reset --hard origin/{branch}")
+                    update_succeeded = False
+                    sys.exit(1)
                 print(
                     "  ⚠ Fast-forward not possible (history diverged), resetting to match remote..."
                 )
