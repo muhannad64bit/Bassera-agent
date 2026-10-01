@@ -85,6 +85,22 @@ def _clean_approval_state(monkeypatch):
         "tools.tirith_security.check_command_security",
         lambda *a, **kw: {"action": "allow", "findings": [], "summary": ""},
     )
+    # Worker-order poisoning (same class as test_command_guards): a gateway
+    # test that ran set_session_vars()/clear_session_vars() in this worker
+    # leaves the session contextvars set in the main-thread context.
+    # get_session_env then returns those values with no os.environ fallback,
+    # so main-thread guard calls resolve a foreign session key and the
+    # session-scoped approval lookups miss. Reset to the "never set"
+    # sentinel so every test starts from pristine context state.
+    import gateway.session_context as _session_ctx
+    for _var in (
+        _session_ctx._SESSION_PLATFORM, _session_ctx._SESSION_CHAT_ID,
+        _session_ctx._SESSION_CHAT_NAME, _session_ctx._SESSION_THREAD_ID,
+        _session_ctx._SESSION_USER_ID, _session_ctx._SESSION_USER_NAME,
+        _session_ctx._SESSION_KEY,
+    ):
+        _var.set(_session_ctx._UNSET)
+    approval_module._approval_session_key.set("")
     approval_module._gateway_queues.clear()
     approval_module._gateway_notify_cbs.clear()
     approval_module._session_approved.clear()
