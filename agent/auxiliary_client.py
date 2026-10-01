@@ -2239,8 +2239,16 @@ def _get_cached_client(
     if async_mode:
         try:
             import asyncio as _aio
-            current_loop = _aio.get_event_loop()
-        except RuntimeError:
+            # Prefer the RUNNING loop (no deprecation, exact identity).
+            # Fall back to the loop this thread has SET — create-then-run
+            # callers (client built before asyncio.run()) still get reuse —
+            # via the policy, because asyncio.get_event_loop() raises on
+            # 3.14+ and warns on 3.12/3.13 when nothing is set.
+            try:
+                current_loop = _aio.get_running_loop()
+            except RuntimeError:
+                current_loop = _aio.get_event_loop_policy().get_event_loop()
+        except Exception:
             pass
     runtime = _normalize_main_runtime(main_runtime)
     runtime_key = tuple(runtime.get(field, "") for field in _MAIN_RUNTIME_FIELDS) if provider == "auto" else ()
