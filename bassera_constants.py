@@ -62,11 +62,17 @@ def default_home_root() -> Path:
       zero downtime (no migration step).
     - Otherwise (fresh install) ``~/.bassera``.
     """
+    def _safe_exists(path: Path) -> bool:
+        try:
+            return path.exists()
+        except PermissionError:
+            return False
+
     bassera_home = Path.home() / ".bassera"
-    if bassera_home.exists():
+    if _safe_exists(bassera_home):
         return bassera_home
     legacy_home = Path.home() / ".wafi"
-    if legacy_home.exists():
+    if _safe_exists(legacy_home):
         return legacy_home
     return bassera_home
 
