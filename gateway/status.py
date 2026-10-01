@@ -193,9 +193,35 @@ def _read_json_file(path: Path) -> Optional[dict[str, Any]]:
     return payload if isinstance(payload, dict) else None
 
 
-def _write_json_file(path: Path, payload: dict[str, Any]) -> None:
+def _atomic_write_text(path: Path, text: str) -> None:
+    """Write *text* to *path* atomically.
+
+    A direct write truncates the file first; a crash (or a concurrent
+    reader) mid-write leaves truncated JSON, and the next gateway start
+    would lose its "already running" detection. The temp-file +
+    os.replace pattern makes the swap atomic on POSIX — readers see
+    either the old or the new content, never a torn file.
+    """
+    import tempfile
+
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload))
+    fd, tmp_path = tempfile.mkstemp(
+        dir=str(path.parent), prefix=path.name + ".", suffix=".tmp"
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        os.replace(tmp_path, str(path))
+    except OSError:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def _write_json_file(path: Path, payload: dict[str, Any]) -> None:
+    _atomic_write_text(path, json.dumps(payload))
 
 
 def _read_pid_record(pid_path: Optional[Path] = None) -> Optional[dict]:

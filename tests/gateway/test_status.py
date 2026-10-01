@@ -442,3 +442,59 @@ class TestTakeoverMarker:
 
         # We are not the target — must NOT consume as planned
         assert result is False
+
+
+class TestAtomicStateWrites:
+    """Gateway state files must never be observable in a torn state.
+
+    A direct write truncates first: a crash between truncate and flush
+    leaves truncated JSON, and the next gateway start loses its
+    'already running' detection. _atomic_write_text uses temp-file +
+    os.replace so readers see old or new content, never a torn file.
+    """
+
+    def test_atomic_write_replaces_content_and_leaves_no_temp(self, tmp_path):
+        from gateway.status import _atomic_write_text
+
+        target = tmp_path / "gateway.pid"
+        target.write_text('{"old": true}')
+        _atomic_write_text(target, '{"pid": 123}')
+        assert target.read_text() == '{"pid": 123}'
+        leftovers = [p for p in tmp_path.iterdir() if p.name.endswith(".tmp")]
+        assert leftovers == []
+
+    def test_atomic_write_creates_parent_dirs(self, tmp_path):
+        from gateway.status import _atomic_write_text
+
+        target = tmp_path / "nested" / "deep" / "state.json"
+        _atomic_write_text(target, "{}")
+        assert target.read_text() == "{}"
+
+    def test_write_json_file_is_atomic(self, tmp_path):
+        """All gateway status writes route through the atomic helper."""
+        import inspect
+
+        import gateway.status as status_mod
+
+        source = inspect.getsource(status_mod._write_json_file)
+        assert "_atomic_write_text" in source, (
+            "_write_json_file must stay atomic — a direct write_text() "
+            "reintroduces the torn-state crash window"
+        )
+
+    def test_failed_atomic_write_leaves_original_intact(self, tmp_path):
+        """A write failure (e.g. disk full) must not destroy the old state."""
+        from unittest.mock import patch
+
+        from gateway.status import _atomic_write_text
+
+        target = tmp_path / "gateway.pid"
+        target.write_text('{"original": true}')
+        with patch("os.replace", side_effect=OSError("disk full")):
+            try:
+                _atomic_write_text(target, '{"new": true}')
+            except OSError:
+                pass
+        assert json.loads(target.read_text()) == {"original": True}
+        leftovers = [p for p in tmp_path.iterdir() if p.name.endswith(".tmp")]
+        assert leftovers == [], "failed writes must clean up their temp file"
