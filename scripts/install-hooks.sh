@@ -35,6 +35,7 @@ if [ -z "$VENV" ]; then
 fi
 
 mkdir -p "$REPO_ROOT/.git/hooks"
+REPO_INTEGRITY_ABS="$REPO_ROOT/scripts/check_worktree_integrity.sh"
 
 cat > "$HOOK" <<EOF
 #!/usr/bin/env bash
@@ -43,8 +44,18 @@ set -euo pipefail
 
 REPO_ROOT="$REPO_ROOT"
 PYTHON="$VENV/bin/python"
+REPO_INTEGRITY_SCRIPT="$REPO_INTEGRITY_ABS"
 
 fail=0
+
+# 0. Worktree integrity preflight — list tracked files that differ
+#    from HEAD without being staged. Warn-only: intentional dirty trees
+#    are normal mid-work, but an EXTERNAL process reverting files (see
+#    scripts/check_worktree_integrity.sh) must never pass unnoticed.
+REPO_INTEGRITY_SCRIPT="$REPO_ROOT/scripts/check_worktree_integrity.sh"
+if [ -x "\$REPO_INTEGRITY_SCRIPT" ]; then
+  "\$REPO_INTEGRITY_SCRIPT" --warn-only || true
+fi
 
 # 1. Byte-compile staged .py files.
 STAGED_PY=\$(git diff --cached --name-only --diff-filter=ACMR -- '*.py')

@@ -401,3 +401,62 @@ def test_crash_detail_kept_for_loopback_peers():
         srv.dispatch = original
     errs = [_json.loads(s) for s in sent if isinstance(s, str) and "-32000" in s]
     assert errs and "kaboom-local" in errs[0]["error"]["message"]
+
+
+def test_unknown_peer_gets_sanitized_crash_detail():
+    """Fail-closed peer classification (regression).
+
+    _peer_is_loopback() previously classified an unidentifiable peer
+    ("unknown") as LOOPBACK — handing raw crash internals to any
+    connection whose address could not be determined. An unknown peer
+    must be treated as remote.
+    """
+    from tui_gateway.ws import _peer_is_loopback
+
+    assert _peer_is_loopback("unknown") is False
+    assert _peer_is_loopback("unknown:1234") is False
+    assert _peer_is_loopback("127.0.0.1:5555") is True
+    assert _peer_is_loopback("::1:5555") is True
+
+
+def test_unknown_peer_receives_ref_not_raw_exception():
+    """End-to-end: a WS object with no client info must not receive raw
+    exception text when a handler crashes."""
+    import json as _json
+
+    sent = []
+    _n = {"calls": 0}
+
+    class FakeWSNoClientInfo:
+        # No .client attribute -> _ws_peer_label returns "unknown"
+        scope = {"query_string": b"", "headers": []}
+
+        async def accept(self):
+            sent.append("accept")
+
+        async def send_text(self, line):
+            sent.append(line)
+
+        async def receive_text(self):
+            if _n["calls"] == 0:
+                _n["calls"] += 1
+                return '{"jsonrpc": "2.0", "id": "r1", "method": "ping", "params": {}}'
+            raise ws_mod._WebSocketDisconnect()
+
+        async def close(self):
+            pass
+
+    import tui_gateway.server as srv
+    original = srv.dispatch
+    srv.dispatch = lambda req: (_ for _ in ()).throw(RuntimeError("SECRET-crash-detail"))
+    try:
+        asyncio.run(ws_mod.handle_ws(FakeWSNoClientInfo()))
+    finally:
+        srv.dispatch = original
+
+    errs = [_json.loads(s) for s in sent if isinstance(s, str) and "-32000" in s]
+    assert errs, "crash must still produce a -32000 response"
+    assert "SECRET-crash-detail" not in errs[0]["error"]["message"], (
+        "an unidentifiable peer must NOT receive raw exception text"
+    )
+    assert "ref=" in errs[0]["error"]["message"]

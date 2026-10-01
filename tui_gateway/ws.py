@@ -101,11 +101,16 @@ def _disable_nagle(ws: Any) -> None:
 # connection is closed (tui_websocket_transport.md §6.4).
 _MAX_FRAME_BYTES = 1024 * 1024
 
-_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost", "[::1]", "unknown"})
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost", "[::1]"})
 
 
 def _peer_is_loopback(peer: str) -> bool:
-    """True for local peers — the only ones allowed crash detail."""
+    """True for local peers — the only ones allowed crash detail.
+
+    Fail-closed: a peer whose address cannot be determined ("unknown")
+    is treated as REMOTE, not loopback — degraded peer info must never
+    upgrade a remote connection into receiving raw crash internals.
+    """
     host = peer.rsplit(":", 1)[0] if ":" in peer else peer
     return host in _LOOPBACK_HOSTS
 
