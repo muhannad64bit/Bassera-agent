@@ -114,6 +114,7 @@ jobs:
           TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0 python -m pytest -o "addopts=" -q \
             tests/tools/test_approval.py tests/tools/test_approval_fuzz.py \
             tests/tools/test_approval_audit.py tests/tools/test_approval_heartbeat.py \
+            tests/tools/test_approval_gateway_resolution.py \
             tests/tools/test_write_deny.py tests/tools/test_file_write_safety.py \
             tests/tools/test_url_safety.py tests/tools/test_website_policy.py \
             tests/tools/test_credential_files.py tests/tools/test_cron_approval_mode.py \
