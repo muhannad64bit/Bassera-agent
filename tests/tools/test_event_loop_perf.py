@@ -59,7 +59,7 @@ class TestInstallBehavior:
     def test_explicit_uvloop_missing_warns(self, monkeypatch, caplog):
         monkeypatch.setenv("BASSERA_EVENT_LOOP", "uvloop")
         monkeypatch.setitem(sys.modules, "uvloop", None)
-        with caplog.at_level(logging.WARNING):
+        with caplog.at_level(logging.WARNING, logger="tools.event_loop_perf"):
             assert maybe_install_uvloop() is False
         assert any("uvloop is not installed" in r.message for r in caplog.records)
 
