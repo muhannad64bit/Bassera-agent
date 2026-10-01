@@ -389,7 +389,17 @@ def _ensure_current_event_loop(request):
         return
 
     try:
-        loop = asyncio.get_event_loop_policy().get_event_loop()
+        # get_event_loop() on a policy with no set loop emits a
+        # DeprecationWarning on 3.12/3.13 (and the same call is what the
+        # production code migrated away from). The warning is expected
+        # here — this fixture exists precisely to CREATE a loop when
+        # there is none — so silence it instead of polluting the
+        # suite's warning summary.
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            loop = asyncio.get_event_loop_policy().get_event_loop()
     except RuntimeError:
         loop = None
 

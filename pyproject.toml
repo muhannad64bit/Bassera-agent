@@ -136,5 +136,6 @@ include = ["agent", "tools", "tools.*", "bassera_cli", "gateway", "gateway.*", "
 testpaths = ["tests"]
 markers = [
     "integration: marks tests requiring external services (API keys, Modal, etc.)",
+    "ssh: marks tests exercising the SSH terminal backend",
 ]
 addopts = "-m 'not integration' -n auto"
