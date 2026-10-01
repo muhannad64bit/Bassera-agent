@@ -1,7 +1,10 @@
 """Tests for bassera_cli.gateway."""
 
+import sys
 from types import SimpleNamespace
 from unittest.mock import patch, call
+
+import pytest
 
 import bassera_cli.gateway as gateway
 
@@ -217,6 +220,12 @@ def test_conflicting_systemd_units_warning(monkeypatch, tmp_path, capsys):
     assert "--system" in out
 
 
+# These two exercise root-privilege branching via os.geteuid, which does
+# not exist on Windows (monkeypatch.setattr with raising=True would raise
+# AttributeError there).
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="os.geteuid does not exist on Windows"
+)
 def test_install_linux_gateway_from_setup_system_choice_without_root_prints_followup(monkeypatch, capsys):
     monkeypatch.setattr(gateway, "prompt_linux_gateway_install_scope", lambda: "system")
     monkeypatch.setattr(gateway.os, "geteuid", lambda: 1000)
@@ -231,6 +240,9 @@ def test_install_linux_gateway_from_setup_system_choice_without_root_prints_foll
     assert "sudo bassera gateway start --system" in out
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="os.geteuid does not exist on Windows"
+)
 def test_install_linux_gateway_from_setup_system_choice_as_root_installs(monkeypatch):
     monkeypatch.setattr(gateway, "prompt_linux_gateway_install_scope", lambda: "system")
     monkeypatch.setattr(gateway.os, "geteuid", lambda: 0)

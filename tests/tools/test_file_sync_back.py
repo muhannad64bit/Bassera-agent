@@ -1,6 +1,5 @@
 """Tests for FileSyncManager.sync_back() — pull remote changes to host."""
 
-import fcntl
 import io
 import logging
 import os
@@ -11,6 +10,11 @@ from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+
+# POSIX-only suite: sync-back locking uses fcntl record locks, which do
+# not exist on Windows. Skips the module there instead of erroring at
+# collection (which would show up as failures on the Windows CI leg).
+fcntl = pytest.importorskip("fcntl")
 
 from tools.environments.file_sync import (
     FileSyncManager,

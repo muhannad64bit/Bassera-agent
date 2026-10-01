@@ -1,9 +1,15 @@
 """Tests for gateway service management helpers."""
 
 import os
-import pwd
 from pathlib import Path
 from types import SimpleNamespace
+
+import pytest
+
+# POSIX-only suite: systemd gateway service management reads Unix user
+# databases via pwd, which does not exist on Windows. Skips the module
+# there instead of erroring at collection on the Windows CI leg.
+pwd = pytest.importorskip("pwd")
 
 import bassera_cli.gateway as gateway_cli
 from gateway.restart import (

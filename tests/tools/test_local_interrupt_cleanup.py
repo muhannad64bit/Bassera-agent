@@ -14,10 +14,21 @@ died.  See commit message for full context.
 import os
 import signal
 import subprocess
+import sys
 import threading
 import time
 
 import pytest
+
+# POSIX-only suite: the cleanup semantics under test depend on
+# os.setsid process groups and os.killpg, neither of which exists on
+# Windows. Skips the module there instead of erroring on the Windows
+# CI leg.
+if sys.platform == "win32":
+    pytest.skip(
+        "POSIX-only: os.setsid/os.killpg process-group lifecycle",
+        allow_module_level=True,
+    )
 
 from tools.environments.local import LocalEnvironment
 
