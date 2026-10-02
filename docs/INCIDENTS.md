@@ -66,3 +66,33 @@ same session step rather than left in the working tree.
   so a deletion is a one-command restore.
 - Prefer regenerating extracted files from a script over hand-restoring:
   a script is idempotent, auditable, and immune to buffer restore.
+
+## 2026-10-02: strike 7 — the mutator now makes commits
+
+**What happened.** Two newly written security-coverage test files were
+staged with `git add` (per the standing defense protocol). Seconds
+later, and before the author's own `git commit` ran, a commit appeared
+on the branch: message "Initial commit", author/committer = the user's
+git identity, tree = exactly the two staged files. The author's
+subsequent `git commit` then failed with "nothing to commit".
+
+**Significance.** This is the first observed strike that COMMITS rather
+than reverts or deletes. It means the external process is running
+`git commit` (or equivalent plumbing) against the repo. Nothing was
+lost — the committed tree was exactly the author's staged content —
+but the junk message destroyed the audit trail for the change, and a
+future strike could just as easily commit a half-finished or wrong
+state, or race a real commit mid-hook.
+
+**Response.** The junk commit was not pushed; `git commit --amend`
+replaced only the message (identical tree), and the corrected commit
+(f8452eaa) carries a note about the incident.
+
+**Mitigation (on top of the existing protocol).**
+- Check `git log` for commits you did not make before every push.
+- Never push immediately after an unexpected "nothing to commit" —
+  inspect `git log -1 --stat` first; it may be a mutator commit.
+- Prefer amending an unpushed mutator commit over reverting/recreating
+  when the tree is provably your own staged content.
+- The definitive fix remains: close the IDE (or disable its AI
+  plugin's write/commit access) during agent sessions in this repo.
