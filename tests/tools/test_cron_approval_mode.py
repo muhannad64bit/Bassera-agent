@@ -7,7 +7,6 @@ import tools.approval as approval_module
 from tools.approval import (
     _get_cron_approval_mode,
     check_all_command_guards,
-    check_dangerous_command,
     detect_dangerous_command,
 )
 
@@ -85,37 +84,13 @@ class TestCronApprovalModeParsing:
 
 
 # ---------------------------------------------------------------------------
-# check_dangerous_command() with cron session
+# Cron behaviors on the live audited guard that the combined-guard section
+# below does not already pin. (These were originally pinned through the
+# legacy pre-tirith approval entry point; exact duplicates of
+# TestCronDenyModeAllGuards were dropped, unique assertions kept.)
 # ---------------------------------------------------------------------------
 
-class TestCronDenyMode:
-    """When BASSERA_CRON_SESSION is set and cron_mode=deny, dangerous commands are blocked."""
-
-    def test_dangerous_command_blocked_in_cron_deny_mode(self, monkeypatch):
-        monkeypatch.setenv("BASSERA_CRON_SESSION", "1")
-        monkeypatch.delenv("BASSERA_INTERACTIVE", raising=False)
-        monkeypatch.delenv("BASSERA_GATEWAY_SESSION", raising=False)
-        monkeypatch.delenv("BASSERA_YOLO_MODE", raising=False)
-
-        from unittest.mock import patch as mock_patch
-        with mock_patch("tools.approval._get_cron_approval_mode", return_value="deny"):
-            result = check_dangerous_command("rm -rf /tmp/stuff", "local")
-            assert not result["approved"]
-            assert "BLOCKED" in result["message"]
-            assert "cron_mode" in result["message"]
-
-    def test_safe_command_allowed_in_cron_deny_mode(self, monkeypatch):
-        """Non-dangerous commands still work even with cron_mode=deny."""
-        monkeypatch.setenv("BASSERA_CRON_SESSION", "1")
-        monkeypatch.delenv("BASSERA_INTERACTIVE", raising=False)
-        monkeypatch.delenv("BASSERA_GATEWAY_SESSION", raising=False)
-        monkeypatch.delenv("BASSERA_YOLO_MODE", raising=False)
-
-        from unittest.mock import patch as mock_patch
-        with mock_patch("tools.approval._get_cron_approval_mode", return_value="deny"):
-            result = check_dangerous_command("ls -la", "local")
-            assert result["approved"]
-
+class TestCronDenyModeExtraCoverage:
     def test_multiple_dangerous_patterns_blocked(self, monkeypatch):
         """All dangerous patterns are blocked, not just rm."""
         monkeypatch.setenv("BASSERA_CRON_SESSION", "1")
@@ -135,7 +110,7 @@ class TestCronDenyMode:
             for cmd in dangerous_commands:
                 is_dangerous, _, _ = detect_dangerous_command(cmd)
                 if is_dangerous:
-                    result = check_dangerous_command(cmd, "local")
+                    result = check_all_command_guards(cmd, "local")
                     assert not result["approved"], f"Should be blocked: {cmd}"
                     assert "BLOCKED" in result["message"]
 
@@ -148,25 +123,10 @@ class TestCronDenyMode:
 
         from unittest.mock import patch as mock_patch
         with mock_patch("tools.approval._get_cron_approval_mode", return_value="deny"):
-            result = check_dangerous_command("rm -rf /tmp/stuff", "local")
+            result = check_all_command_guards("rm -rf /tmp/stuff", "local")
             assert not result["approved"]
             # Should contain the description of what was flagged
             assert "dangerous" in result["message"].lower() or "delete" in result["message"].lower()
-
-
-class TestCronApproveMode:
-    """When BASSERA_CRON_SESSION is set and cron_mode=approve, dangerous commands pass through."""
-
-    def test_dangerous_command_allowed_in_cron_approve_mode(self, monkeypatch):
-        monkeypatch.setenv("BASSERA_CRON_SESSION", "1")
-        monkeypatch.delenv("BASSERA_INTERACTIVE", raising=False)
-        monkeypatch.delenv("BASSERA_GATEWAY_SESSION", raising=False)
-        monkeypatch.delenv("BASSERA_YOLO_MODE", raising=False)
-
-        from unittest.mock import patch as mock_patch
-        with mock_patch("tools.approval._get_cron_approval_mode", return_value="approve"):
-            result = check_dangerous_command("rm -rf /tmp/stuff", "local")
-            assert result["approved"]
 
 
 # ---------------------------------------------------------------------------
@@ -188,6 +148,7 @@ class TestCronDenyModeAllGuards:
             result = check_all_command_guards("rm -rf /tmp/stuff", "local")
             assert not result["approved"]
             assert "BLOCKED" in result["message"]
+            assert "cron_mode" in result["message"]
 
     def test_safe_command_allowed_in_combined_guard(self, monkeypatch):
         monkeypatch.setenv("BASSERA_CRON_SESSION", "1")
@@ -230,7 +191,7 @@ class TestCronModeInteractions:
 
         from unittest.mock import patch as mock_patch
         with mock_patch("tools.approval._get_cron_approval_mode", return_value="deny"):
-            result = check_dangerous_command("rm -rf /", "docker")
+            result = check_all_command_guards("rm -rf /", "docker")
             assert result["approved"]
 
     def test_yolo_overrides_cron_deny(self, monkeypatch):
@@ -242,7 +203,7 @@ class TestCronModeInteractions:
 
         from unittest.mock import patch as mock_patch
         with mock_patch("tools.approval._get_cron_approval_mode", return_value="deny"):
-            result = check_dangerous_command("rm -rf /", "local")
+            result = check_all_command_guards("rm -rf /", "local")
             assert result["approved"]
 
     def test_non_cron_non_interactive_still_auto_approves(self, monkeypatch):
@@ -252,5 +213,5 @@ class TestCronModeInteractions:
         monkeypatch.delenv("BASSERA_GATEWAY_SESSION", raising=False)
         monkeypatch.delenv("BASSERA_YOLO_MODE", raising=False)
 
-        result = check_dangerous_command("rm -rf /tmp/stuff", "local")
+        result = check_all_command_guards("rm -rf /tmp/stuff", "local")
         assert result["approved"]
