@@ -16,3 +16,7 @@ tokens/
 node_modules/
 *.egg-info/
 *.egg-info/
+
+# pytest coverage artifacts (test-local, never committed)
+.coverage
+.coverage.*
