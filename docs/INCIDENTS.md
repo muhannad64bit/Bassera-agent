@@ -96,3 +96,40 @@ replaced only the message (identical tree), and the corrected commit
   when the tree is provably your own staged content.
 - The definitive fix remains: close the IDE (or disable its AI
   plugin's write/commit access) during agent sessions in this repo.
+
+## 2026-10-02: strike 8 — the mutator committed an untracked artifact AND pushed to the remote
+
+**What happened.** Two new mutator behaviors in one hour:
+1. It committed the untracked `.coverage` binary (a pytest coverage
+   artifact sitting in the repo root) as "Update project files"
+   (58174df3, local-only — dropped un-pushed via git reset --soft).
+   The file was untracked but NOT gitignored; the ignore hole is now
+   closed (`.coverage`, `.coverage.*` in .gitignore).
+2. It PUSHED to origin/main: the remote moved to 91ae50cb ("Initial
+   commit", strike 7's junk commit) while the author's corrected
+   amended commit was still local. The author's push was rejected as
+   non-fast-forward.
+
+**Why nothing was lost.** 91ae50cb's tree was byte-identical to the
+author's amended commit f8452eaa (verified with git diff --stat before
+any reconciliation), so the only divergence was the message. The local
+junk .coverage commit was local-only (verified with branch -r
+--contains). Reconciliation used `git pull --rebase`: the amended
+commit was auto-skipped as an already-applied cherry-pick, and the two
+local commits replayed cleanly on top of the remote tip. No
+force-push, no history rewrite on the remote.
+
+**Consequence.** The security-coverage tests live in remote history
+under the junk "Initial commit" message; the detailed change
+description survives here (strike 7 section) and in the session
+report, but not attached to the commit itself. This is the price of
+the no-force-push rule given a mutator with push access.
+
+**Mitigation update.**
+- The external process has PUSH access. Before every push, diff the
+  intended remote tip against origin/main after a fetch; investigate
+  any commit you did not make.
+- Keep test artifacts out of the repo root or gitignore them
+  immediately; anything untracked is a commit away from the remote.
+- The definitive fix remains closing the IDE / revoking the plugin's
+  git credentials during agent sessions.
