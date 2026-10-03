@@ -1088,9 +1088,9 @@ class QQAdapter(BasePlatformAdapter):
             return MessageType.PHOTO
         # Unknown content type with an attachment — don't assume PHOTO
         # to prevent non-image files from being sent to vision analysis.
+        # (Static method: no instance is available, so no _log_tag.)
         logger.debug(
-            "[%s] Unknown media content_type '%s', defaulting to TEXT",
-            self._log_tag,
+            "[QQBot] Unknown media content_type '%s', defaulting to TEXT",
             first_type,
         )
         return MessageType.TEXT

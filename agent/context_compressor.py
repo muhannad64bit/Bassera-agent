@@ -796,7 +796,12 @@ The user has requested that this compaction PRIORITISE preserving all informatio
                 )
                 self.summary_model = ""  # empty = use main model
                 self._summary_failure_cooldown_until = 0.0  # no cooldown
-                return self._generate_summary(messages, summary_budget)  # retry immediately
+                # Retry immediately with the main model, reusing the same
+                # turn list and focus topic. (The original retry call
+                # referenced an undefined `messages` — a NameError — and
+                # would have bound summary_budget to the focus_topic
+                # parameter positionally.)
+                return self._generate_summary(turns_to_summarize, focus_topic)  # retry immediately
 
             # Transient errors (timeout, rate limit, network) — shorter cooldown
             _transient_cooldown = 60
