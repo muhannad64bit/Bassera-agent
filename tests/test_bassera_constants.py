@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 import bassera_constants
-from bassera_constants import get_default_bassera_root, is_container
+from bassera_constants import default_home_root, get_default_bassera_root, is_container
 
 
 class TestGetDefaultBasseraRoot:
@@ -61,6 +61,32 @@ class TestGetDefaultBasseraRoot:
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
         monkeypatch.setenv("BASSERA_HOME", str(profile))
         assert get_default_bassera_root() == docker_root
+
+
+class TestDefaultHomeRoot:
+    def test_permission_error_on_bassera_home_falls_through(self, monkeypatch):
+        """Permission errors on ~/.bassera should not crash home resolution."""
+        monkeypatch.setattr(Path, "home", lambda: Path("/root"))
+
+        def fake_exists(path):
+            if path == Path("/root/.bassera"):
+                raise PermissionError("permission denied")
+            return False
+
+        monkeypatch.setattr(Path, "exists", fake_exists)
+        assert default_home_root() == Path("/root/.bassera")
+
+    def test_permission_error_on_bassera_home_allows_legacy_fallback(self, monkeypatch):
+        """If ~/.bassera is inaccessible, ~/.wafi can still be selected."""
+        monkeypatch.setattr(Path, "home", lambda: Path("/root"))
+
+        def fake_exists(path):
+            if path == Path("/root/.bassera"):
+                raise PermissionError("permission denied")
+            return path == Path("/root/.wafi")
+
+        monkeypatch.setattr(Path, "exists", fake_exists)
+        assert default_home_root() == Path("/root/.wafi")
 
 
 class TestIsContainer:
