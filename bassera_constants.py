@@ -63,11 +63,17 @@ def default_home_root() -> Path:
     - Otherwise (fresh install) ``~/.bassera``.
     """
     bassera_home = Path.home() / ".bassera"
-    if bassera_home.exists():
-        return bassera_home
+    try:
+        if bassera_home.exists():
+            return bassera_home
+    except PermissionError:
+        pass
     legacy_home = Path.home() / ".wafi"
-    if legacy_home.exists():
-        return legacy_home
+    try:
+        if legacy_home.exists():
+            return legacy_home
+    except PermissionError:
+        pass
     return bassera_home
 
 
