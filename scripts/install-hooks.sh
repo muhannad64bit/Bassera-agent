@@ -76,7 +76,19 @@ PYLIST
   fi
 fi
 
-# 2. Fast security subset (full suite: scripts/run_tests.sh).
+# 2. Lint gate — bug-focused ruff rules (see [tool.ruff] in pyproject.toml).
+#    Skipped with a warning when ruff is not installed (CI enforces it
+#    absolutely); failures here always abort the commit.
+if [ "\$fail" -eq 0 ]; then
+  if "\$PYTHON" -m ruff --version >/dev/null 2>&1; then
+    (cd "\$REPO_ROOT" && "\$PYTHON" -m ruff check \\
+      gateway tools agent bassera_cli bassera_constants.py tui_gateway) || fail=1
+  else
+    echo "pre-commit: ruff not installed - skipping lint gate (CI enforces it)"
+  fi
+fi
+
+# 3. Fast security subset (full suite: scripts/run_tests.sh).
 if [ "\$fail" -eq 0 ]; then
   (cd "\$REPO_ROOT" && TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0 \\
     "\$PYTHON" -m pytest -o "addopts=" -q -p no:cacheprovider \\
@@ -94,5 +106,5 @@ chmod +x "$HOOK"
 
 echo "installed $HOOK"
 echo "  venv: $VENV"
-echo "  scope: staged .py compile check + security test subset"
+echo "  scope: staged .py compile check + ruff bug-gate lint + security test subset"
 echo "remove with: rm .git/hooks/pre-commit"

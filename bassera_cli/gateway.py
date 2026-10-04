@@ -3020,7 +3020,6 @@ def _setup_qqbot():
     method_idx = prompt_choice("  How would you like to set up QQ Bot?", method_choices, 0)
 
     credentials = None
-    used_qr = False
 
     if method_idx == 0:
         # ── QR scan-to-configure ──
@@ -3030,8 +3029,6 @@ def _setup_qqbot():
             print()
             print_warning("  QQ Bot setup cancelled.")
             return
-        if credentials:
-            used_qr = True
         if not credentials:
             print_info("  QR setup did not complete. Continuing with manual input.")
 

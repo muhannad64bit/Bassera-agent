@@ -492,7 +492,7 @@ async def get_sessions(limit: int = 20, offset: int = 0):
             return {"sessions": sessions, "total": total, "limit": limit, "offset": offset}
         finally:
             db.close()
-    except Exception as e:
+    except Exception:
         _log.exception("GET /api/sessions failed")
         raise HTTPException(status_code=500, detail="Internal server error")
 
@@ -724,7 +724,7 @@ async def update_config(body: ConfigUpdate):
     try:
         save_config(_denormalize_config_from_web(body.config))
         return {"ok": True}
-    except Exception as e:
+    except Exception:
         _log.exception("PUT /api/config failed")
         raise HTTPException(status_code=500, detail="Internal server error")
 
@@ -753,7 +753,7 @@ async def set_env_var(body: EnvVarUpdate):
     try:
         save_env_value(body.key, body.value)
         return {"ok": True, "key": body.key}
-    except Exception as e:
+    except Exception:
         _log.exception("PUT /api/env failed")
         raise HTTPException(status_code=500, detail="Internal server error")
 
@@ -767,7 +767,7 @@ async def remove_env_var(body: EnvVarDelete):
         return {"ok": True, "key": body.key}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         _log.exception("DELETE /api/env failed")
         raise HTTPException(status_code=500, detail="Internal server error")
 

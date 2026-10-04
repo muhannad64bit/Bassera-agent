@@ -733,8 +733,6 @@ class MemoryStore:
                 session_id=record.session_id or self._active_session_id,
             )
         )
-        entry = format_memory_record(normalized)
-
         scan_error = _scan_memory_content(normalized.content)
         if scan_error:
             return {"success": False, "error": scan_error}

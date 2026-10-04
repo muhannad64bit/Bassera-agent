@@ -133,3 +133,21 @@ the no-force-push rule given a mutator with push access.
   immediately; anything untracked is a commit away from the remote.
 - The definitive fix remains closing the IDE / revoking the plugin's
   git credentials during agent sessions.
+
+## 2026-10-02: strike 9 — targeted revert minutes after editing
+
+**What happened.** Three files edited within one work step
+(gateway/platforms/sms.py, gateway/platforms/whatsapp.py,
+tools/memory_tool.py — TYPE_CHECKING imports and a dead-assignment
+removal) were found reverted to HEAD roughly a minute after the edits
+were verified applied. The restored files carried **Sep 23 mtimes**
+(ten days old) — the signature of an editor "restore from local
+history" write, not of any repo process. Files edited in the same
+step minutes earlier survived.
+
+**Response.** Re-applied the edits and staged them within the same
+command; verified via git diff and the lint gate. The edit-in-place +
+immediate `git add` protocol continues to hold: the git index is the
+only working surface the mutator has never been observed to touch
+(strikes 1-9 reverted working trees, deleted untracked files, or made
+commits — the index itself has always survived intact).

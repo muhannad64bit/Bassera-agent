@@ -39,7 +39,7 @@ dependencies = [
 [project.optional-dependencies]
 modal = ["modal>=1.0.0,<2"]
 daytona = ["daytona>=0.148.0,<1"]
-dev = ["debugpy>=1.8.0,<2", "pytest>=9.0.2,<10", "pytest-asyncio>=1.3.0,<2", "pytest-xdist>=3.0,<4", "mcp>=1.2.0,<2", "hypothesis>=6.100,<7", "pytest-cov>=6.0,<8"]
+dev = ["debugpy>=1.8.0,<2", "pytest>=9.0.2,<10", "pytest-asyncio>=1.3.0,<2", "pytest-xdist>=3.0,<4", "mcp>=1.2.0,<2", "hypothesis>=6.100,<7", "pytest-cov>=6.0,<8", "ruff>=0.12,<1"]
 messaging = ["python-telegram-bot[webhooks]>=22.6,<23", "discord.py[voice]>=2.7.1,<3", "aiohttp>=3.13.3,<4", "slack-bolt>=1.18.0,<2", "slack-sdk>=3.27.0,<4", "qrcode>=7.0,<8"]
 cron = ["croniter>=6.0.0,<7"]
 slack = ["slack-bolt>=1.18.0,<2", "slack-sdk>=3.27.0,<4"]
@@ -145,3 +145,24 @@ markers = [
     "ssh: marks tests exercising the SSH terminal backend",
 ]
 addopts = "-m 'not integration' -n auto"
+
+[tool.ruff]
+target-version = "py311"
+extend-exclude = ["venv", ".venv", "ui-tui", "optional-skills", "docs"]
+
+[tool.ruff.lint]
+# Bug-focused lint gate. Every rule selected here is an unambiguous
+# correctness rule, and two of them (F821, F601) have each produced at
+# least one real defect in this codebase (2026-10-02: NameError crashes
+# in context_compressor and the qqbot adapter; a repeated dict key in
+# model_normalize). Style rules are deliberately NOT selected — add
+# them only with triage, never wholesale.
+select = [
+    "E9",   # syntax/parsing errors
+    "F821", # undefined names
+    "F601", # repeated dict keys (literal)
+    "F602", # repeated dict keys (effective)
+    "F841", # unused locals (dead assignments hide typos)
+    "B012", # break inside finally (swallows exceptions)
+    "B905", # zip() without an explicit strict=
+]

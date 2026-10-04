@@ -6043,7 +6043,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
                                         print(
                                             f"  ⚠ {svc_name} died after restart, retrying..."
                                         )
-                                        retry = subprocess.run(
+                                        subprocess.run(
                                             scope_cmd + ["restart", svc_name],
                                             capture_output=True,
                                             text=True,
