@@ -7590,6 +7590,50 @@ Examples:
 
     pairing_sub.add_parser("clear-pending", help="Clear all pending codes")
 
+    # ── Permanent command approvals: inspect + revoke ────────────────
+    # Every "[a]lways" approval (and every command_allowlist entry in
+    # config.yaml) grants a standing permission to run commands matching
+    # a pattern. This surface makes those grants visible and revocable
+    # without hand-editing config.yaml.
+    approvals_parser = subparsers.add_parser(
+        "approvals",
+        help="Inspect and revoke permanently approved command patterns",
+    )
+    approvals_sub = approvals_parser.add_subparsers(dest="approvals_command")
+
+    approvals_sub.add_parser(
+        "list", help="List permanently approved command patterns"
+    )
+
+    approvals_revoke_parser = approvals_sub.add_parser(
+        "revoke", help="Revoke one permanently approved command pattern"
+    )
+    approvals_revoke_parser.add_argument(
+        "pattern",
+        help="The pattern to revoke, exactly as shown by 'approvals list'",
+    )
+
+    def cmd_approvals(args):
+        import tools.approval as approval_module
+
+        if getattr(args, "approvals_command", None) == "revoke":
+            if approval_module.revoke_permanent_approval(args.pattern):
+                print(f"✓ Revoked permanent approval: {args.pattern}")
+            else:
+                print(f"✗ No permanent approval matches: {args.pattern}")
+                print("  Run 'bassera approvals list' to see current approvals.")
+        else:
+            approvals = approval_module.list_permanent_approvals()
+            if not approvals:
+                print("No permanently approved command patterns.")
+            else:
+                print(f"{len(approvals)} permanently approved command pattern(s):")
+                for pattern in approvals:
+                    print(f"  - {pattern}")
+                print("Revoke with: bassera approvals revoke <pattern>")
+
+    approvals_parser.set_defaults(func=cmd_approvals)
+
     def cmd_pairing(args):
         from bassera_cli.pairing import pairing_command
 

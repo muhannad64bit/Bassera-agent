@@ -111,6 +111,15 @@ DANGEROUS_PATTERNS = [
     (rf'\btee\b.*["\'`]?{_SENSITIVE_WRITE_TARGET}', "overwrite system file via tee"),
     (rf'>>?\s*["\'`]?{_SENSITIVE_WRITE_TARGET}', "overwrite system file via redirection"),
     (r'\bxargs\s+.*\brm\b', "xargs with rm"),
+    (r'\brm\b.*\bxargs\b', "rm piped into xargs (indirect execution)"),
+    # Indirection obfuscation: a dangerous binary assigned to a variable
+    # (X=rm; $X -rf ...) or wrapped in command substitution
+    # ($(echo rm) -rf ...) defeats literal token matching while the
+    # shell still executes the destructive command.
+    (r'(?:^|[;&|]\s*|\$\([^)]*)\s*\w+\s*=\s*\S*(?:rm|dd|mkfs|shred)\b',
+     "dangerous binary assigned to a variable (indirect execution)"),
+    (r'(?:\$\(|`).*\s-rf\b',
+     "command substitution combined with rm -rf"),
     (r'\bfind\b.*-exec\s+(/\S*/)?rm\b', "find -exec rm"),
     (r'\bfind\b.*-delete\b', "find -delete"),
     # Gateway lifecycle protection: prevent the agent from killing its own
@@ -195,6 +204,20 @@ def _normalize_command_for_detection(command: str) -> str:
     Strips ANSI escape sequences (full ECMA-48 via tools.ansi_strip),
     null bytes, and normalizes Unicode fullwidth characters so that
     obfuscation techniques cannot bypass the pattern-based detection.
+
+    Additionally neutralizes three shell word-splitting obfuscations
+    that make a dangerous token invisible to naive pattern matching
+    while still executing in bash:
+
+    * ``$IFS`` / ``${IFS}`` — bash word-splits on the expansion, so
+      ``rm${IFS}-rf${IFS}/x`` runs exactly like ``rm -rf /x``.
+    * backslash escaping — ``r\\m`` is the word ``rm`` to the shell.
+    * intra-word / whole-word quoting — ``r''m``, ``r""m`` and
+      ``'rm'`` all execute as ``rm``; quotes do not split shell words.
+
+    This function is used for DETECTION ONLY (single caller:
+    detect_dangerous_command). The executed command is never altered
+    by it.
     """
     from tools.ansi_strip import strip_ansi
 
@@ -204,6 +227,12 @@ def _normalize_command_for_detection(command: str) -> str:
     command = command.replace('\x00', '')
     # Normalize Unicode (fullwidth Latin, halfwidth Katakana, etc.)
     command = unicodedata.normalize('NFKC', command)
+    # $IFS expansion acts as a word separator to the shell.
+    command = re.sub(r'\$\{?IFS\}?', ' ', command, flags=re.IGNORECASE)
+    # Backslash escapes and quotes do not split shell words: remove
+    # them so the detector sees the words the shell will actually run.
+    command = command.replace('\\', '')
+    command = re.sub(r"['\"]", '', command)
     return command
 
 
@@ -424,6 +453,60 @@ def save_permanent_allowlist(patterns: set):
         save_config(config)
     except Exception as e:
         logger.warning("Could not save allowlist: %s", e)
+
+
+def list_permanent_approvals() -> list:
+    """Return a sorted copy of the permanently-approved command patterns.
+
+    Read-only inspection surface: callers get a snapshot they can print
+    or diff without holding the approval lock or mutating state.
+    """
+    with _lock:
+        return sorted(_permanent_approved)
+
+
+def revoke_permanent_approval(pattern_key: str) -> bool:
+    """Revoke one permanently-approved command pattern and persist it.
+
+    This is strictly a narrowing operation: it removes a previously
+    granted permission ("[a]lways" approval or a command_allowlist
+    entry) and never grants anything. The revocation is recorded in
+    the approval audit trail (pattern key only — no command text is
+    involved). Returns True if the pattern was present, False if
+    nothing matched (in which case state and config are untouched).
+    """
+    with _lock:
+        if pattern_key not in _permanent_approved:
+            return False
+        _permanent_approved.discard(pattern_key)
+    save_permanent_allowlist(_permanent_approved)
+
+    try:
+        import json
+        import time
+
+        from bassera_constants import get_bassera_home
+
+        audit_dir = get_bassera_home() / "logs"
+        audit_dir.mkdir(parents=True, exist_ok=True)
+        entry = {
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
+            "decision": "revoked",
+            "session": get_current_session_key(),
+            "env_type": "cli",
+            "pattern_key": pattern_key,
+            "description": None,
+            "smart": False,
+            "command": None,
+        }
+        with _audit_lock:
+            with open(audit_dir / "audit.log", "a", encoding="utf-8") as fh:
+                fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception as exc:
+        # Audit is best-effort: the revocation itself has already been
+        # applied and persisted; a failed log write must not undo it.
+        logger.warning("Approval revocation audit write failed: %s", exc)
+    return True
 
 
 # =========================================================================

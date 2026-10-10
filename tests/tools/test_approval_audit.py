@@ -145,3 +145,45 @@ class TestAuditTrail:
         assert len(lines) == 1
         assert lines[0]["decision"] == "approved"
         assert lines[0]["description"]
+
+
+class TestAuditLogIntegrity:
+    """The audit log must be one JSON entry per decision — an attacker
+    (or a merely unusual command) must not be able to forge or split
+    entries through the command text."""
+
+    def test_newline_in_command_cannot_forge_audit_entries(self, monkeypatch, tmp_path):
+        """A command containing newlines must land as ONE audit line with
+        the newlines JSON-escaped — no extra forged records."""
+        home = _bassera_home(monkeypatch, tmp_path)
+        monkeypatch.delenv("BASSERA_INTERACTIVE", raising=False)
+        monkeypatch.delenv("BASSERA_GATEWAY_SESSION", raising=False)
+        monkeypatch.delenv("BASSERA_EXEC_ASK", raising=False)
+        monkeypatch.delenv("BASSERA_CRON_SESSION", raising=False)
+
+        hostile = 'echo "line1\\n{\\"decision\\":\\"denied\\",\\"bogus\\":1}\\nline3"; rm -rf /'
+
+        result = check_all_command_guards(hostile, "local")
+        assert result["approved"] is True  # unattended auto-allow
+        lines = _audit_lines(home)
+        assert len(lines) == 1, "newlines in the command must not create forged entries"
+        assert lines[0]["decision"] == "approved"
+        # The hostile JSON text must survive as data, not become structure.
+        assert lines[0]["command"] == hostile
+
+    def test_every_audit_line_parses_as_json(self, monkeypatch, tmp_path):
+        """Structural invariant: the whole file is newline-delimited JSON,
+        one object per decision."""
+        home = _bassera_home(monkeypatch, tmp_path)
+        monkeypatch.delenv("BASSERA_INTERACTIVE", raising=False)
+        monkeypatch.delenv("BASSERA_GATEWAY_SESSION", raising=False)
+        monkeypatch.delenv("BASSERA_EXEC_ASK", raising=False)
+        monkeypatch.delenv("BASSERA_CRON_SESSION", raising=False)
+
+        for cmd in ("rm -rf /", "dd if=/dev/zero of=/dev/sda", "mkfs.ext4 /dev/sda1"):
+            check_all_command_guards(cmd, "local")
+
+        raw = (home / "logs" / "audit.log").read_text()
+        parsed = [json.loads(line) for line in raw.splitlines() if line.strip()]
+        assert len(parsed) == 3
+        assert all(e["decision"] == "approved" for e in parsed)
